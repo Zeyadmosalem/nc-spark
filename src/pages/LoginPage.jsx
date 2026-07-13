@@ -71,7 +71,7 @@ export default function LoginPage() {
         <div className="login-header">
           <div className="login-logo">
             <div className="login-logo-mark">NC</div>
-            <strong>NC Spark</strong>
+            <strong> Spark </strong>
           </div>
           <h1>Welcome to NC Spark</h1>
           <p>Choose your role to enter the learning portal.</p>
