@@ -10,6 +10,44 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-21-nc-spark-backend-design.md`
 
+## Progress
+
+| Task | Status | Notes |
+|---|---|---|
+| 1. Scaffolding & test harness | **Done** | Adapted for a hosted dev project; Docker is unavailable |
+| 2. Enums & profile tables | **Done** | |
+| 3. Domain provisioning | **Done** | `citext` replaced with lowercase `text` (see below) |
+| 4. Privilege escalation guard | **Done** | Needed two extra migrations, `_0450` and `_0460` |
+| 5. RLS helpers & supervisor hierarchy | Not started | `app.my_role()`/`app.my_status()` already exist from `_0450` |
+| 6. Profile read visibility | **Partly done** | `profiles_select_self` landed early in `_0460`; admin/supervisor policies and `public_profiles` remain |
+| 7. Audit log | Not started | |
+| 8. Shared Edge Function helpers | Not started | |
+| 9. `admin-set-role` | Not started | Needs `SUPABASE_ACCESS_TOKEN` to deploy |
+| 10. Signup review & suspension | Not started | Needs `SUPABASE_ACCESS_TOKEN` to deploy |
+| 11. Frontend api layer | **Done** | |
+| 12. `useSession` + TanStack Query | **Done** | |
+| 13. Auth screens | **Done** | |
+| 14. Route wiring & AppContext migration | **Done** | |
+| 15. Seed & CI | **Partly done** | `seed.sql` written; CI workflow and README remain |
+
+### Corrections to this plan, learned during execution
+
+1. **Task 4 depends on Task 6.** `UPDATE ... WHERE` applies SELECT policies to
+   its row scan, so `profiles_select_self` must exist before any self-update
+   can match a row. Without it the update returns HTTP 200, changes nothing,
+   and reports no error.
+2. **A `WITH CHECK` subquery over `profiles` is itself RLS-filtered.** It
+   returns NULL and rejects every update. Use a `SECURITY DEFINER` helper.
+3. **`citext` is unusable under `SET search_path = ''`** — the type and its
+   operators live in the `extensions` schema. Store lowercase `text` and
+   compare with `lower()` rather than widening the search path.
+4. **Task 13's deletion of `src/pages/LoginPage.jsx` belongs in Task 14**,
+   alongside the routing rewire that stops importing it. Otherwise that commit
+   does not build.
+5. Local Supabase needs Docker, which is unavailable on this machine. Use
+   `db push --db-url <session-pooler>` and `functions deploy --use-api`. The
+   direct database host resolves to IPv6 only and is unreachable.
+
 ## Global Constraints
 
 - Every `SECURITY DEFINER` function MUST declare `SET search_path = ''` and use fully qualified table names. Omitting this is a search-path injection hole.
