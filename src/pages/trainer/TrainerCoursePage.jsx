@@ -6,7 +6,7 @@ import JourneyMap from '../../components/journey/JourneyMap';
 
 export default function TrainerCoursePage() {
   const { courseId } = useParams();
-  const { courses, currentUser, activities, quizzes, chatMessages, sendChatMessage } = useApp();
+  const { courses, currentUser, activities, chatMessages, sendChatMessage } = useApp();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('video');

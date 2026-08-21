@@ -49,6 +49,7 @@ const ROLE_CARDS = [
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedId, setSelectedId] = useState('s1');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const { login } = useApp();
   const navigate = useNavigate();
 
@@ -57,13 +58,19 @@ export default function LoginPage() {
     setSelectedId(card.defaultId);
   }
 
-  function handleLogin() {
-    if (!selectedRole) return;
-    login(selectedRole, selectedId);
-    navigate(`/${selectedRole}`);
+  // login() is async once Supabase is configured. Navigating without awaiting
+  // it meant the route guard ran before currentUser was set and bounced
+  // straight back to /login.
+  async function handleLogin() {
+    if (!selectedRole || isSigningIn) return;
+    setIsSigningIn(true);
+    try {
+      await login(selectedRole, selectedId);
+      navigate(`/${selectedRole}`);
+    } finally {
+      setIsSigningIn(false);
+    }
   }
-
-  const activeCard = ROLE_CARDS.find((c) => c.role === selectedRole);
 
   return (
     <div className="login-page">
@@ -120,12 +127,13 @@ export default function LoginPage() {
                   </select>
                   <button
                     className="btn btn-primary btn-block"
+                    disabled={isSigningIn}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleLogin();
                     }}
                   >
-                    Enter as {card.label} →
+                    {isSigningIn ? 'Signing in…' : `Enter as ${card.label} →`}
                   </button>
                 </div>
               )}

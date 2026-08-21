@@ -16,11 +16,11 @@ export default function QuizPreview() {
         // try base64
         const decoded = JSON.parse(atob(q));
         quiz = decoded;
-      } catch (_e1) {
+      } catch {
         try {
           const decoded2 = JSON.parse(decodeURIComponent(q));
           quiz = decoded2;
-        } catch (_e2) {
+        } catch {
           // ignore
         }
       }

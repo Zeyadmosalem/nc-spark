@@ -6,9 +6,7 @@ import CoursePage from './CoursePage';
 import QuizPage from './QuizPage';
 import QuizPreview from './QuizPreview';
 import ActivityPage from './ActivityPage';
-import TraineeQuizzesPage from './TraineeQuizzesPage';
 import AchievementsPage from './AchievementsPage';
-import VideosPage from './VideosPage';
 import CourseCatalog from './CourseCatalog';
 
 const NAV = [

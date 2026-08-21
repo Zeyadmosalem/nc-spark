@@ -6,7 +6,7 @@ import JourneyMap from '../../components/journey/JourneyMap';
 
 export default function CoursePage() {
   const { courseId } = useParams();
-  const { courses, currentUser, pendingCourseEnrollments, addXP, activities, quizzes, chatMessages, sendChatMessage } = useApp();
+  const { courses, currentUser, pendingCourseEnrollments, activities, chatMessages, sendChatMessage } = useApp();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('video');
@@ -53,7 +53,6 @@ export default function CoursePage() {
   }
 
   const quizAttempt = currentUser.quizAttempts?.[course.quizId];
-  const completedStages = course.stages.filter((s) => s.status === 'done').length;
   
   function handleSendChat(e) {
     e.preventDefault();

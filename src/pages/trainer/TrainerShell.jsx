@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
@@ -233,38 +232,6 @@ function Dashboard() {
         </div>
       </motion.div>
     </motion.div>
-  );
-}
-
-function CreateContentHub() {
-  const navigate = useNavigate();
-  return (
-    <div className="page-body" style={{ maxWidth: 700, margin: '0 auto' }}>
-      <p className="eyebrow">Create Content</p>
-      <h1 className="section-heading" style={{ marginBottom: '2rem' }}>What would you like to create?</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        <motion.div
-          className="card"
-          whileHover={{ scale: 1.02 }}
-          onClick={() => navigate('/trainer/create/activity')}
-          style={{ cursor: 'pointer', textAlign: 'center', padding: '2.5rem 1.5rem' }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✨</div>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>New Activity</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Create a video, reading, flashcard, matching, scenario, or file submission activity.</p>
-        </motion.div>
-        <motion.div
-          className="card"
-          whileHover={{ scale: 1.02 }}
-          onClick={() => navigate('/trainer/create/quiz')}
-          style={{ cursor: 'pointer', textAlign: 'center', padding: '2.5rem 1.5rem' }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>New Quiz</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Author MCQ, True/False, and short answer questions with a pass mark and time limit.</p>
-        </motion.div>
-      </div>
-    </div>
   );
 }
 

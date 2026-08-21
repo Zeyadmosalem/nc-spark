@@ -6,7 +6,7 @@ import JourneyMap from '../../components/journey/JourneyMap';
 
 export default function SupervisorCoursePage() {
   const { courseId } = useParams();
-  const { courses, currentUser, activities, quizzes, chatMessages, sendChatMessage, trainers } = useApp();
+  const { courses, currentUser, activities, chatMessages, sendChatMessage, trainers } = useApp();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('video');

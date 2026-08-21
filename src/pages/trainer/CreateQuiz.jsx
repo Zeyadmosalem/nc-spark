@@ -83,7 +83,7 @@ export default function CreateQuiz() {
       const link = `${window.location.origin}/trainee/quiz/preview?q=${base}`;
       navigator.clipboard.writeText(link);
       alert('Preview link copied to clipboard');
-    } catch (e) {
+    } catch {
       alert('Unable to copy link in this environment.');
     }
   }

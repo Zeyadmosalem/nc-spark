@@ -11,7 +11,7 @@ export function AppProvider({ children }) {
     try {
       const raw = localStorage.getItem('nc_quizzes');
       return raw ? JSON.parse(raw) : DEFAULT_QUIZZES;
-    } catch (e) {
+    } catch {
       return DEFAULT_QUIZZES;
     }
   });
@@ -26,10 +26,10 @@ export function AppProvider({ children }) {
   }, [theme]);
 
   useEffect(() => {
-    try { localStorage.setItem('nc_quizzes', JSON.stringify(quizzes)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('nc_quizzes', JSON.stringify(quizzes)); } catch { /* ignore */ }
   }, [quizzes]);
   const [chatMessages, setChatMessages] = useState(CHAT_MESSAGES);
-  const [videos, setVideos] = useState(VIDEOS || []);
+  const [videos] = useState(VIDEOS || []);
   const [pendingRequests, setPendingRequests] = useState(PENDING_REQUESTS);
   const [pendingCourseEnrollments, setPendingCourseEnrollments] = useState([]);
   const [pendingCourseTeachingRequests, setPendingCourseTeachingRequests] = useState([]);
@@ -132,7 +132,7 @@ export function AppProvider({ children }) {
     const email = userRecord.email;
     const password = 'Password123!'; // Default password for development sync
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       if (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed')) {
@@ -233,9 +233,15 @@ export function AppProvider({ children }) {
 
   function submitQuizResult(quizId, score, total) {
     if (!currentUser || currentUser.role !== 'trainee') return;
-    const pct = score / total;
     const quiz = quizzes[quizId];
-    const passed = pct >= quiz.passMark;
+    if (!quiz) {
+      showNotification({ type: 'error', text: 'That quiz is no longer available.' });
+      return;
+    }
+    // Fall back to the question count, and never divide by zero.
+    const outOf = total || quiz.questions?.length || 0;
+    const pct = outOf > 0 ? score / outOf : 0;
+    const passed = pct >= (quiz.passMark ?? 0.7);
     const xpGained = passed ? 30 : 10;
     addXP(xpGained);
     if (pct >= 0.9) unlockBadge('badge_sharpshooter');
@@ -489,19 +495,27 @@ export function AppProvider({ children }) {
 
     const activity = activities[activityId];
     const xpGain = activity?.xp || 10;
-    const newCompletions = [...(currentUser.activityCompletions || []), activityId];
+    const prevCompletions = currentUser.activityCompletions || [];
+    const newCompletions = [...prevCompletions, activityId];
 
     setCurrentUser((u) => ({ ...u, activityCompletions: newCompletions }));
     setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, activityCompletions: newCompletions } : s));
     addXP(xpGain);
 
-    // Check if a module is now complete
+    // A module counts as done when every one of its activities is either a
+    // recorded completion or an attempted quiz.
+    const isDone = (aId, completions) =>
+      completions.includes(aId) || Boolean(quizzes[aId] && currentUser.quizAttempts?.[aId]);
+
+    // Only announce a module that THIS activity just completed. Previously
+    // every module was re-checked on every completion, so any module already
+    // finished was re-announced each time another activity was completed.
     for (const path of learningPaths) {
       for (const mod of path.modules) {
-        const allDone = mod.activities.every((aId) =>
-          newCompletions.includes(aId) || (quizzes[aId] && currentUser.quizAttempts?.[aId])
-        );
-        if (allDone) {
+        if (!mod.activities.includes(activityId)) continue;
+        const wasComplete = mod.activities.every((aId) => isDone(aId, prevCompletions));
+        const nowComplete = mod.activities.every((aId) => isDone(aId, newCompletions));
+        if (!wasComplete && nowComplete) {
           showNotification({ type: 'milestone', text: `Module "${mod.title}" complete! 🎉` });
         }
       }
@@ -582,9 +596,8 @@ export function AppProvider({ children }) {
       userLevel, userLevelProgress,
       videos, createQuiz, assignQuizToCourse,
       submitQuizResultWithAnswers, reviewSubmission,
-      activities, learningPaths,
       completeActivity, isModuleUnlocked,
-      getTeamReport, applyForCourse, approveEnrollment,
+      getTeamReport, applyForCourse,
     }}>
       {children}
     </AppContext.Provider>
