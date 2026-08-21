@@ -14,25 +14,26 @@ export default function SupervisorCoursePage() {
   const chatScrollRef = useRef(null);
 
   const course = courses.find((c) => c.id === courseId);
+  const messages = chatMessages[courseId] || [];
+
+  // Auto-scroll chat. Must run before any early return, otherwise the hook
+  // count changes between a found and a missing course and React throws.
+  useEffect(() => {
+    if (activeTab === 'chat' && chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages.length, activeTab]);
+
   if (!course) return <div className="page-body"><p>Course not found.</p></div>;
 
   const trainer = trainers.find((t) => t.id === course.trainerId);
 
-  // Chat logic
-  const messages = chatMessages[courseId] || [];
   function handleSendChat(e) {
     e.preventDefault();
     if (!chatText.trim()) return;
     sendChatMessage(courseId, chatText.trim());
     setChatText('');
   }
-
-  // Auto-scroll chat
-  useEffect(() => {
-    if (activeTab === 'chat' && chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [messages, activeTab]);
 
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>

@@ -14,6 +14,17 @@ export default function CoursePage() {
   const chatScrollRef = useRef(null);
 
   const course = courses.find((c) => c.id === courseId);
+  const messages = chatMessages[courseId] || [];
+
+  // Auto-scroll chat. Must run before the "not found" / "not enrolled" early
+  // returns below, otherwise the hook count changes between courses and React
+  // throws "Rendered fewer hooks than expected".
+  useEffect(() => {
+    if (activeTab === 'chat' && chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages.length, activeTab]);
+
   if (!course) return <div className="page-body"><p>Course not found.</p></div>;
 
   const isEnrolled = currentUser.enrolledCourses?.includes(course.id);
@@ -44,21 +55,12 @@ export default function CoursePage() {
   const quizAttempt = currentUser.quizAttempts?.[course.quizId];
   const completedStages = course.stages.filter((s) => s.status === 'done').length;
   
-  // Chat logic
-  const messages = chatMessages[courseId] || [];
   function handleSendChat(e) {
     e.preventDefault();
     if (!chatText.trim()) return;
     sendChatMessage(courseId, chatText.trim());
     setChatText('');
   }
-
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    if (activeTab === 'chat' && chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [messages, activeTab]);
 
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
