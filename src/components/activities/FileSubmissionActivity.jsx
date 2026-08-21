@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { safeHtml } from '../../lib/sanitizeHtml';
 
 export default function FileSubmissionActivity({ activity, onComplete }) {
   const [file, setFile] = useState(null);
@@ -47,9 +48,9 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div 
+      <div
         style={{ fontSize: '1.05rem', lineHeight: 1.6, color: 'var(--text)' }}
-        dangerouslySetInnerHTML={{ __html: activity.description || 'Please upload your assignment below.' }}
+        {...safeHtml(activity.description || 'Please upload your assignment below.')}
       />
 
       <AnimatePresence mode="wait">

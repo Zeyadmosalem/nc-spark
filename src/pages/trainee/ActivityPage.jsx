@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
 import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';

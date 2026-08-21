@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
 import Sidebar from '../../components/shared/Sidebar';
-import { ADMIN_STATS, USERS } from '../../data/dummyData';
+import { ADMIN_STATS } from '../../data/dummyData';
 import ContentManager from './ContentManager';
 import UserManager from './UserManager';
 

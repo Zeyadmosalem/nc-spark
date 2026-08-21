@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { safeHtml } from '../../lib/sanitizeHtml';
 
 export default function ScenarioActivity({ activity }) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -27,10 +28,11 @@ export default function ScenarioActivity({ activity }) {
     }
   }
 
-  // Simple markdown formatting for step text
+  // Simple markdown formatting for step text. The result is sanitized before
+  // it is rendered, so trainer-authored text cannot inject active content.
   const formattedText = step.text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.*?)`/g, '<code style="background:var(--surface-alt);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em">$1</code>')
+    .replace(/`(.*?)`/g, '<code class="inline-code">$1</code>')
     .replace(/\n\n/g, '<br/><br/>');
 
   return (
@@ -39,9 +41,9 @@ export default function ScenarioActivity({ activity }) {
         Situation {currentStepIndex + 1} of {activity.steps.length}
       </div>
 
-      <div 
+      <div
         style={{ fontSize: '1.1rem', lineHeight: 1.6, color: 'var(--text)' }}
-        dangerouslySetInnerHTML={{ __html: formattedText }}
+        {...safeHtml(formattedText)}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
