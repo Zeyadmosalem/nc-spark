@@ -37,7 +37,7 @@ export function AppProvider({ children }) {
   const [trainers, setTrainers] = useState(USERS.trainers);
   const [supervisors, setSupervisors] = useState(USERS.supervisors);
   const [notification, setNotification] = useState(null);
-  const [activities] = useState(ACTIVITIES);
+  const [activities, setActivities] = useState(ACTIVITIES);
   const [learningPaths] = useState(LEARNING_PATHS);
 
   useEffect(() => {
