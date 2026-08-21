@@ -10,7 +10,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "vitest run --config vitest.db.config.js"
+    "test:db": "vitest run --config vitest.db.config.js",
+    "db:setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-docker.ps1",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:env": "node ./scripts/write-local-env.mjs",
+    "db:status": "supabase status"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.3",

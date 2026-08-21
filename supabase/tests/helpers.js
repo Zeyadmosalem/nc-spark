@@ -1,8 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+
+// Prefer a local stack when one is configured, so `supabase start` followed by
+// `npm run db:env` switches the suite to local without editing anything. Falls
+// back to the hosted dev project.
+const localPath = new URL('../../.env.test.local', import.meta.url);
+const hostedPath = new URL('../../.env.test', import.meta.url);
+const envPath = existsSync(localPath) ? localPath : hostedPath;
+
+export const TARGET = existsSync(localPath) ? 'local' : 'hosted';
 
 const env = Object.fromEntries(
-  readFileSync(new URL('../../.env.test', import.meta.url), 'utf8')
+  readFileSync(envPath, 'utf8')
     .split('\n')
     .filter((l) => l.trim() && !l.trim().startsWith('#'))
     .map((l) => {
