@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { AppProvider, useApp } from './AppContext';
+import { USERS } from '../data/dummyData';
 
-const wrapper = ({ children }) => <AppProvider>{children}</AppProvider>;
+const trainee = USERS.trainees.find((t) => t.id === 's1');
+const wrapper = ({ children }) => <AppProvider currentUser={trainee}>{children}</AppProvider>;
 
 let consoleError;
 beforeEach(() => {
@@ -15,9 +17,7 @@ afterEach(() => {
 });
 
 function signedInTrainee() {
-  const hook = renderHook(() => useApp(), { wrapper });
-  act(() => { hook.result.current.login('trainee', 's1'); });
-  return hook;
+  return renderHook(() => useApp(), { wrapper });
 }
 
 describe('completeActivity milestone notifications', () => {

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useEffect } from 'react';
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { AppProvider, useApp } from '../../context/AppContext';
+import { AppProvider } from '../../context/AppContext';
+import { USERS } from '../../data/dummyData';
 import CoursePage from './CoursePage';
 
 // Regression cover for the conditional-hook crash. CoursePage returned early
@@ -14,15 +14,8 @@ import CoursePage from './CoursePage';
 // Trainee s1 is enrolled in c1 and c3, but NOT c2 — so c1 -> c2 crosses the
 // guard boundary, which is exactly the case that used to crash.
 
-// Mirrors the route guard in App.jsx: CoursePage is only ever mounted once a
-// trainee is signed in, so the harness gates on that too. Without the gate we
-// would be testing a state the router never actually produces.
-function SignedInAs({ role, id, children }) {
-  const { login, currentUser } = useApp();
-  useEffect(() => { if (!currentUser) login(role, id); }, [currentUser, login, role, id]);
-  if (!currentUser) return null;
-  return children;
-}
+// Auth now lives in useSession; AppContext receives the profile as a prop.
+const trainee = USERS.trainees.find((t) => t.id === 's1');
 
 function NavProbe() {
   const navigate = useNavigate();
@@ -37,15 +30,13 @@ function NavProbe() {
 
 function renderAt(path) {
   return render(
-    <AppProvider>
-      <SignedInAs role="trainee" id="s1">
-        <MemoryRouter initialEntries={[path]}>
-          <NavProbe />
-          <Routes>
-            <Route path="/course/:courseId" element={<CoursePage />} />
-          </Routes>
-        </MemoryRouter>
-      </SignedInAs>
+    <AppProvider currentUser={trainee}>
+      <MemoryRouter initialEntries={[path]}>
+        <NavProbe />
+        <Routes>
+          <Route path="/course/:courseId" element={<CoursePage />} />
+        </Routes>
+      </MemoryRouter>
     </AppProvider>
   );
 }
