@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and component tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # These were real vulnerabilities in this codebase, not hypotheticals.
+      # A grep is cheap insurance against them being reintroduced.
+      - name: Guard against reintroduced credentials
+        run: |
+          if grep -rn "Password123" src/; then
+            echo "::error::Hardcoded development password found in src/"
+            exit 1
+          fi
+          if grep -rn "dangerouslySetInnerHTML" src/ --include=*.jsx; then
+            echo "::error::Raw dangerouslySetInnerHTML in a component; use safeHtml() from src/lib/sanitizeHtml.js"
+            exit 1
+          fi
+          echo "No reintroduced credentials or unsanitized HTML."
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+  # RLS and Edge Function tests need Supabase credentials and are not run here.
+  # Run `npm run test:db` locally before opening a pull request that touches
+  # supabase/migrations or supabase/functions.
+  database-tests-reminder:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Warn if backend changed without a local db test run
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD \
+             | grep -qE '^supabase/(migrations|functions)/'; then
+            echo "::warning::This PR changes migrations or Edge Functions. Run 'npm run test:db' locally before merging."
+          else
+            echo "No backend changes in this PR."
+          fi
