@@ -23,9 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secrets and local Supabase state
-.env.test
-.env.local
+# Secrets and local Supabase state.
+# Deny every .env variant and re-admit only the committed templates, so a new
+# file such as .env or .env.production cannot be added by accident.
+.env*
+!.env*.example
 supabase/.temp/
 supabase/.branches/
-.env.test.local

@@ -9,7 +9,10 @@ const mockAuth = {
   onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
 };
 
-vi.mock('./client', () => ({ supabase: { auth: mockAuth }, isConfigured: true }));
+const client = { auth: mockAuth };
+vi.mock('./client', () => ({
+  supabase: client, isConfigured: true, requireClient: () => client,
+}));
 
 const { signIn, signUp, signOut, resetPassword } = await import('./auth');
 const { toCamel } = await import('./profiles');

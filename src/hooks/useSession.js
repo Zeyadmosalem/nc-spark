@@ -30,7 +30,11 @@ export function useSession() {
 
   useEffect(() => {
     let active = true;
-    getSession().then((s) => { if (active) load(s); });
+    // A rejected session lookup must still settle the hook. Left unhandled it
+    // pins status at 'loading' and the app never renders anything but a spinner.
+    getSession()
+      .catch(() => null)
+      .then((s) => { if (active) load(s); });
     const unsubscribe = onAuthChange((s) => { if (active) load(s); });
     return () => { active = false; unsubscribe?.(); };
   }, [load]);
