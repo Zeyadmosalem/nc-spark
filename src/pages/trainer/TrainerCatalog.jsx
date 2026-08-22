@@ -1,5 +1,54 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { usePendingEnrollments, useDecideEnrollment } from '../../hooks/useApprovals';
+
+function EnrollmentQueue() {
+  const { data: queue, isLoading } = usePendingEnrollments();
+  const decide = useDecideEnrollment();
+
+  if (isLoading || !queue || queue.length === 0) return null;
+
+  return (
+    <div className="card no-hover" style={{ marginBottom: '1.5rem' }}>
+      <div className="card-title">📥 Pending Enrolment Requests ({queue.length})</div>
+      {decide.error && (
+        <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+          {decide.error.message}
+        </p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+        {queue.map((req) => (
+          <div
+            key={req.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
+              padding: '0.75rem', borderRadius: 'var(--r-md)', background: 'var(--surface-alt)',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <strong>{req.traineeName}</strong>
+              <span style={{ color: 'var(--text-2)' }}> → {req.courseTitle}</span>
+            </div>
+            <button
+              className="btn btn-success btn-sm"
+              disabled={decide.isPending}
+              onClick={() => decide.mutate({ enrollmentId: req.id, decision: 'approve' })}
+            >
+              Approve
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={decide.isPending}
+              onClick={() => decide.mutate({ enrollmentId: req.id, decision: 'deny' })}
+            >
+              Deny
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function TrainerCatalog() {
   const { courses, currentUser, requestCourseTeaching, pendingCourseTeachingRequests } = useApp();
@@ -17,6 +66,7 @@ export default function TrainerCatalog() {
 
   return (
     <div className="page-body">
+      <EnrollmentQueue />
       <p className="eyebrow">Discover</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 className="section-heading" style={{ margin: 0 }}>Course Catalog</h1>

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
 import Sidebar from '../../components/shared/Sidebar';
 import TraineeDashboard from './TraineeDashboard';
 import CoursePage from './CoursePage';
@@ -19,8 +20,16 @@ const NAV = [
 ];
 
 function MyCoursesPage() {
-  const { currentUser, courses } = useApp();
-  const enrolled = courses.filter((c) => currentUser.enrolledCourses?.includes(c.id));
+  const { data: enrollments, isLoading } = useMyEnrollments();
+  const { data: courses } = useCourses();
+
+  if (isLoading) return <div className="page-body" role="status">Loading your courses…</div>;
+
+  const byId = new Map((courses ?? []).map((c) => [c.id, c]));
+  const active = (enrollments ?? []).filter(
+    (e) => e.status === 'active' || e.status === 'completed'
+  );
+
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div>
@@ -28,29 +37,55 @@ function MyCoursesPage() {
         <h1 className="section-heading">Learning Library</h1>
         <p className="section-sub">All your enrolled courses in one place.</p>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {enrolled.map((course) => (
-          <div key={course.id} className="course-card">
-            <div className="course-card-header" style={{ background: `linear-gradient(145deg, ${course.color}dd, ${course.color}aa)` }}>
-              <div className="course-card-icon">{course.icon}</div>
-              <div className="course-card-title">{course.title}</div>
-              <div className="course-card-subtitle">{course.subtitle}</div>
-            </div>
-            <div className="course-card-body">
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.5 }}>{course.description}</p>
-              <div>
-                <div className="course-progress-label"><span>Progress</span><span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>{course.progress}%</span></div>
-                <div className="progress-track"><div className="progress-fill" style={{ width: `${course.progress}%` }} /></div>
+      {active.length === 0 ? (
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
+            You are not enrolled in any course yet.
+          </p>
+          <Link to="/trainee/catalog" className="btn btn-primary">Browse the catalog</Link>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          {active.map((enrollment) => {
+            const course = byId.get(enrollment.courseId);
+            if (!course) return null;
+            const accent = course.color || '#002F6C';
+            return (
+              <div key={enrollment.id} className="course-card">
+                <div className="course-card-header"
+                     style={{ background: `linear-gradient(145deg, ${accent}dd, ${accent}aa)` }}>
+                  <div className="course-card-icon">{course.icon || '📘'}</div>
+                  <div className="course-card-title">{course.title}</div>
+                  <div className="course-card-subtitle">{course.subtitle}</div>
+                </div>
+                <div className="course-card-body">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                    {course.description}
+                  </p>
+                  <div>
+                    <div className="course-progress-label">
+                      <span>Progress</span>
+                      <span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>
+                        {enrollment.percent}%
+                      </span>
+                    </div>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${enrollment.percent}%` }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="course-card-footer">
+                  <Link to={`/trainee/courses/${course.id}`}
+                        className="btn btn-primary btn-block btn-sm"
+                        style={{ display: 'flex', textDecoration: 'none', justifyContent: 'center', alignItems: 'center' }}>
+                    Open Course →
+                  </Link>
+                </div>
               </div>
-            </div>
-            <div className="course-card-footer">
-              <Link to={`/trainee/courses/${course.id}`} className="btn btn-primary btn-block btn-sm" style={{ display: 'flex', textDecoration: 'none', justifyContent: 'center', alignItems: 'center' }}>
-                Open Course →
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

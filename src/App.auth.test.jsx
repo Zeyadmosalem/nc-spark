@@ -1,8 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const mocks = vi.hoisted(() => ({ useSession: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  useSession: vi.fn(),
+  listCourses: vi.fn(async () => []),
+  getCourseOutline: vi.fn(async () => null),
+  myEnrollments: vi.fn(async () => []),
+  applyForCourse: vi.fn(),
+}));
 vi.mock('./hooks/useSession', () => ({ useSession: mocks.useSession }));
+// The trainee shell now reads the catalog from the server. Supabase is absent
+// under test, so the api layer is stubbed and a QueryClient is supplied.
+vi.mock('./api/courses', () => ({
+  listCourses: mocks.listCourses, getCourseOutline: mocks.getCourseOutline,
+}));
+vi.mock('./api/enrollments', () => ({
+  myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,
+}));
 
 const { default: App } = await import('./App');
 const { AppProvider } = await import('./context/AppContext');
@@ -16,7 +31,12 @@ function session(status, profile = null) {
 
 function renderApp(path = '/', currentUser = null) {
   window.history.pushState({}, '', path);
-  return render(<AppProvider currentUser={currentUser}><App /></AppProvider>);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AppProvider currentUser={currentUser}><App /></AppProvider>
+    </QueryClientProvider>
+  );
 }
 
 let consoleError;
@@ -65,6 +85,12 @@ describe('routing by session status', () => {
     session('active', { ...trainee, status: 'active' });
     renderApp('/trainee/courses', trainee);
     expect(await screen.findByText(/Learning Library/i)).toBeInTheDocument();
+  });
+
+  it('shows the empty state when a trainee has no enrollments', async () => {
+    session('active', { ...trainee, status: 'active' });
+    renderApp('/trainee/courses', trainee);
+    expect(await screen.findByText(/not enrolled in any course yet/i)).toBeInTheDocument();
   });
 
   it('REDIRECTS a trainee away from the admin area', async () => {
