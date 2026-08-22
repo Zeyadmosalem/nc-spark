@@ -56,6 +56,13 @@ const unlocked = async (moduleId) => {
   return data;
 };
 
+const svcUnlocked = async (moduleId) => {
+  const { data } = await svc.rpc('is_module_unlocked_for', {
+    enrollment: enrolId, module: moduleId,
+  });
+  return data;
+};
+
 describe('app.is_module_unlocked', () => {
   it('a module with no prerequisite is unlocked from the start', async () => {
     expect(await unlocked(modA)).toBe(true);
@@ -112,6 +119,35 @@ describe('app.is_module_unlocked', () => {
       enrollment: enrolId, module: modA,
     });
     expect(data).toBeNull();
+  });
+});
+
+// The probe derives the caller from auth.uid(), which is NULL for service_role,
+// and service_role has no USAGE on schema app either. Edge Functions therefore
+// need their own entry point: they act on behalf of a trainee they have already
+// authorised themselves, so ownership is checked before the call, not inside it.
+describe('is_module_unlocked_for (service-role entry point)', () => {
+  it('answers for any enrollment when called by service_role', async () => {
+    expect(await svcUnlocked(modA)).toBe(true);
+  });
+
+  it('reports a locked module as locked', async () => {
+    const { data: locked } = await svc.from('modules')
+      .insert({ course_id: courseId, title: 'Svc Locked', position: 20 }).select().single();
+    await svc.from('activities').insert({
+      module_id: locked.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
+    });
+    const { data: after } = await svc.from('modules')
+      .insert({ course_id: courseId, title: 'Svc After', position: 21, unlock_after_module_id: locked.id })
+      .select().single();
+    expect(await svcUnlocked(after.id)).toBe(false);
+  });
+
+  it('is NOT callable by an ordinary signed-in user', async () => {
+    const { error } = await cTrainee.rpc('is_module_unlocked_for', {
+      enrollment: enrolId, module: modA,
+    });
+    expect(error).not.toBeNull();
   });
 });
 
