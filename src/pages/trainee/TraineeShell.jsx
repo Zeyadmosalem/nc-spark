@@ -20,14 +20,19 @@ const NAV = [
   { to: '/trainee/support', icon: '🎧', label: 'Support' },
 ];
 
-function MyCoursesPage() {
+export function MyCoursesPage() {
   const { data: enrollments, isLoading, error } = useMyEnrollments();
-  const { data: courses, error: coursesError } = useCourses();
+  const { data: courses, isLoading: coursesLoading, error: coursesError } = useCourses();
 
-  if (isLoading) return <div className="page-body" role="status">Loading your courses…</div>;
+  // Both queries are needed to draw a single card: the enrollment supplies
+  // progress, the course supplies its name. Waiting on only one of them means
+  // every card misses its course lookup and the page renders blank mid-flight.
+  if (isLoading || coursesLoading) {
+    return <div className="page-body" role="status">Loading your courses…</div>;
+  }
 
-  // Otherwise a failed load is indistinguishable from "you are not enrolled in
-  // any course yet", and the trainee is told to go browse the catalog.
+  // A failure is otherwise indistinguishable from "you are not enrolled in any
+  // course yet", and the trainee is sent off to browse the catalog.
   const failure = error ?? coursesError;
   if (failure) {
     return (

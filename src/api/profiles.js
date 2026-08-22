@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { supabase, requireClient } from './client';
 import { unwrap, invokeFn, currentUserId } from './helpers';
 
 /** The single place snake_case becomes camelCase. */
@@ -15,7 +15,13 @@ export function toCamel(row) {
   };
 }
 
+/**
+ * Runs on first paint from useSession, so — like getSession — it reports
+ * "nobody is signed in" rather than throwing. The readable configuration
+ * error belongs on an action the user took, not on page load.
+ */
 export async function fetchMyProfile() {
+  if (!supabase) return null;
   const { data } = await supabase.auth.getSession();
   const id = data?.session?.user?.id;
   if (!id) return null;
@@ -25,7 +31,7 @@ export async function fetchMyProfile() {
 
 export async function updateMyProfile({ name, avatar }) {
   const id = await currentUserId();
-  return toCamel(unwrap(await supabase
+  return toCamel(unwrap(await requireClient()
     .from('profiles').update({ name, avatar }).eq('id', id).select().single()));
 }
 

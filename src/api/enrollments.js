@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { requireClient } from './client';
 import { unwrap, invokeFn, currentUserId } from './helpers';
 
 export function enrollmentToCamel(row) {
@@ -16,7 +16,7 @@ export function enrollmentToCamel(row) {
 
 /** The caller's own enrollments, with derived progress joined in. */
 export async function myEnrollments() {
-  const rows = unwrap(await supabase
+  const rows = unwrap(await requireClient()
     .from('enrollments')
     .select('*, enrollment_progress(percent)'));
   return (rows ?? []).map((r) =>
@@ -29,7 +29,7 @@ export async function myEnrollments() {
  * always lands as pending.
  */
 export async function applyForCourse(courseId) {
-  const row = unwrap(await supabase.from('enrollments')
+  const row = unwrap(await requireClient().from('enrollments')
     .insert({ course_id: courseId, trainee_id: await currentUserId() })
     .select().single());
   return enrollmentToCamel(row);
@@ -37,7 +37,7 @@ export async function applyForCourse(courseId) {
 
 /** Pending applications visible to the caller: their courses, or all for an admin. */
 export async function pendingEnrollments() {
-  const rows = unwrap(await supabase
+  const rows = unwrap(await requireClient()
     .from('enrollments')
     .select('*, profiles!enrollments_trainee_id_fkey(name, avatar), courses(title)')
     .eq('status', 'pending'));
