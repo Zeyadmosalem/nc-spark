@@ -1,11 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { USERS, COURSES, QUIZZES as DEFAULT_QUIZZES, CHAT_MESSAGES, PENDING_REQUESTS, getLevel, getLevelProgress, VIDEOS, ACTIVITIES, LEARNING_PATHS } from '../data/dummyData';
-import { supabase } from '../lib/supabaseClient';
 
 const AppContext = createContext(null);
 
-export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+export function AppProvider({ children, currentUser = null }) {
+  // Auth now lives in useSession. This local copy exists only so the
+  // not-yet-migrated mock mutations (XP, badges, quiz attempts) keep
+  // working until each subsystem moves to the backend.
+  const [localUser, setLocalUser] = useState(currentUser);
+  const setCurrentUser = setLocalUser;
+  useEffect(() => { setLocalUser(currentUser); }, [currentUser]);
   const [courses, setCourses] = useState(COURSES);
   const [quizzes, setQuizzes] = useState(() => {
     try {
@@ -40,156 +44,9 @@ export function AppProvider({ children }) {
   const [activities, setActivities] = useState(ACTIVITIES);
   const [learningPaths] = useState(LEARNING_PATHS);
 
-  useEffect(() => {
-    if (!supabase) return;
-
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
-
-  async function fetchUserProfile(authUser) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
-      if (data) {
-        // Map postgres field snake_case to frontend camelCase
-        const mappedUser = {
-          id: data.id,
-          role: data.role,
-          name: data.name,
-          avatar: data.avatar,
-          email: data.email,
-          xp: data.xp || 0,
-          streak: data.streak || 0,
-          badges: data.badges || [],
-          managedTrainers: data.managed_trainers || [],
-        };
-        setCurrentUser(mappedUser);
-      } else if (error) {
-        console.error("Error fetching user profile:", error.message);
-      }
-    } catch (e) {
-      console.error("Profile fetch exception:", e);
-    }
-  }
-
   function showNotification(msg) {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3500);
-  }
-
-  async function login(role, id) {
-    if (!supabase) {
-      if (role === 'admin') { setCurrentUser({ ...USERS.admin }); return; }
-      if (role === 'supervisor') {
-        const sv = supervisors.find((s) => s.id === id) || supervisors[0];
-        setCurrentUser({ ...sv });
-        return;
-      }
-      if (role === 'trainer') {
-        const t = trainers.find((t) => t.id === id) || trainers[0];
-        setCurrentUser({ ...t });
-        return;
-      }
-      if (role === 'trainee') {
-        const s = trainees.find((s) => s.id === id) || trainees[0];
-        setCurrentUser({ ...s });
-        return;
-      }
-      return;
-    }
-
-    // Supabase Auth Integration with local dev sync
-    let userRecord = null;
-    if (role === 'admin') userRecord = USERS.admin;
-    else if (role === 'supervisor') userRecord = supervisors.find((s) => s.id === id) || supervisors[0];
-    else if (role === 'trainer') userRecord = trainers.find((t) => t.id === id) || trainers[0];
-    else if (role === 'trainee') userRecord = trainees.find((t) => t.id === id) || trainees[0];
-
-    if (!userRecord) return;
-
-    const email = userRecord.email;
-    const password = 'Password123!'; // Default password for development sync
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      if (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed')) {
-        showNotification({ type: 'info', text: 'Registering dev account in Supabase...' });
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: userRecord.name,
-              avatar: userRecord.avatar,
-              role: userRecord.role
-            }
-          }
-        });
-
-        if (signUpError) {
-          showNotification({ type: 'error', text: `Auth signup failed: ${signUpError.message}` });
-          return;
-        }
-
-        const newUser = signUpData.user;
-        if (newUser) {
-          const profileData = {
-            id: newUser.id,
-            role: userRecord.role,
-            name: userRecord.name,
-            avatar: userRecord.avatar,
-            email: userRecord.email,
-            xp: userRecord.xp || 0,
-            streak: userRecord.streak || 0,
-            badges: userRecord.badges || [],
-            managed_trainers: userRecord.managedTrainers || []
-          };
-
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert(profileData);
-
-          if (profileError) {
-            console.error("Failed to insert profile:", profileError.message);
-          }
-          
-          await supabase.auth.signInWithPassword({ email, password });
-        }
-      } else {
-        showNotification({ type: 'error', text: `Auth failed: ${error.message}` });
-      }
-    }
-  }
-
-  async function logout() {
-    if (supabase) {
-      await supabase.auth.signOut();
-    } else {
-      setCurrentUser(null);
-    }
   }
 
   function toggleTheme() {
@@ -197,42 +54,42 @@ export function AppProvider({ children }) {
   }
 
   function addXP(amount) {
-    if (!currentUser || currentUser.role !== 'trainee') return;
-    const prevLevel = getLevel(currentUser.xp);
-    const newXP = currentUser.xp + amount;
+    if (!localUser || localUser.role !== 'trainee') return;
+    const prevLevel = getLevel(localUser.xp);
+    const newXP = localUser.xp + amount;
     const newLevel = getLevel(newXP);
     const leveledUp = prevLevel.label !== newLevel.label;
     setCurrentUser((u) => ({ ...u, xp: newXP }));
-    setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, xp: newXP } : s));
+    setTrainees((prev) => prev.map((s) => s.id === localUser.id ? { ...s, xp: newXP } : s));
     showNotification({ type: leveledUp ? 'levelup' : 'xp', amount, newLevel: newLevel.label });
   }
 
   function unlockBadge(badgeId) {
-    if (!currentUser || currentUser.role !== 'trainee') return;
-    if (currentUser.badges.includes(badgeId)) return;
-    const newBadges = [...currentUser.badges, badgeId];
+    if (!localUser || localUser.role !== 'trainee') return;
+    if (localUser.badges.includes(badgeId)) return;
+    const newBadges = [...localUser.badges, badgeId];
     setCurrentUser((u) => ({ ...u, badges: newBadges }));
-    setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, badges: newBadges } : s));
+    setTrainees((prev) => prev.map((s) => s.id === localUser.id ? { ...s, badges: newBadges } : s));
     showNotification({ type: 'badge', badgeId });
   }
 
   function sendChatMessage(courseId, text) {
-    if (!currentUser) return;
+    if (!localUser) return;
     const newMsg = {
       id: `m${Date.now()}`,
-      userId: currentUser.id,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      role: currentUser.role,
+      userId: localUser.id,
+      name: localUser.name,
+      avatar: localUser.avatar,
+      role: localUser.role,
       text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isTrainer: currentUser.role === 'trainer',
+      isTrainer: localUser.role === 'trainer',
     };
     setChatMessages((prev) => ({ ...prev, [courseId]: [...(prev[courseId] || []), newMsg] }));
   }
 
   function submitQuizResult(quizId, score, total) {
-    if (!currentUser || currentUser.role !== 'trainee') return;
+    if (!localUser || localUser.role !== 'trainee') return;
     const quiz = quizzes[quizId];
     if (!quiz) {
       showNotification({ type: 'error', text: 'That quiz is no longer available.' });
@@ -246,10 +103,10 @@ export function AppProvider({ children }) {
     addXP(xpGained);
     if (pct >= 0.9) unlockBadge('badge_sharpshooter');
     if (pct >= 1.0) unlockBadge('badge_perfect');
-    const existing = currentUser.quizAttempts?.[quizId];
-    const newAttempts = { ...currentUser.quizAttempts, [quizId]: { attempts: (existing?.attempts || 0) + 1, score: Math.round(pct * 100), secondAttemptRequested: false, secondAttemptApproved: false } };
+    const existing = localUser.quizAttempts?.[quizId];
+    const newAttempts = { ...localUser.quizAttempts, [quizId]: { attempts: (existing?.attempts || 0) + 1, score: Math.round(pct * 100), secondAttemptRequested: false, secondAttemptApproved: false } };
     setCurrentUser((u) => ({ ...u, quizAttempts: newAttempts }));
-    setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, quizAttempts: newAttempts } : s));
+    setTrainees((prev) => prev.map((s) => s.id === localUser.id ? { ...s, quizAttempts: newAttempts } : s));
     
     // Auto complete the stage in the course if passed
     if (passed) {
@@ -265,8 +122,8 @@ export function AppProvider({ children }) {
   }
 
   function applyForCourse(courseId) {
-    if (!currentUser || currentUser.role !== 'trainee') return;
-    setPendingCourseEnrollments(prev => [...prev, { traineeId: currentUser.id, courseId, requestedAt: new Date().toISOString() }]);
+    if (!localUser || localUser.role !== 'trainee') return;
+    setPendingCourseEnrollments(prev => [...prev, { traineeId: localUser.id, courseId, requestedAt: new Date().toISOString() }]);
     showNotification({ type: 'info', text: 'Enrollment request sent to trainer.' });
   }
 
@@ -279,7 +136,7 @@ export function AppProvider({ children }) {
       return t;
     }));
     // If current user is the trainee being approved (e.g. for mock testing), update them too
-    if (currentUser?.id === traineeId) {
+    if (localUser?.id === traineeId) {
       setCurrentUser(u => ({ ...u, enrolledCourses: [...(u.enrolledCourses || []), courseId] }));
     }
     showNotification({ type: 'info', text: 'Trainee enrolled successfully.' });
@@ -287,8 +144,8 @@ export function AppProvider({ children }) {
 
   // Trainer Teaching Requests
   function requestCourseTeaching(courseId) {
-    if (!currentUser || currentUser.role !== 'trainer') return;
-    setPendingCourseTeachingRequests(prev => [...prev, { trainerId: currentUser.id, trainerName: currentUser.name, courseId, requestedAt: new Date().toISOString() }]);
+    if (!localUser || localUser.role !== 'trainer') return;
+    setPendingCourseTeachingRequests(prev => [...prev, { trainerId: localUser.id, trainerName: localUser.name, courseId, requestedAt: new Date().toISOString() }]);
     showNotification({ type: 'info', text: 'Request to teach course submitted to Admin.' });
   }
 
@@ -310,8 +167,8 @@ export function AppProvider({ children }) {
     // store submission record for trainer review
     const submission = {
       id: `sub_${Date.now()}`,
-      traineeId: currentUser.id,
-      traineeName: currentUser.name,
+      traineeId: localUser.id,
+      traineeName: localUser.name,
       answers,
       score: Math.round((score / (total || 1)) * 100),
       createdAt: new Date().toISOString(),
@@ -350,24 +207,24 @@ export function AppProvider({ children }) {
   }
 
   function requestSecondAttempt(quizId) {
-    if (!currentUser) return;
+    if (!localUser) return;
     const quiz = quizzes[quizId];
     const course = courses.find((c) => c.quizId === quizId);
     const newReq = {
       id: `req${Date.now()}`,
-      traineeId: currentUser.id,
-      traineeName: currentUser.name,
-      avatar: currentUser.avatar,
+      traineeId: localUser.id,
+      traineeName: localUser.name,
+      avatar: localUser.avatar,
       quizId,
       quizTitle: quiz.title,
       courseTitle: course?.title || '',
-      score: currentUser.quizAttempts?.[quizId]?.score || 0,
+      score: localUser.quizAttempts?.[quizId]?.score || 0,
       requestedAt: new Date().toISOString().split('T')[0],
     };
     setPendingRequests((prev) => [...prev, newReq]);
-    const updated = { ...currentUser.quizAttempts, [quizId]: { ...currentUser.quizAttempts[quizId], secondAttemptRequested: true } };
+    const updated = { ...localUser.quizAttempts, [quizId]: { ...localUser.quizAttempts[quizId], secondAttemptRequested: true } };
     setCurrentUser((u) => ({ ...u, quizAttempts: updated }));
-    setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, quizAttempts: updated } : s));
+    setTrainees((prev) => prev.map((s) => s.id === localUser.id ? { ...s, quizAttempts: updated } : s));
     showNotification({ type: 'info', text: 'Second attempt request sent to your trainer.' });
   }
 
@@ -490,22 +347,22 @@ export function AppProvider({ children }) {
 
   // Activity completion
   function completeActivity(activityId) {
-    if (!currentUser || currentUser.role !== 'trainee') return;
-    if (currentUser.activityCompletions?.includes(activityId)) return;
+    if (!localUser || localUser.role !== 'trainee') return;
+    if (localUser.activityCompletions?.includes(activityId)) return;
 
     const activity = activities[activityId];
     const xpGain = activity?.xp || 10;
-    const prevCompletions = currentUser.activityCompletions || [];
+    const prevCompletions = localUser.activityCompletions || [];
     const newCompletions = [...prevCompletions, activityId];
 
     setCurrentUser((u) => ({ ...u, activityCompletions: newCompletions }));
-    setTrainees((prev) => prev.map((s) => s.id === currentUser.id ? { ...s, activityCompletions: newCompletions } : s));
+    setTrainees((prev) => prev.map((s) => s.id === localUser.id ? { ...s, activityCompletions: newCompletions } : s));
     addXP(xpGain);
 
     // A module counts as done when every one of its activities is either a
     // recorded completion or an attempted quiz.
     const isDone = (aId, completions) =>
-      completions.includes(aId) || Boolean(quizzes[aId] && currentUser.quizAttempts?.[aId]);
+      completions.includes(aId) || Boolean(quizzes[aId] && localUser.quizAttempts?.[aId]);
 
     // Only announce a module that THIS activity just completed. Previously
     // every module was re-checked on every completion, so any module already
@@ -533,9 +390,9 @@ export function AppProvider({ children }) {
     const prereq = path.modules.find((m) => m.id === mod.unlockAfter);
     if (!prereq) return true;
 
-    const completions = currentUser?.activityCompletions || [];
+    const completions = localUser?.activityCompletions || [];
     return prereq.activities.every((aId) =>
-      completions.includes(aId) || (quizzes[aId] && currentUser?.quizAttempts?.[aId])
+      completions.includes(aId) || (quizzes[aId] && localUser?.quizAttempts?.[aId])
     );
   }
 
@@ -566,12 +423,12 @@ export function AppProvider({ children }) {
     return { supervisor, trainerReports };
   }
 
-  const userLevel = currentUser?.role === 'trainee' ? getLevel(currentUser.xp) : null;
-  const userLevelProgress = currentUser?.role === 'trainee' ? getLevelProgress(currentUser.xp) : 0;
+  const userLevel = localUser?.role === 'trainee' ? getLevel(localUser.xp) : null;
+  const userLevelProgress = localUser?.role === 'trainee' ? getLevelProgress(localUser.xp) : 0;
 
   return (
     <AppContext.Provider value={{
-      currentUser, login, logout,
+      currentUser: localUser,
       courses, quizzes, chatMessages, activities, learningPaths,
       trainees, trainers, supervisors, pendingRequests, pendingCourseEnrollments, pendingCourseTeachingRequests,
       addXP, unlockBadge, sendChatMessage,

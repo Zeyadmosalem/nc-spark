@@ -10,6 +10,61 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-21-nc-spark-backend-design.md`
 
+## Progress
+
+| Task | Status | Notes |
+|---|---|---|
+| 1. Scaffolding & test harness | **Done** | Adapted for a hosted dev project; Docker is unavailable |
+| 2. Enums & profile tables | **Done** | |
+| 3. Domain provisioning | **Done** | `citext` replaced with lowercase `text` (see below) |
+| 4. Privilege escalation guard | **Done** | Needed two extra migrations, `_0450` and `_0460` |
+| 5. RLS helpers & supervisor hierarchy | **Done** | Reused `app.my_role()` rather than adding `app.current_role()` |
+| 6. Profile read visibility | **Done** | Split across `_0460` and `_0600` |
+| 7. Audit log | **Done** | Needed `_0750` to drop the actor FK (see correction 6) |
+| 8. Shared Edge Function helpers | **Done** | Verified by deploying, since `functions serve` needs Docker |
+| 9. `admin-set-role` | **Done** | Deployed and tested |
+| 10. Signup review & suspension | **Done** | Deployed and tested |
+| 11. Frontend api layer | **Done** | |
+| 12. `useSession` + TanStack Query | **Done** | |
+| 13. Auth screens | **Done** | |
+| 14. Route wiring & AppContext migration | **Done** | |
+| 15. Seed & CI | **Done** | `seed.sql`, CI workflow and README all in place |
+
+### Corrections to this plan, learned during execution
+
+1. **Task 4 depends on Task 6.** `UPDATE ... WHERE` applies SELECT policies to
+   its row scan, so `profiles_select_self` must exist before any self-update
+   can match a row. Without it the update returns HTTP 200, changes nothing,
+   and reports no error.
+2. **A `WITH CHECK` subquery over `profiles` is itself RLS-filtered.** It
+   returns NULL and rejects every update. Use a `SECURITY DEFINER` helper.
+3. **`citext` is unusable under `SET search_path = ''`** — the type and its
+   operators live in the `extensions` schema. Store lowercase `text` and
+   compare with `lower()` rather than widening the search path.
+4. **Task 13's deletion of `src/pages/LoginPage.jsx` belongs in Task 14**,
+   alongside the routing rewire that stops importing it. Otherwise that commit
+   does not build.
+5. Local Supabase needs Docker, which is unavailable on this machine. Use
+   `db push --db-url <session-pooler>` and `functions deploy --use-api`. The
+   direct database host resolves to IPv6 only and is unreachable.
+6. **An `ON DELETE SET NULL` foreign key into an append-only table makes the
+   referenced rows undeletable.** SET NULL is an UPDATE, which the immutability
+   trigger refuses, so the whole delete fails — reported as an empty error
+   object. Audit records are snapshots: drop the FK and denormalise instead.
+7. **Append-only tables cannot be cleaned between test runs.** Any lookup by a
+   fixed label matches rows from previous runs and `.single()` returns null.
+   Scope every audit assertion to a per-run unique value.
+8. **`functions deploy --use-api` works without Docker**, and uploads `_shared/`
+   alongside each function automatically.
+
+## Status: M1 complete
+
+All 15 tasks done. 82 frontend tests, 97 database tests, 0 lint errors,
+0 vulnerabilities, clean build. Deferred by design: the JWT custom-claims hook
+(§3.2 of the spec — `useSession` reads status from the database instead, which
+is strictly more correct) and an admin UI for the pending-signup queue, which
+belongs with the other admin screens in M2.
+
 ## Global Constraints
 
 - Every `SECURITY DEFINER` function MUST declare `SET search_path = ''` and use fully qualified table names. Omitting this is a search-path injection hole.

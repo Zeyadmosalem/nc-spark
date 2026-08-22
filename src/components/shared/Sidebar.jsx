@@ -1,14 +1,20 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
+import { signOut } from '../../api/auth';
 
 export default function Sidebar({ navItems, footerExtra }) {
-  const { currentUser, logout, pendingRequests, theme, toggleTheme } = useApp();
+  const { currentUser, pendingRequests, theme, toggleTheme } = useApp();
   const navigate = useNavigate();
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
+  async function handleLogout() {
+    // useSession picks up the auth change and App routes back to /login,
+    // but navigating explicitly keeps the transition immediate.
+    try {
+      await signOut();
+    } finally {
+      navigate('/login');
+    }
   }
 
   return (
