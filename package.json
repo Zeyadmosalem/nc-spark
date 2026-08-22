@@ -16,7 +16,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:env": "node ./scripts/write-local-env.mjs",
-    "db:status": "supabase status"
+    "db:status": "supabase status",
+    "db:seed-catalog": "node ./scripts/seed-catalog.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.3",
