@@ -1,66 +1,80 @@
-import { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useCourses, useMyEnrollments, useApplyForCourse } from '../../hooks/useCourses';
 
 export default function CourseCatalog() {
-  const { courses, currentUser, applyForCourse, pendingCourseEnrollments } = useApp();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { data: courses, isLoading, error } = useCourses();
+  const { data: enrollments } = useMyEnrollments();
+  const apply = useApplyForCourse();
 
-  // Filter out courses the trainee is already enrolled in
-  const availableCourses = courses.filter(
-    (c) => !currentUser.enrolledCourses?.includes(c.id)
-  );
+  if (isLoading) {
+    return <div className="page-body" role="status">Loading courses…</div>;
+  }
 
-  const filtered = availableCourses.filter(c => 
-    c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (error) {
+    return (
+      <div className="page-body">
+        <div className="card no-hover" role="alert" style={{ padding: '2rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--brand-accent)' }}>Could not load the catalog: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const byCourse = new Map((enrollments ?? []).map((e) => [e.courseId, e]));
+  // Anything already active or completed belongs in My Courses, not here.
+  const available = (courses ?? []).filter((c) => {
+    const status = byCourse.get(c.id)?.status;
+    return status !== 'active' && status !== 'completed';
+  });
 
   return (
-    <div className="page-body">
-      <p className="eyebrow">Discover</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 className="section-heading" style={{ margin: 0 }}>Course Catalog</h1>
-        <input 
-          className="input-field" 
-          placeholder="Search courses..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: '1 1 300px', maxWidth: '400px' }}
-        />
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div>
+        <p className="eyebrow">Course Catalog</p>
+        <h1 className="section-heading">Browse Available Courses</h1>
+        <p className="section-sub">Apply to join. Your trainer approves each request.</p>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.5 }}>🔍</div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>No Courses Found</h3>
-          <p style={{ color: 'var(--text-2)' }}>Try adjusting your search or you might be enrolled in everything!</p>
+      {apply.error && (
+        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+          {apply.error.message}
+        </div>
+      )}
+
+      {available.length === 0 ? (
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-2)' }}>No further courses are available to you right now.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {filtered.map(c => {
-            const isPending = pendingCourseEnrollments?.some(req => req.traineeId === currentUser.id && req.courseId === c.id);
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          {available.map((course) => {
+            const isPending = byCourse.get(course.id)?.status === 'pending';
+            const accent = course.color || '#002F6C';
             return (
-              <div key={c.id} className="card">
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '2.5rem', width: '4rem', height: '4rem', background: `${c.color}22`, borderRadius: 'var(--r-xl)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{c.icon}</div>
-                  <div>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{c.title}</h2>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>{c.totalModules} Modules • Instructor ID: {c.trainerId}</div>
-                  </div>
+              <div key={course.id} className="course-card">
+                <div className="course-card-header"
+                     style={{ background: `linear-gradient(145deg, ${accent}dd, ${accent}aa)` }}>
+                  <div className="course-card-icon">{course.icon || '📘'}</div>
+                  <div className="course-card-title">{course.title}</div>
+                  <div className="course-card-subtitle">{course.subtitle}</div>
                 </div>
-                <p style={{ fontSize: '0.95rem', color: 'var(--text-2)', marginBottom: '1.5rem', flex: 1 }}>{c.description}</p>
-                {isPending ? (
-                  <button className="btn btn-secondary" style={{ width: '100%', cursor: 'not-allowed', opacity: 0.8 }} disabled>
-                    ⏳ Pending Approval
+                <div className="course-card-body">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                    {course.description}
+                  </p>
+                </div>
+                <div className="course-card-footer">
+                  <button
+                    className={`btn btn-block btn-sm ${isPending ? 'btn-ghost' : 'btn-primary'}`}
+                    disabled={isPending || apply.isPending}
+                    onClick={() => apply.mutate(course.id)}
+                  >
+                    {isPending ? 'Awaiting approval' : 'Apply to enrol'}
                   </button>
-                ) : (
-                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => applyForCourse(c.id)}>
-                    ✨ Request Enrollment
-                  </button>
-                )}
+                </div>
               </div>
             );
-          })}</div>
+          })}
+        </div>
       )}
     </div>
   );
