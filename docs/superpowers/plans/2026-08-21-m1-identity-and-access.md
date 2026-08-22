@@ -18,17 +18,17 @@
 | 2. Enums & profile tables | **Done** | |
 | 3. Domain provisioning | **Done** | `citext` replaced with lowercase `text` (see below) |
 | 4. Privilege escalation guard | **Done** | Needed two extra migrations, `_0450` and `_0460` |
-| 5. RLS helpers & supervisor hierarchy | Not started | `app.my_role()`/`app.my_status()` already exist from `_0450` |
-| 6. Profile read visibility | **Partly done** | `profiles_select_self` landed early in `_0460`; admin/supervisor policies and `public_profiles` remain |
-| 7. Audit log | Not started | |
-| 8. Shared Edge Function helpers | Not started | |
-| 9. `admin-set-role` | Not started | Needs `SUPABASE_ACCESS_TOKEN` to deploy |
-| 10. Signup review & suspension | Not started | Needs `SUPABASE_ACCESS_TOKEN` to deploy |
+| 5. RLS helpers & supervisor hierarchy | **Done** | Reused `app.my_role()` rather than adding `app.current_role()` |
+| 6. Profile read visibility | **Done** | Split across `_0460` and `_0600` |
+| 7. Audit log | **Done** | Needed `_0750` to drop the actor FK (see correction 6) |
+| 8. Shared Edge Function helpers | **Done** | Verified by deploying, since `functions serve` needs Docker |
+| 9. `admin-set-role` | **Done** | Deployed and tested |
+| 10. Signup review & suspension | **Done** | Deployed and tested |
 | 11. Frontend api layer | **Done** | |
 | 12. `useSession` + TanStack Query | **Done** | |
 | 13. Auth screens | **Done** | |
 | 14. Route wiring & AppContext migration | **Done** | |
-| 15. Seed & CI | **Partly done** | `seed.sql` written; CI workflow and README remain |
+| 15. Seed & CI | **Done** | `seed.sql`, CI workflow and README all in place |
 
 ### Corrections to this plan, learned during execution
 
@@ -47,6 +47,23 @@
 5. Local Supabase needs Docker, which is unavailable on this machine. Use
    `db push --db-url <session-pooler>` and `functions deploy --use-api`. The
    direct database host resolves to IPv6 only and is unreachable.
+6. **An `ON DELETE SET NULL` foreign key into an append-only table makes the
+   referenced rows undeletable.** SET NULL is an UPDATE, which the immutability
+   trigger refuses, so the whole delete fails — reported as an empty error
+   object. Audit records are snapshots: drop the FK and denormalise instead.
+7. **Append-only tables cannot be cleaned between test runs.** Any lookup by a
+   fixed label matches rows from previous runs and `.single()` returns null.
+   Scope every audit assertion to a per-run unique value.
+8. **`functions deploy --use-api` works without Docker**, and uploads `_shared/`
+   alongside each function automatically.
+
+## Status: M1 complete
+
+All 15 tasks done. 82 frontend tests, 97 database tests, 0 lint errors,
+0 vulnerabilities, clean build. Deferred by design: the JWT custom-claims hook
+(§3.2 of the spec — `useSession` reads status from the database instead, which
+is strictly more correct) and an admin UI for the pending-signup queue, which
+belongs with the other admin screens in M2.
 
 ## Global Constraints
 
