@@ -10,6 +10,36 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-21-nc-spark-backend-design.md` — sections 4.3, 4.4, 5.6, and 7.
 
+## Progress
+
+| Task | Status | Notes |
+|---|---|---|
+| 1. Catalog enums and tables | **Done** | |
+| 2. Enrollment tables | **Done** | |
+| 3. Helpers and progress view | **Done** | |
+| 4. Catalog policies | **Done** | |
+| 5. Enrollment policies | **Done** | |
+| 6. Approval and publishing functions | **Blocked** | Written; needs a `SUPABASE_ACCESS_TOKEN` to deploy and test |
+| 7. Seed script | **Done** | Publishes only courses that have activities |
+| 8. Frontend api modules | **Done** | |
+| 9. Catalog wired into the UI | **Done** | |
+| 10. Trainer approval queue | **Done** | Untestable end-to-end until Task 6 deploys |
+
+### Corrections learned during execution
+
+1. **A page that fetches needs a `QueryClientProvider` in its tests.** Wiring
+   `MyCoursesPage` to TanStack Query broke `App.auth.test.jsx`, which sat on the
+   loading state forever. Any test rendering `App` now needs the provider and
+   stubbed api modules.
+2. **The seed must not do through the service role what the API forbids.**
+   Seeding every course as published put Business Administration — which has no
+   learning path, so no activities — into the catalog in a state
+   `publish-course` would refuse. The seed now publishes only courses with
+   activities.
+3. **Test runs leave stray courses behind.** Suites that create courses in
+   `beforeAll` and delete only their own leave others; the catalog had 7 rows
+   when it should have had 3. Prefer deleting by the slug prefix the suite owns.
+
 ## Global Constraints
 
 - Every `SECURITY DEFINER` function MUST declare `SET search_path = ''` and use fully qualified names. Omitting this is a search-path injection hole.
