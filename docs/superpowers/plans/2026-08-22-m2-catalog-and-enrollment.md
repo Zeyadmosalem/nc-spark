@@ -19,11 +19,11 @@
 | 3. Helpers and progress view | **Done** | |
 | 4. Catalog policies | **Done** | |
 | 5. Enrollment policies | **Done** | |
-| 6. Approval and publishing functions | **Blocked** | Written; needs a `SUPABASE_ACCESS_TOKEN` to deploy and test |
+| 6. Approval and publishing functions | **Done** | Deployed with --use-api and tested |
 | 7. Seed script | **Done** | Publishes only courses that have activities |
 | 8. Frontend api modules | **Done** | |
 | 9. Catalog wired into the UI | **Done** | |
-| 10. Trainer approval queue | **Done** | Untestable end-to-end until Task 6 deploys |
+| 10. Trainer approval queue | **Done** | Verified end-to-end against the live functions |
 
 ### Corrections learned during execution
 
@@ -38,7 +38,16 @@
    activities.
 3. **Test runs leave stray courses behind.** Suites that create courses in
    `beforeAll` and delete only their own leave others; the catalog had 7 rows
-   when it should have had 3. Prefer deleting by the slug prefix the suite owns.
+   when it should have had 3. Prefer deleting by the slug prefix the suite owns,
+   as `fn-catalog.test.js` does.
+
+## Status: M2 complete
+
+All 10 tasks done. 106 frontend tests, 180 database tests, 0 lint errors,
+clean build. Verified live: a trainer publishes a course, a trainee sees it and
+applies, cannot read its activities while pending, the trainer sees her name in
+the queue and approves, and only then do the activities become readable with
+progress at 0%.
 
 ## Global Constraints
 
