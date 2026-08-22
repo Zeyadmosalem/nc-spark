@@ -1,4 +1,5 @@
 import { useCourses, useMyEnrollments, useApplyForCourse } from '../../hooks/useCourses';
+import QueryError from '../../components/shared/QueryError';
 
 export default function CourseCatalog() {
   const { data: courses, isLoading, error } = useCourses();
@@ -12,9 +13,7 @@ export default function CourseCatalog() {
   if (error) {
     return (
       <div className="page-body">
-        <div className="card no-hover" role="alert" style={{ padding: '2rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--brand-accent)' }}>Could not load the catalog: {error.message}</p>
-        </div>
+        <QueryError error={error} what="the catalog" />
       </div>
     );
   }

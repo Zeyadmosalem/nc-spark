@@ -1,11 +1,7 @@
 import { supabase, requireClient } from './client';
+import { unwrap } from './helpers';
 
 const normalise = (email) => String(email ?? '').trim().toLowerCase();
-
-function unwrap({ data, error }) {
-  if (error) throw new Error(error.message);
-  return data;
-}
 
 export async function signIn(email, password) {
   return unwrap(await requireClient().auth.signInWithPassword({

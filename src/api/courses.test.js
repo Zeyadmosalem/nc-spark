@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const from = vi.fn();
 const invoke = vi.fn();
-const getUser = vi.fn(async () => ({ data: { user: { id: 'u1' } } }));
+const getSession = vi.fn(async () => ({ data: { session: { user: { id: 'u1' } } } }));
+const client = { from, functions: { invoke }, auth: { getSession } };
 vi.mock('./client', () => ({
-  supabase: { from, functions: { invoke }, auth: { getUser } },
-  isConfigured: true,
+  supabase: client, isConfigured: true, requireClient: () => client,
 }));
 
 const { courseToCamel, listCourses, publishCourse, getCourseOutline } = await import('./courses');

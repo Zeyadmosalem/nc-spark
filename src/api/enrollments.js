@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { unwrap, invokeFn, currentUserId } from './helpers';
 
 export function enrollmentToCamel(row) {
   if (!row) return null;
@@ -11,11 +12,6 @@ export function enrollmentToCamel(row) {
     completedAt: row.completed_at ?? null,
     percent: row.percent ?? 0,
   };
-}
-
-function unwrap({ data, error }) {
-  if (error) throw new Error(error.message);
-  return data;
 }
 
 /** The caller's own enrollments, with derived progress joined in. */
@@ -33,9 +29,8 @@ export async function myEnrollments() {
  * always lands as pending.
  */
 export async function applyForCourse(courseId) {
-  const { data: { user } } = await supabase.auth.getUser();
   const row = unwrap(await supabase.from('enrollments')
-    .insert({ course_id: courseId, trainee_id: user.id })
+    .insert({ course_id: courseId, trainee_id: await currentUserId() })
     .select().single());
   return enrollmentToCamel(row);
 }
@@ -52,13 +47,6 @@ export async function pendingEnrollments() {
     traineeAvatar: r.profiles?.avatar ?? '?',
     courseTitle: r.courses?.title ?? '',
   }));
-}
-
-async function invokeFn(fn, body) {
-  const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data;
 }
 
 export const decideEnrollment = (enrollmentId, decision) =>
