@@ -7,6 +7,11 @@ import {
 } from '../../hooks/useCourses';
 import { useUsers, useTeachingRequests, useDecideTeachingRequest } from '../../hooks/useAdmin';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatusPill from '../../components/ui/StatusPill';
+import Alert from '../../components/ui/Alert';
+import EmptyState from '../../components/ui/EmptyState';
+import { useToast } from '../../components/ui/toast-context';
 
 /**
  * The curriculum, on real courses.
@@ -28,37 +33,7 @@ import QueryError from '../../components/shared/QueryError';
 const ICONS = ['📘', '🔥', '🦺', '⚕️', '⚖️', '🔧', '🚚', '🧪', '💡', '🎯'];
 const COLORS = ['#00a3e0', '#6b2c8d', '#e8b34d', '#28a745', '#dc3545', '#0f766e'];
 
-const STATUS_STYLE = {
-  published: { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Published' },
-  draft:     { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Draft' },
-  archived:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Archived' },
-};
-
 const EMPTY = { title: '', subtitle: '', description: '', icon: '📘', color: '#00a3e0' };
-
-// Module scope: a component declared during render is a new type every pass,
-// so React remounts it and any state it holds is lost.
-function Alert({ error }) {
-  if (!error) return null;
-  return (
-    <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-      {error.message}
-    </p>
-  );
-}
-
-function StatusPill({ status }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.archived;
-  return (
-    <span style={{
-      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
-      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
-      letterSpacing: '0.04em', whiteSpace: 'nowrap',
-    }}>
-      {s.label}
-    </span>
-  );
-}
 
 export default function ContentManager() {
   const courses = useCourses();
@@ -66,12 +41,13 @@ export default function ContentManager() {
   const requests = useTeachingRequests();
   const content = useCourseContentCounts();
   const create = useCreateCourse();
+  const { notify } = useToast();
 
   const [editing, setEditing] = useState(null); // a course, or EMPTY for a new one
   const [form, setForm] = useState(EMPTY);
 
   if (courses.isLoading) {
-    return <div className="page-body" role="status">Loading the curriculum…</div>;
+    return <PageSkeleton label="Loading the curriculum" stats={0} rows={4} />;
   }
   if (courses.error) {
     return (
@@ -102,7 +78,12 @@ export default function ContentManager() {
 
   async function submitNew(e) {
     e.preventDefault();
-    await create.mutateAsync(form).then(() => setEditing(null)).catch(() => null);
+    await create.mutateAsync(form)
+      .then(() => {
+        notify(`${form.title} created. Add some content before publishing it.`);
+        setEditing(null);
+      })
+      .catch(() => null);
   }
 
   return (
@@ -140,14 +121,18 @@ export default function ContentManager() {
       )}
 
       {list.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
-            No courses yet. Create one, add modules and activities, then publish it.
-          </p>
-          <button type="button" className="btn btn-primary" onClick={openNew}>
-            Create the first course
-          </button>
-        </div>
+        <EmptyState
+          icon="📚"
+          title="No courses yet"
+          action={(
+            <button type="button" className="btn btn-primary" onClick={openNew}>
+              Create the first course
+            </button>
+          )}
+        >
+          A course holds modules, and a module holds activities. Create one, add
+          content to it, then publish it.
+        </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
           {list.map((course) => (
@@ -189,7 +174,21 @@ export default function ContentManager() {
 }
 
 function TeachingRequestCard({ request }) {
+  const { notify } = useToast();
   const decide = useDecideTeachingRequest();
+
+  // Deciding removes the row. Naming the outcome is the only way to tell an
+  // approval from a denial after the fact.
+  const decideWith = (decision) => decide.mutate(
+    { requestId: request.id, decision },
+    {
+      onSuccess: () => notify(
+        decision === 'approve'
+          ? `${request.trainerName} now teaches ${request.courseTitle}.`
+          : `Request from ${request.trainerName} denied.`,
+      ),
+    },
+  );
   return (
     <motion.div
       layout
@@ -217,7 +216,7 @@ function TeachingRequestCard({ request }) {
             type="button"
             className="btn btn-primary btn-sm"
             disabled={decide.isPending}
-            onClick={() => decide.mutate({ requestId: request.id, decision: 'approve' })}
+            onClick={() => decideWith('approve')}
           >
             {decide.isPending ? 'Working…' : 'Approve'}
           </button>
@@ -225,7 +224,7 @@ function TeachingRequestCard({ request }) {
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={decide.isPending}
-            onClick={() => decide.mutate({ requestId: request.id, decision: 'deny' })}
+            onClick={() => decideWith('deny')}
           >
             Deny
           </button>
@@ -237,6 +236,7 @@ function TeachingRequestCard({ request }) {
 }
 
 function CourseRow({ course, trainer, content, onEdit }) {
+  const { notify } = useToast();
   const publish = usePublishCourse();
   const remove = useDeleteCourse();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -303,7 +303,16 @@ function CourseRow({ course, trainer, content, onEdit }) {
             className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}
             disabled={busy || cannotPublish}
             title={cannotPublish ? 'Add an activity first' : undefined}
-            onClick={() => publish.mutate({ courseId: course.id, publish: !isPublished })}
+            onClick={() => publish.mutate(
+              { courseId: course.id, publish: !isPublished },
+              {
+                onSuccess: () => notify(
+                  isPublished
+                    ? `${course.title} is back to draft — trainees can no longer see it.`
+                    : `${course.title} is published and visible in the catalog.`,
+                ),
+              },
+            )}
           >
             {publish.isPending ? 'Working…' : isPublished ? 'Unpublish' : 'Publish'}
           </button>
@@ -316,7 +325,10 @@ function CourseRow({ course, trainer, content, onEdit }) {
                 type="button"
                 className="btn btn-sm btn-danger"
                 disabled={busy}
-                onClick={() => remove.mutate({ id: course.id })}
+                onClick={() => remove.mutate(
+                  { id: course.id },
+                  { onSuccess: () => notify(`${course.title} deleted.`) },
+                )}
               >
                 Delete for good
               </button>
@@ -340,11 +352,17 @@ function CourseRow({ course, trainer, content, onEdit }) {
 
 /** The edit dialog owns its own mutation so its pending state is per-course. */
 function EditDialog({ course, form, setForm, onClose }) {
+  const { notify } = useToast();
   const update = useUpdateCourse();
 
   async function submit(e) {
     e.preventDefault();
-    await update.mutateAsync({ id: course.id, ...form }).then(onClose).catch(() => null);
+    await update.mutateAsync({ id: course.id, ...form })
+      .then(() => {
+        notify('Course details saved.');
+        onClose();
+      })
+      .catch(() => null);
   }
 
   return (

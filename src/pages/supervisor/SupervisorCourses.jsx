@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatusPill from '../../components/ui/StatusPill';
+import EmptyState from '../../components/ui/EmptyState';
 import {
   useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
 } from '../../hooks/useSupervisor';
@@ -16,25 +19,6 @@ import {
  * have rendered every attempt as "Unknown quiz". Migration 20260825000100
  * fixed it.
  */
-
-const STATUS_STYLE = {
-  published: { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Published' },
-  draft:     { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Draft' },
-  archived:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Archived' },
-};
-
-function StatusPill({ status }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.archived;
-  return (
-    <span style={{
-      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
-      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
-      letterSpacing: '0.04em', whiteSpace: 'nowrap',
-    }}>
-      {s.label}
-    </span>
-  );
-}
 
 const mean = (nums) =>
   (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
@@ -57,7 +41,7 @@ export default function SupervisorCourses() {
   const attempts = useTeamQuizAttempts();
 
   if (trainers.isLoading || courses.isLoading) {
-    return <div className="page-body" role="status">Loading team courses…</div>;
+    return <PageSkeleton label="Loading team courses" stats={0} rows={4} />;
   }
 
   const failure = trainers.error ?? courses.error;
@@ -96,13 +80,11 @@ export default function SupervisorCourses() {
       </div>
 
       {list.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-2)', margin: 0 }}>
-            {team.length === 0
-              ? 'No trainers are assigned to you yet.'
-              : 'Your trainers have no courses yet.'}
-          </p>
-        </div>
+        <EmptyState icon="📚" title="Nothing to show">
+          {team.length === 0
+            ? 'No trainers are assigned to you yet.'
+            : 'Your trainers have no courses yet.'}
+        </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
           {list.map((course) => {

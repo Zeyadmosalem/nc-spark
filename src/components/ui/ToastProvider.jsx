@@ -16,7 +16,13 @@ import { ToastContext } from './toast-context';
 
 const LIFETIME_MS = 4000;
 
-export default function ToastProvider({ children }) {
+/**
+ * @param lifetime  how long a toast stays, in ms. A prop rather than a
+ *                  constant so a test can use a short one: the exit animation
+ *                  keeps the node mounted after the timer fires, which makes
+ *                  fake timers unable to observe the removal at all.
+ */
+export default function ToastProvider({ children, lifetime = LIFETIME_MS }) {
   const [toasts, setToasts] = useState([]);
   const timers = useRef(new Map());
   const nextId = useRef(0);
@@ -35,8 +41,8 @@ export default function ToastProvider({ children }) {
     nextId.current += 1;
     const id = nextId.current;
     setToasts((current) => [...current, { id, message, tone }]);
-    timers.current.set(id, setTimeout(() => dismiss(id), LIFETIME_MS));
-  }, [dismiss]);
+    timers.current.set(id, setTimeout(() => dismiss(id), lifetime));
+  }, [dismiss, lifetime]);
 
   // A timer that fires after unmount sets state on a dead component.
   const timersRef = timers;

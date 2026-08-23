@@ -13,6 +13,15 @@ const mocks = vi.hoisted(() => ({
 
 const idle = (mutate) => ({ mutate, isPending: false, error: null });
 
+/**
+ * The variables a mutation was called with.
+ *
+ * mutate now takes a second argument — the per-call { onSuccess } that fires
+ * the confirmation toast — so a bare toHaveBeenCalledWith would fail on the
+ * argument count while saying nothing about what actually reached the server.
+ */
+const varsOf = (spy) => spy.mock.calls.at(-1)?.[0];
+
 vi.mock('../../hooks/useAdmin', () => ({
   useUsers: mocks.useUsers,
   usePendingSignups: mocks.usePendingSignups,
@@ -54,7 +63,7 @@ describe('the approval queue', () => {
     render(<UserManager />);
     await userEvent.selectOptions(screen.getByLabelText('Join as'), 'trainer');
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    expect(mocks.review).toHaveBeenCalledWith({
+    expect(varsOf(mocks.review)).toEqual({
       userId: 'p1', decision: 'approve', role: 'trainer',
     });
   });
@@ -70,7 +79,7 @@ describe('the approval queue', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Reject' }));
     expect(mocks.review).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Confirm reject' }));
-    expect(mocks.review).toHaveBeenCalledWith({ userId: 'p1', decision: 'reject' });
+    expect(varsOf(mocks.review)).toEqual({ userId: 'p1', decision: 'reject' });
   });
 
   it('says so plainly when nobody is waiting', () => {
@@ -107,19 +116,19 @@ describe('the directory', () => {
     mocks.useUsers.mockReturnValue(query([user({ id: 'u1', name: 'Ada' })]));
     render(<UserManager />);
     await userEvent.selectOptions(screen.getByLabelText('Role for Ada'), 'supervisor');
-    expect(mocks.setRole).toHaveBeenCalledWith({ userId: 'u1', role: 'supervisor' });
+    expect(varsOf(mocks.setRole)).toEqual({ userId: 'u1', role: 'supervisor' });
   });
 
   it('suspends, then offers to reinstate', async () => {
     mocks.useUsers.mockReturnValue(query([user({ id: 'u1' })]));
     const { rerender } = render(<UserManager />);
     await userEvent.click(screen.getByRole('button', { name: 'Suspend' }));
-    expect(mocks.suspend).toHaveBeenCalledWith({ userId: 'u1', suspend: true });
+    expect(varsOf(mocks.suspend)).toEqual({ userId: 'u1', suspend: true });
 
     mocks.useUsers.mockReturnValue(query([user({ id: 'u1', status: 'suspended' })]));
     rerender(<UserManager />);
     await userEvent.click(screen.getByRole('button', { name: 'Reinstate' }));
-    expect(mocks.suspend).toHaveBeenLastCalledWith({ userId: 'u1', suspend: false });
+    expect(varsOf(mocks.suspend)).toEqual({ userId: 'u1', suspend: false });
   });
 
   /**
@@ -171,5 +180,34 @@ describe('failures', () => {
     render(<UserManager />);
     expect(screen.getByRole('button', { name: 'Working...' })).toBeDisabled();
     expect(screen.getByLabelText('Role for Ada')).toBeDisabled();
+  });
+});
+
+describe('confirmation', () => {
+  /**
+   * Approving removes the row from the queue, which looks exactly like a click
+   * that did nothing. The only feedback this page had was the absence of an
+   * error.
+   */
+  it('confirms an approval by name and role', async () => {
+    mocks.usePendingSignups.mockReturnValue(query([
+      user({ id: 'p1', status: 'pending', name: 'Grace Hopper' }),
+    ]));
+    render(<UserManager />);
+    await userEvent.selectOptions(screen.getByLabelText('Join as'), 'trainer');
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+    const onSuccess = mocks.review.mock.calls.at(-1)?.[1]?.onSuccess;
+    expect(onSuccess).toBeTypeOf('function');
+  });
+
+  // A rejected account cannot be approved later, only recreated. That is worth
+  // saying before the second click, not after.
+  it('warns that rejection is permanent once the confirm step is showing', async () => {
+    mocks.usePendingSignups.mockReturnValue(query([user({ id: 'p1', status: 'pending' })]));
+    render(<UserManager />);
+    expect(screen.queryByText(/Rejecting is permanent/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Reject' }));
+    expect(screen.getByText(/Rejecting is permanent/)).toBeInTheDocument();
   });
 });

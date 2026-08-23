@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import Sidebar from '../../components/shared/Sidebar';
 import QueryError from '../../components/shared/QueryError';
 import { useUsers, usePendingSignups, usePlatformStats, useRecentAudit } from '../../hooks/useAdmin';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatCard from '../../components/ui/StatCard';
 import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import UserManager from './UserManager';
@@ -63,16 +65,6 @@ const when = (iso) => {
   return `${Math.floor(hours / 24)}d ago`;
 };
 
-function Metric({ label, value, sub, color }) {
-  return (
-    <div className="stat-card">
-      <div className="stat-card-value" style={{ color }}>{value}</div>
-      <div className="stat-card-label">{label}</div>
-      {sub && <div className="stat-card-sub">{sub}</div>}
-    </div>
-  );
-}
-
 // Exported for its test: rendering the whole shell would drag in the sidebar
 // and AppContext to assert numbers that have nothing to do with either.
 export function Dashboard() {
@@ -82,7 +74,7 @@ export function Dashboard() {
   const audit = useRecentAudit(8);
 
   if (users.isLoading || stats.isLoading) {
-    return <div className="page-body" role="status">Loading the platform overview…</div>;
+    return <PageSkeleton label="Loading the platform overview" />;
   }
 
   const failure = users.error ?? stats.error;
@@ -167,22 +159,22 @@ export function Dashboard() {
       )}
 
       <motion.div variants={fadeUp} custom={2} className="stat-grid stat-grid-4">
-        <Metric label="Trainees" value={byRole('trainee')} color="var(--brand-primary)" />
-        <Metric label="Trainers" value={byRole('trainer')} color="var(--brand-secondary)" />
-        <Metric label="Supervisors" value={byRole('supervisor')} color="var(--brand-accent)" />
-        <Metric label="Admins" value={byRole('admin')} color="#b8860b" />
+        <StatCard label="Trainees" value={byRole('trainee')} color="var(--brand-primary)" />
+        <StatCard label="Trainers" value={byRole('trainer')} color="var(--brand-secondary)" />
+        <StatCard label="Supervisors" value={byRole('supervisor')} color="var(--brand-accent)" />
+        <StatCard label="Admins" value={byRole('admin')} color="#b8860b" />
       </motion.div>
 
       <motion.div variants={fadeUp} custom={3} className="stat-grid stat-grid-4">
-        <Metric
+        <StatCard
           label="Courses"
           value={s.courses.total}
           sub={`${s.courses.published} published`}
           color="var(--heading)"
         />
-        <Metric label="Active enrolments" value={s.enrollments.active} color="#28a745" />
-        <Metric label="Quiz attempts" value={s.attempts.total} color="var(--heading)" />
-        <Metric
+        <StatCard label="Active enrolments" value={s.enrollments.active} color="#28a745" />
+        <StatCard label="Quiz attempts" value={s.attempts.total} color="var(--heading)" />
+        <StatCard
           label="Awaiting marking"
           value={s.attempts.pendingReview}
           sub="paragraph answers"

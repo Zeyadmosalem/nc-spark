@@ -34,6 +34,14 @@ vi.mock('../../hooks/useAuthoring', () => ({
 const CourseBuilder = (await import('./CourseBuilder')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
+/**
+ * The variables a mutation was called with. mutate now takes a second argument
+ * — the per-call { onSuccess } that fires the confirmation toast — so a bare
+ * toHaveBeenCalledWith fails on the argument count while saying nothing about
+ * what reached the server.
+ */
+const varsOf = (spy) => spy.mock.calls.at(-1)?.[0];
+
 
 const show = () => render(
   <MemoryRouter initialEntries={['/admin/content/c1']}>
@@ -157,7 +165,7 @@ describe('the unlock gate', () => {
     show();
     await userEvent.selectOptions(
       screen.getByLabelText('Opens after', { selector: '#gate-m2' }), '');
-    expect(mocks.updateModule).toHaveBeenCalledWith({
+    expect(varsOf(mocks.updateModule)).toEqual({
       id: 'm2', courseId: 'c1', unlockAfterModuleId: null,
     });
   });
@@ -170,7 +178,7 @@ describe('renaming a module', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Title of module 1'), '!');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(mocks.updateModule).toHaveBeenCalledWith({
+    expect(varsOf(mocks.updateModule)).toEqual({
       id: 'm1', courseId: 'c1', title: 'Module one!',
     });
   });
@@ -183,7 +191,7 @@ describe('deleting a module', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(mocks.deleteModule).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Delete module' }));
-    expect(mocks.deleteModule).toHaveBeenCalledWith({ id: 'm1', courseId: 'c1' });
+    expect(varsOf(mocks.deleteModule)).toEqual({ id: 'm1', courseId: 'c1' });
   });
 
   // The cascade reaches activity_completions, so it destroys trainee progress.
@@ -304,7 +312,7 @@ describe('editing an activity', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
     await userEvent.type(screen.getByLabelText('Text'), ' more');
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(mocks.updateActivity).toHaveBeenCalledWith({
+    expect(varsOf(mocks.updateActivity)).toEqual({
       id: 'a1', courseId: 'c1', title: 'Read this', xp: 10,
       content: { body: 'text more' },
     });
@@ -314,7 +322,7 @@ describe('editing an activity', () => {
     mocks.useCourseForEditing.mockReturnValue(courseWith([mod({ activities: [activity()] })]));
     show();
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    expect(mocks.deleteActivity).toHaveBeenCalledWith({ id: 'a1', courseId: 'c1' });
+    expect(varsOf(mocks.deleteActivity)).toEqual({ id: 'a1', courseId: 'c1' });
   });
 });
 
