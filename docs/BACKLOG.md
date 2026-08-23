@@ -25,14 +25,15 @@ and the supervisor role were wired to the server. The site is live at
 
 | # | Item | Outcome |
 |---|---|---|
+| **B13** | Module and activity authoring | **Closed.** `src/pages/admin/CourseBuilder.jsx` at `/admin/content/:courseId`. No migration was needed: `modules_write` and `activities_write` have been `for all` policies covering an admin or the owning trainer since M2, with full grants — the database was ready and nothing called it. A live test now creates a course, adds an activity and publishes it, which is a loop that had never once closed. |
 | **B5** | A supervisor cannot read `quizzes` | **Fixed** in `20260825000100_supervisor_reads.sql`, on the condition B5 set: a supervisor oversight screen now exists to need it. The migration also adds `courses_select_supervisor`, because `enrollments_select_supervisor` does not filter on course status and a supervisor could otherwise hold an enrolment on a draft course they could not name. Mutation-tested live: reverting the policy makes the title come back as "Unknown quiz". |
 
 ## Deferred milestones
 
 | # | Item | Decision |
 |---|---|---|
-| **B6** | **M4b — trainer quiz authoring** | Chosen in the M4 design session: quizzes are admin/seed-only for now. `CreateQuiz` still writes to the prototype's in-memory context. Until this ships, loading real quiz content means running `npm run db:seed-quizzes`. |
-| **B13** | **Module and activity authoring** | **The sharpest gap in the product.** `src/api/activities.js` has read paths only, and no api function anywhere creates a module or an activity. The admin Curriculum page can now create a course, but nothing can put content in it, and publish-course refuses a course with zero activities — so a course created through the UI can never be published. The only route to content is `npm run db:seed-catalog` or SQL. The Curriculum page shows the counts and disables Publish with the reason, so this fails honestly rather than as a mystery 422, but it is the thing standing between the admin console and a usable authoring loop. Bigger than B6 and should probably absorb it. |
+| **B6** | **Quiz question authoring** | Narrowed. The course builder can now add a *quiz activity* to a module, but the questions and answer keys behind it are still seeded with `npm run db:seed-quizzes`. `CreateQuiz` still writes to the prototype's in-memory context. The care needed here is real: `quiz_answer_keys` has no grant for `authenticated` at all, so authoring keys has to go through an Edge Function rather than a table write, or M4's whole guarantee unravels. |
+| **B14** | **Editors for flashcards, matching and scenario activities** | The course builder authors 4 of the 7 activity types. These three store structured content — decks, pairs, branching steps — and each needs a real editor; a textarea of raw JSON is not one, and `activities_content_shape` rejects anything malformed. They stay seed-only, and the type picker says so rather than offering a form that cannot work. |
 | **B7** | **XP and gamification awarding** | XP has been display-only since M1 — nothing grants it. Deferred deliberately so M4 stayed about grading integrity. Badges, streaks and the leaderboard should land together with it. |
 | **B8** | **M5 — realtime chat** | `CourseChatDrawer` and the course chat tab are still the prototype's in-memory implementation. Messages do not persist or reach anyone else. |
 
@@ -50,10 +51,15 @@ Counted 2026-08-23, after this sprint. A page is "wired" if it reads from
 | Trainee | 7/8 | `QuizPreview` |
 | Trainer | 3/7 | `CourseManagement`, `CreateActivity`, `CreateQuiz`, `TrainerCoursePage` |
 
-Trainer is the only role left with prototype screens, and all four of them are
-authoring — the same gap as B6 and B13. Nothing can create a module, an
-activity or a quiz from the app, which is why they could not be wired in this
-sprint: there is no server-side write to wire them to.
+The admin course builder is reachable by the owning trainer too — same
+policies — but there is no trainer-side route to it yet. Pointing the four
+trainer authoring screens at `CourseBuilder` rather than rebuilding them is
+the cheap next step.
+
+Trainer is the only role left with prototype screens, and all four are
+authoring. Modules and activities can now be authored (B13, closed), so these
+are no longer blocked on missing backend — they are blocked only on a
+trainer-side route into the builder.
 
 `QuizPreview` is a standalone demo of the quiz UI on canned questions. It is
 reachable at `/trainee/quiz/preview` and is not part of any flow.

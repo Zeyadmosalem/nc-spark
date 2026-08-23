@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
@@ -288,8 +289,15 @@ function CourseRow({ course, trainer, content, onEdit }) {
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusPill status={course.status} />
+          <Link
+            to={`/admin/content/${course.id}`}
+            className="btn btn-ghost btn-sm"
+            style={{ textDecoration: 'none' }}
+          >
+            {activities === 0 ? 'Add content' : 'Content'}
+          </Link>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onEdit}>
-            Edit
+            Details
           </button>
           <button
             type="button"

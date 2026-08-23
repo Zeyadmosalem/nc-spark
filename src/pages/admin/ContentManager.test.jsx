@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +52,7 @@ describe('the course list', () => {
       course({ id: 'c1', title: 'Fire Safety', status: 'draft' }),
       course({ id: 'c2', title: 'Manual Handling', status: 'published' }),
     ]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(within(screen.getByText('Fire Safety').closest('.card')).getByText('Draft'))
       .toBeInTheDocument();
     expect(within(screen.getByText('Manual Handling').closest('.card')).getByText('Published'))
@@ -61,7 +62,7 @@ describe('the course list', () => {
   it('resolves the trainer name from the directory', () => {
     mocks.useUsers.mockReturnValue(query([{ id: 't1', name: 'Grace Hopper', role: 'trainer' }]));
     mocks.useCourses.mockReturnValue(query([course({ trainerId: 't1' })]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByText('Trainer: Grace Hopper')).toBeInTheDocument();
   });
 
@@ -72,18 +73,18 @@ describe('the course list', () => {
    */
   it('says plainly when a course has no trainer', () => {
     mocks.useCourses.mockReturnValue(query([course({ trainerId: null })]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByText(/No trainer assigned/)).toBeInTheDocument();
   });
 
   it('toggles publish state through the Edge Function', async () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
-    const { rerender } = render(<ContentManager />);
+    const { rerender } = render(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
     expect(mocks.publish).toHaveBeenCalledWith({ courseId: 'c1', publish: true });
 
     mocks.useCourses.mockReturnValue(query([course({ status: 'published' })]));
-    rerender(<ContentManager />);
+    rerender(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish' }));
     expect(mocks.publish).toHaveBeenLastCalledWith({ courseId: 'c1', publish: false });
   });
@@ -99,7 +100,7 @@ describe('the course list', () => {
       isPending: false,
       error: new Error('A course needs at least one activity before it can be published'),
     };
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByRole('alert'))
       .toHaveTextContent('A course needs at least one activity');
   });
@@ -107,7 +108,7 @@ describe('the course list', () => {
   // Deleting cascades to modules, activities and every enrolment on the course.
   it('does not delete on the first click', async () => {
     mocks.useCourses.mockReturnValue(query([course()]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(mocks.remove).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Delete for good' }));
@@ -120,21 +121,21 @@ describe('teaching requests', () => {
     mocks.useTeachingRequests.mockReturnValue(query([{
       id: 'r1', trainerName: 'Grace', trainerAvatar: 'G', courseTitle: 'Fire Safety',
     }]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByText(/wants to teach/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
     expect(mocks.decide).toHaveBeenCalledWith({ requestId: 'r1', decision: 'approve' });
   });
 
   it('hides the section entirely when nobody has asked', () => {
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.queryByText(/Trainers asking to teach/)).not.toBeInTheDocument();
   });
 });
 
 describe('creating a course', () => {
   it('will not submit without a title', async () => {
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: '+ New course' }));
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
     await userEvent.type(screen.getByLabelText('Title'), 'Fire Safety');
@@ -142,7 +143,7 @@ describe('creating a course', () => {
   });
 
   it('offers an empty state that leads somewhere', async () => {
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Create the first course' }));
     expect(screen.getByRole('dialog', { name: 'New course' })).toBeInTheDocument();
   });
@@ -156,7 +157,7 @@ describe('what this page deliberately does not offer', () => {
    */
   it('has no authoring tabs it cannot back', () => {
     mocks.useCourses.mockReturnValue(query([course()]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.queryByRole('button', { name: /Learning Paths/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Quizzes$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Activities$/i })).not.toBeInTheDocument();
@@ -164,7 +165,7 @@ describe('what this page deliberately does not offer', () => {
 
   it('shows a load failure rather than an empty curriculum', () => {
     mocks.useCourses.mockReturnValue(query(undefined, { error: new Error('nope') }));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByRole('alert')).toHaveTextContent(/Could not load the curriculum/);
   });
 });
@@ -178,14 +179,14 @@ describe('what this page deliberately does not offer', () => {
 describe('content an admin cannot yet add', () => {
   it('shows how much content a course has', () => {
     mocks.useCourses.mockReturnValue(query([course()]));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByText(/2 modules . 7 activities/)).toBeInTheDocument();
   });
 
   it('disables Publish and says why when a course is empty', () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
     mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 0, activities: 0 } }));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled();
     expect(screen.getByText(/needs at least one activity before it can be published/))
       .toBeInTheDocument();
@@ -194,7 +195,7 @@ describe('content an admin cannot yet add', () => {
   it('still allows Unpublish on an empty course that is somehow published', () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'published' })]));
     mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 0, activities: 0 } }));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Unpublish' })).toBeEnabled();
   });
 
@@ -203,7 +204,24 @@ describe('content an admin cannot yet add', () => {
   it('leaves Publish enabled when the counts have not arrived', () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
     mocks.useCourseContentCounts.mockReturnValue(query(undefined));
-    render(<ContentManager />);
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled();
+  });
+});
+
+describe('the route into the builder', () => {
+  it('links each course to its content, and says so louder when empty', () => {
+    mocks.useCourses.mockReturnValue(query([course()]));
+    mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 0, activities: 0 } }));
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
+    const link = screen.getByRole('link', { name: 'Add content' });
+    expect(link).toHaveAttribute('href', '/admin/content/c1');
+  });
+
+  it('calls it Content once the course has some', () => {
+    mocks.useCourses.mockReturnValue(query([course()]));
+    render(<MemoryRouter><ContentManager /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Content' }))
+      .toHaveAttribute('href', '/admin/content/c1');
   });
 });
