@@ -1,15 +1,22 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSession } from './hooks/useSession';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import TraineeShell from './pages/trainee/TraineeShell';
-import TrainerShell from './pages/trainer/TrainerShell';
-import SupervisorShell from './pages/supervisor/SupervisorShell';
-import AdminShell from './pages/admin/AdminShell';
 import NotificationToast from './components/shared/NotificationToast';
 import ErrorBoundary from './components/shared/ErrorBoundary';
+
+// One shell per role, and a user only ever reaches their own. Loading them
+// eagerly meant every trainee downloaded the admin and supervisor pages
+// before seeing their own dashboard. Auth pages stay eager: they are the
+// first thing a signed-out visitor needs, so deferring them would trade a
+// smaller bundle for a slower login.
+const TraineeShell    = lazy(() => import('./pages/trainee/TraineeShell'));
+const TrainerShell    = lazy(() => import('./pages/trainer/TrainerShell'));
+const SupervisorShell = lazy(() => import('./pages/supervisor/SupervisorShell'));
+const AdminShell      = lazy(() => import('./pages/admin/AdminShell'));
 
 export default function App() {
   return (
@@ -43,16 +50,18 @@ function AppRoutes() {
 
   return (
     <ErrorBoundary key={location.pathname}>
-      <Routes>
-        <Route path="/login" element={signedIn ? <Navigate to={home} replace /> : <LoginPage />} />
-        <Route path="/signup" element={signedIn ? <Navigate to={home} replace /> : <SignupPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/trainee/*"    element={profile?.role === 'trainee'    ? <TraineeShell />    : <Navigate to={home} replace />} />
-        <Route path="/trainer/*"    element={profile?.role === 'trainer'    ? <TrainerShell />    : <Navigate to={home} replace />} />
-        <Route path="/supervisor/*" element={profile?.role === 'supervisor' ? <SupervisorShell /> : <Navigate to={home} replace />} />
-        <Route path="/admin/*"      element={profile?.role === 'admin'      ? <AdminShell />      : <Navigate to={home} replace />} />
-        <Route path="*" element={<Navigate to={home} replace />} />
-      </Routes>
+      <Suspense fallback={<div className="page-body" role="status">Loading…</div>}>
+        <Routes>
+          <Route path="/login" element={signedIn ? <Navigate to={home} replace /> : <LoginPage />} />
+          <Route path="/signup" element={signedIn ? <Navigate to={home} replace /> : <SignupPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/trainee/*"    element={profile?.role === 'trainee'    ? <TraineeShell />    : <Navigate to={home} replace />} />
+          <Route path="/trainer/*"    element={profile?.role === 'trainer'    ? <TrainerShell />    : <Navigate to={home} replace />} />
+          <Route path="/supervisor/*" element={profile?.role === 'supervisor' ? <SupervisorShell /> : <Navigate to={home} replace />} />
+          <Route path="/admin/*"      element={profile?.role === 'admin'      ? <AdminShell />      : <Navigate to={home} replace />} />
+          <Route path="*" element={<Navigate to={home} replace />} />
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }
