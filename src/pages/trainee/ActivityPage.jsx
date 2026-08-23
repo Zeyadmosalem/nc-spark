@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useActivity, useCompleteActivity } from '../../hooks/useActivities';
+import { useSession } from '../../hooks/useSession';
 import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';
 import VideoActivity from '../../components/activities/VideoActivity';
@@ -27,6 +28,7 @@ export default function ActivityPage() {
   const courseId = location.state?.courseId;
 
   const { data: activity, isLoading, error } = useActivity(activityId);
+  const { profile } = useSession();
   const complete = useCompleteActivity();
   const [done, setDone] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -82,7 +84,12 @@ export default function ActivityPage() {
           onBack={back}
           isCompleted={done || complete.isPending}
         >
-          <Renderer activity={activity} onComplete={handleComplete} />
+          {/* The submission renderer uploads straight to Storage, whose policy
+              authorises on {courseId}/{traineeId}/, so it needs both ids. */}
+          <Renderer
+            activity={{ ...activity, courseId, traineeId: profile?.id }}
+            onComplete={handleComplete}
+          />
         </ActivityWrapper>
       ) : (
         <div className="page-body" style={{ maxWidth: 800, margin: '0 auto' }}>
