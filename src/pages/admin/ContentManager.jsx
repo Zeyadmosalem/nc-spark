@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
 } from '../../hooks/useCourses';
-import { useUsers, useTeachingRequests, useDecideTeachingRequest } from '../../hooks/useAdmin';
+import {
+  useUsers, useTeachingRequests, useDecideTeachingRequest, useCourseContentCounts,
+} from '../../hooks/useAdmin';
 import QueryError from '../../components/shared/QueryError';
 
 /**
@@ -62,6 +64,7 @@ export default function ContentManager() {
   const courses = useCourses();
   const users = useUsers();
   const requests = useTeachingRequests();
+  const content = useCourseContentCounts();
   const create = useCreateCourse();
 
   const [editing, setEditing] = useState(null); // a course, or EMPTY for a new one
@@ -152,6 +155,7 @@ export default function ContentManager() {
               key={course.id}
               course={course}
               trainer={trainerName(course.trainerId)}
+              content={content.data?.[course.id]}
               onEdit={() => openEdit(course)}
             />
           ))}
@@ -232,13 +236,18 @@ function TeachingRequestCard({ request }) {
   );
 }
 
-function CourseRow({ course, trainer, onEdit }) {
+function CourseRow({ course, trainer, content, onEdit }) {
   const publish = usePublishCourse();
   const remove = useDeleteCourse();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const isPublished = course.status === 'published';
   const busy = publish.isPending || remove.isPending;
+
+  // publish-course refuses a course with no activities. Knowing that here turns
+  // a 422 an admin has to provoke into a disabled button that says why.
+  const activities = content?.activities;
+  const cannotPublish = activities === 0 && !isPublished;
 
   return (
     <div className="card no-hover">
@@ -264,6 +273,16 @@ function CourseRow({ course, trainer, onEdit }) {
                 ? `Trainer: ${trainer}`
                 : 'No trainer assigned — only an admin can edit or publish it'}
             </div>
+            {content && (
+              <div style={{
+                fontSize: '0.78rem',
+                color: cannotPublish ? 'var(--brand-accent)' : 'var(--text-3)',
+              }}>
+                {content.modules} module{content.modules === 1 ? '' : 's'} ·{' '}
+                {activities} activit{activities === 1 ? 'y' : 'ies'}
+                {cannotPublish && ' — needs at least one activity before it can be published'}
+              </div>
+            )}
           </div>
         </div>
 
@@ -275,7 +294,8 @@ function CourseRow({ course, trainer, onEdit }) {
           <button
             type="button"
             className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}
-            disabled={busy}
+            disabled={busy || cannotPublish}
+            title={cannotPublish ? 'Add an activity first' : undefined}
             onClick={() => publish.mutate({ courseId: course.id, publish: !isPublished })}
           >
             {publish.isPending ? 'Working…' : isPublished ? 'Unpublish' : 'Publish'}

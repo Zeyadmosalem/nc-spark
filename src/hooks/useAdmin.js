@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listUsers, pendingSignups, platformStats, recentAudit } from '../api/admin';
+import {
+  listUsers, pendingSignups, platformStats, recentAudit, courseContentCounts,
+} from '../api/admin';
 import { pendingTeachingRequests, decideTeachingRequest } from '../api/teaching';
 import { setUserRole, reviewSignup, suspendUser } from '../api/profiles';
 
@@ -7,6 +9,7 @@ export const adminKeys = {
   users: ['admin', 'users'],
   pendingSignups: ['admin', 'signups', 'pending'],
   stats: ['admin', 'stats'],
+  contentCounts: ['admin', 'content-counts'],
   // `audit` is the prefix the mutations invalidate; `auditPage` is what a
   // component subscribes to. TanStack matches prefixes, so invalidating the
   // short key clears every page size without either side naming a limit.
@@ -20,6 +23,9 @@ export const useUsers = () =>
 
 export const usePendingSignups = () =>
   useQuery({ queryKey: adminKeys.pendingSignups, queryFn: pendingSignups });
+
+export const useCourseContentCounts = () =>
+  useQuery({ queryKey: adminKeys.contentCounts, queryFn: courseContentCounts });
 
 export const usePlatformStats = () =>
   useQuery({ queryKey: adminKeys.stats, queryFn: platformStats });

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 const mocks = vi.hoisted(() => ({
   useCourses: vi.fn(), useUsers: vi.fn(), useTeachingRequests: vi.fn(),
+  useCourseContentCounts: vi.fn(),
   create: vi.fn(), update: vi.fn(), remove: vi.fn(), publish: vi.fn(), decide: vi.fn(),
   state: { publish: { isPending: false, error: null }, create: { isPending: false, error: null } },
 }));
@@ -22,6 +23,7 @@ vi.mock('../../hooks/useCourses', () => ({
 vi.mock('../../hooks/useAdmin', () => ({
   useUsers: mocks.useUsers,
   useTeachingRequests: mocks.useTeachingRequests,
+  useCourseContentCounts: mocks.useCourseContentCounts,
   useDecideTeachingRequest: () => asMutation(mocks.decide),
 }));
 
@@ -38,6 +40,7 @@ beforeEach(() => {
   mocks.useCourses.mockReturnValue(query([]));
   mocks.useUsers.mockReturnValue(query([]));
   mocks.useTeachingRequests.mockReturnValue(query([]));
+  mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 2, activities: 7 } }));
   mocks.state.publish = { isPending: false, error: null };
   mocks.state.create = { isPending: false, error: null };
 });
@@ -163,5 +166,44 @@ describe('what this page deliberately does not offer', () => {
     mocks.useCourses.mockReturnValue(query(undefined, { error: new Error('nope') }));
     render(<ContentManager />);
     expect(screen.getByRole('alert')).toHaveTextContent(/Could not load the curriculum/);
+  });
+});
+
+/**
+ * Nothing in the app can create a module or an activity yet — src/api has read
+ * paths only, and authoring is backlog B6. So an admin can create a course and
+ * then find Publish refuses it, with the reason buried in a 422 they have to
+ * provoke. These make the refusal visible before it happens.
+ */
+describe('content an admin cannot yet add', () => {
+  it('shows how much content a course has', () => {
+    mocks.useCourses.mockReturnValue(query([course()]));
+    render(<ContentManager />);
+    expect(screen.getByText(/2 modules . 7 activities/)).toBeInTheDocument();
+  });
+
+  it('disables Publish and says why when a course is empty', () => {
+    mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
+    mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 0, activities: 0 } }));
+    render(<ContentManager />);
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled();
+    expect(screen.getByText(/needs at least one activity before it can be published/))
+      .toBeInTheDocument();
+  });
+
+  it('still allows Unpublish on an empty course that is somehow published', () => {
+    mocks.useCourses.mockReturnValue(query([course({ status: 'published' })]));
+    mocks.useCourseContentCounts.mockReturnValue(query({ c1: { modules: 0, activities: 0 } }));
+    render(<ContentManager />);
+    expect(screen.getByRole('button', { name: 'Unpublish' })).toBeEnabled();
+  });
+
+  // The counts query can fail or still be loading; that must not disable a
+  // button that would otherwise work.
+  it('leaves Publish enabled when the counts have not arrived', () => {
+    mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
+    mocks.useCourseContentCounts.mockReturnValue(query(undefined));
+    render(<ContentManager />);
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled();
   });
 });

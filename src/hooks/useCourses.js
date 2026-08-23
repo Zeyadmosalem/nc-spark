@@ -51,6 +51,7 @@ export function useApplyForCourse() {
 function invalidateCatalog(queryClient) {
   queryClient.invalidateQueries({ queryKey: courseKeys.all });
   queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+  queryClient.invalidateQueries({ queryKey: ['admin', 'content-counts'] });
 }
 
 export function useCreateCourse() {

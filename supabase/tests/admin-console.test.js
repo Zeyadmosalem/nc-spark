@@ -34,7 +34,7 @@ process.env.VITE_SUPABASE_URL = env.SUPABASE_URL;
 process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
 
 const { supabase } = await import('../../src/api/client.js');
-const { listUsers, pendingSignups, platformStats, recentAudit } =
+const { listUsers, pendingSignups, platformStats, recentAudit, courseContentCounts } =
   await import('../../src/api/admin.js');
 const { pendingTeachingRequests } = await import('../../src/api/teaching.js');
 const { setUserRole, reviewSignup, suspendUser } = await import('../../src/api/profiles.js');
@@ -121,6 +121,25 @@ describe('an admin, through the real api layer', () => {
     expect(mine.courseTitle).toBe('Verification Course');
   });
 
+  /**
+   * A nested two-level embed. The Curriculum page uses it to disable Publish on
+   * an empty course, so if it silently returned nothing every course would look
+   * unpublishable.
+   */
+  it('counts the modules and activities on each course', async () => {
+    const counts = await courseContentCounts();
+    expect(counts[courseId]).toEqual({ modules: 0, activities: 0 });
+
+    const { data: m } = await svc.from('modules')
+      .insert({ course_id: courseId, title: 'M1', position: 1 }).select().single();
+    await svc.from('activities').insert({
+      module_id: m.id, type: 'reading', title: 'A1', position: 1, content: { body: 'x' },
+    });
+
+    const after = await courseContentCounts();
+    expect(after[courseId]).toEqual({ modules: 1, activities: 1 });
+  });
+
   it('approves a signup, and the queue shrinks', async () => {
     await reviewSignup(pending.id, 'approve', 'trainee');
     const queue = await pendingSignups();
@@ -175,6 +194,18 @@ describe('a trainee calling the admin reads', () => {
 
   it('gets an empty teaching-request queue', async () => {
     expect(await pendingTeachingRequests()).toEqual([]);
+  });
+
+  /**
+   * Not an empty result: courses_select_published means a trainee legitimately
+   * sees published courses, and modules_select shows their outline before
+   * enrolling. What they must NOT see is the unpublished course, and they must
+   * not see activities on a course they are not enrolled in.
+   */
+  it('sees published outlines but not the draft course', async () => {
+    const counts = await courseContentCounts();
+    expect(counts[courseId]).toBeUndefined();
+    expect(Object.values(counts).every((c) => c.activities === 0)).toBe(true);
   });
 
   it('reads no audit trail at all', async () => {
