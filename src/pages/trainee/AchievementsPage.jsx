@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useMyEnrollments, useCourses } from '../../hooks/useCourses';
 import { useMyQuizResults, useCompletedActivityCount } from '../../hooks/useProgress';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatCard from '../../components/ui/StatCard';
+import StatusPill from '../../components/ui/StatusPill';
 
 /**
  * What the trainee has actually achieved.
@@ -25,37 +28,6 @@ const fadeUp = {
   }),
 };
 
-const VERDICT = {
-  passed:         { label: 'Passed',          bg: 'rgba(40,167,69,0.15)',  fg: '#28a745' },
-  failed:         { label: 'Not passed',      bg: 'rgba(220,53,69,0.15)',  fg: '#dc3545' },
-  expired:        { label: 'Ran out of time', bg: 'rgba(220,53,69,0.15)',  fg: '#dc3545' },
-  pending_review: { label: 'Awaiting marking', bg: 'rgba(232,179,77,0.18)', fg: '#b8860b' },
-};
-
-function Verdict({ status }) {
-  const v = VERDICT[status];
-  if (!v) return null;
-  return (
-    <span style={{
-      background: v.bg, color: v.fg, fontSize: '0.7rem', fontWeight: 700,
-      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
-      letterSpacing: '0.04em', whiteSpace: 'nowrap',
-    }}>
-      {v.label}
-    </span>
-  );
-}
-
-function Stat({ label, value, icon, color }) {
-  return (
-    <div className="stat-card">
-      <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{icon}</div>
-      <div className="stat-card-value" style={{ color }}>{value}</div>
-      <div className="stat-card-label">{label}</div>
-    </div>
-  );
-}
-
 const onDate = (iso) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -71,7 +43,7 @@ export default function AchievementsPage() {
     enrollments.data?.map((e) => e.id));
 
   if (enrollments.isLoading || courses.isLoading || results.isLoading) {
-    return <div className="page-body" role="status">Loading your record…</div>;
+    return <PageSkeleton label="Loading your record" />;
   }
 
   const failure = enrollments.error ?? courses.error ?? results.error;
@@ -110,15 +82,15 @@ export default function AchievementsPage() {
       </motion.div>
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        <Stat label="Courses completed" value={finished.length} icon="🎓" color="#28a745" />
-        <Stat
+        <StatCard label="Courses completed" value={finished.length} icon="🎓" color="#28a745" />
+        <StatCard
           label="Activities completed"
           value={completions.isLoading ? '—' : (completions.data ?? 0)}
           icon="✅"
           color="var(--brand-primary)"
         />
-        <Stat label="Quizzes passed" value={passed.length} icon="📝" color="var(--brand-secondary)" />
-        <Stat
+        <StatCard label="Quizzes passed" value={passed.length} icon="📝" color="var(--brand-secondary)" />
+        <StatCard
           label="Average score"
           value={average === null ? '—' : `${average}%`}
           icon="📊"
@@ -186,7 +158,7 @@ export default function AchievementsPage() {
                   <span style={{ fontWeight: 700, color: 'var(--heading)' }}>
                     {typeof a.score === 'number' ? `${a.score}%` : '—'}
                   </span>
-                  <Verdict status={a.status} />
+                  <StatusPill status={a.status} />
                 </div>
               </div>
             ))}

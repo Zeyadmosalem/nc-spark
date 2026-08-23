@@ -99,7 +99,7 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
             </div>
 
             {uploadError && (
-              <div role="alert" style={{ marginTop: '1rem', color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+              <div className="alert alert-error" role="alert" aria-live="assertive">
                 {uploadError}
               </div>
             )}

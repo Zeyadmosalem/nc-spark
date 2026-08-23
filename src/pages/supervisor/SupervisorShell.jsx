@@ -1,11 +1,14 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/shared/Sidebar';
+import RoleShell from '../../components/shared/RoleShell';
 import QueryError from '../../components/shared/QueryError';
 import {
   useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
 } from '../../hooks/useSupervisor';
 import SupervisorCourses from './SupervisorCourses';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatCard from '../../components/ui/StatCard';
+import EmptyState from '../../components/ui/EmptyState';
 
 /**
  * Supervisor oversight, on real data.
@@ -35,16 +38,6 @@ const fadeUp = {
   }),
 };
 
-function Stat({ label, value, sub, color }) {
-  return (
-    <div className="stat-card">
-      <div className="stat-card-value" style={{ color }}>{value}</div>
-      <div className="stat-card-label">{label}</div>
-      {sub && <div className="stat-card-sub">{sub}</div>}
-    </div>
-  );
-}
-
 const mean = (nums) =>
   (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
 
@@ -55,7 +48,7 @@ export function Dashboard() {
   const attempts = useTeamQuizAttempts();
 
   if (trainers.isLoading) {
-    return <div className="page-body" role="status">Loading your team…</div>;
+    return <PageSkeleton label="Loading your team" />;
   }
   if (trainers.error) {
     return (
@@ -72,12 +65,10 @@ export function Dashboard() {
       <div className="page-body">
         <p className="eyebrow">Oversight</p>
         <h1 className="section-heading">Your Team</h1>
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-2)', margin: 0 }}>
-            No trainers are assigned to you yet. An administrator links trainers
-            to a supervisor; until then there is nothing to oversee.
-          </p>
-        </div>
+        <EmptyState icon="👥" title="No team yet">
+          No trainers are assigned to you yet. An administrator links trainers to
+          a supervisor; until then there is nothing to oversee.
+        </EmptyState>
       </div>
     );
   }
@@ -116,20 +107,20 @@ export function Dashboard() {
       </motion.div>
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        <Stat label="Trainers" value={team.length} color="var(--brand-secondary)" />
-        <Stat
+        <StatCard label="Trainers" value={team.length} color="var(--brand-secondary)" />
+        <StatCard
           label="Courses"
           value={courseList.length}
           sub={`${courseList.filter((c) => c.status === 'published').length} published`}
           color="var(--brand-primary)"
         />
-        <Stat
+        <StatCard
           label="Learners enrolled"
           value={active.length}
           sub={averageProgress === null ? 'no progress yet' : `${averageProgress}% average progress`}
           color="#28a745"
         />
-        <Stat
+        <StatCard
           label="Quiz pass rate"
           value={passRate === null ? '—' : `${passRate}%`}
           sub={`${decided.length} graded attempt${decided.length === 1 ? '' : 's'}`}
@@ -200,15 +191,12 @@ export function Dashboard() {
 
 export default function SupervisorShell() {
   return (
-    <div className="app-shell">
-      <Sidebar navItems={NAV} />
-      <div className="main-content">
-        <Routes>
-          <Route index element={<Dashboard />} />
-          <Route path="courses" element={<SupervisorCourses />} />
-          <Route path="*" element={<Navigate to="/supervisor" replace />} />
-        </Routes>
-      </div>
-    </div>
+    <RoleShell navItems={NAV} title="NC Spark Oversight">
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="courses" element={<SupervisorCourses />} />
+        <Route path="*" element={<Navigate to="/supervisor" replace />} />
+      </Routes>
+    </RoleShell>
   );
 }

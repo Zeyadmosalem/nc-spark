@@ -5,6 +5,9 @@ import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
 import ProgressRing from '../../components/gamification/ProgressRing';
 import TraineeNotices from '../../components/shared/TraineeNotices';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatCard from '../../components/ui/StatCard';
+import EmptyState from '../../components/ui/EmptyState';
 
 /**
  * The first screen a trainee sees, on real enrolment progress.
@@ -29,16 +32,6 @@ const fadeUp = {
   }),
 };
 
-function Stat({ label, value, icon, color }) {
-  return (
-    <div className="stat-card">
-      <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{icon}</div>
-      <div className="stat-card-value" style={{ color }}>{value}</div>
-      <div className="stat-card-label">{label}</div>
-    </div>
-  );
-}
-
 export default function TraineeDashboard() {
   const { profile } = useSession();
   const enrollments = useMyEnrollments();
@@ -47,7 +40,7 @@ export default function TraineeDashboard() {
   // Both queries draw a single card: the enrollment carries progress, the
   // course carries its name. Rendering on one of them shows nameless cards.
   if (enrollments.isLoading || courses.isLoading) {
-    return <div className="page-body" role="status">Loading your dashboard…</div>;
+    return <PageSkeleton label="Loading your dashboard" />;
   }
 
   const failure = enrollments.error ?? courses.error;
@@ -132,10 +125,10 @@ export default function TraineeDashboard() {
       </motion.div>
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        <Stat label="Overall progress" value={`${overall}%`} icon="📈" color="var(--brand-primary)" />
-        <Stat label="In progress" value={active.length} icon="📚" color="var(--brand-secondary)" />
-        <Stat label="Completed" value={completed.length} icon="✅" color="#28a745" />
-        <Stat
+        <StatCard label="Overall progress" value={`${overall}%`} icon="📈" color="var(--brand-primary)" />
+        <StatCard label="In progress" value={active.length} icon="📚" color="var(--brand-secondary)" />
+        <StatCard label="Completed" value={completed.length} icon="✅" color="#28a745" />
+        <StatCard
           label="Awaiting approval"
           value={waiting.length}
           icon="⏳"
@@ -146,14 +139,19 @@ export default function TraineeDashboard() {
       <motion.div variants={fadeUp} custom={2} className="card no-hover">
         <div className="card-title">📚 My courses</div>
         {started.length === 0 && waiting.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
-              You are not enrolled in any course yet.
-            </p>
-            <Link to="/trainee/catalog" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-              Browse the catalog
-            </Link>
-          </div>
+          <EmptyState
+            icon="🎓"
+            title="Nothing on your plate yet"
+            action={(
+              <Link to="/trainee/catalog" className="btn btn-primary"
+                    style={{ textDecoration: 'none' }}>
+                Browse the catalog
+              </Link>
+            )}
+          >
+            You are not enrolled in any course yet. Find one in the catalog and
+            apply — a trainer approves you, then you can start.
+          </EmptyState>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {started.map((e) => {

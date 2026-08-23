@@ -5,6 +5,11 @@ import {
   useUsers, usePendingSignups, useSetUserRole, useReviewSignup, useSuspendUser,
 } from '../../hooks/useAdmin';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatusPill from '../../components/ui/StatusPill';
+import Alert from '../../components/ui/Alert';
+import EmptyState from '../../components/ui/EmptyState';
+import { useToast } from '../../components/ui/toast-context';
 
 /**
  * The admin console's reason to exist.
@@ -22,13 +27,6 @@ import QueryError from '../../components/shared/QueryError';
 
 const ROLES = ['trainee', 'trainer', 'supervisor', 'admin'];
 
-const STATUS_STYLE = {
-  active:    { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Active' },
-  pending:   { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Pending' },
-  suspended: { bg: 'rgba(220,53,69,0.15)',  fg: '#dc3545',       label: 'Suspended' },
-  rejected:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Rejected' },
-};
-
 const TABS = [
   { key: 'all',        label: 'Everyone',    match: () => true },
   { key: 'trainee',    label: 'Trainees',    match: (u) => u.role === 'trainee' },
@@ -39,32 +37,6 @@ const TABS = [
 ];
 
 const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-// Module scope, not defined during render: a component declared inside a
-// render is a new type on every pass, so React remounts it and any state it
-// holds is lost. Neither of these holds state yet, which is exactly why it
-// would be a trap for whoever adds some.
-function Alert({ error }) {
-  if (!error) return null;
-  return (
-    <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-      {error.message}
-    </p>
-  );
-}
-
-function StatusPill({ status }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.rejected;
-  return (
-    <span style={{
-      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
-      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
-      letterSpacing: '0.04em', whiteSpace: 'nowrap',
-    }}>
-      {s.label}
-    </span>
-  );
-}
 
 /** How long somebody has been waiting on a human. */
 function waitedFor(iso) {
@@ -78,6 +50,9 @@ function waitedFor(iso) {
   return `${days} day${days === 1 ? '' : 's'}`;
 }
 
+const displayName = (user) => user.name || 'Unnamed';
+const initial = (user) => user.avatar || (user.name ?? '?').charAt(0).toUpperCase();
+
 export default function UserManager() {
   const { profile } = useSession();
   const users = useUsers();
@@ -87,7 +62,7 @@ export default function UserManager() {
   const [search, setSearch] = useState('');
 
   if (users.isLoading) {
-    return <div className="page-body" role="status">Loading users...</div>;
+    return <PageSkeleton label="Loading users" stats={0} rows={5} />;
   }
   if (users.error) {
     return (
@@ -121,16 +96,20 @@ export default function UserManager() {
       {/* The queue comes first and unprompted. A pending user cannot sign in,
           and nothing else in the product tells anyone they are waiting. */}
       <section>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
-          Waiting for approval ({queue.length})
-        </h2>
+        <div className="section-header" style={{ marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Waiting for approval</h2>
+          {queue.length > 0 && (
+            <span className="section-count">
+              {queue.length} {queue.length === 1 ? 'person' : 'people'}
+            </span>
+          )}
+        </div>
         {signups.error && <QueryError error={signups.error} what="the approval queue" />}
         {!signups.error && (queue.length === 0 ? (
-          <div className="card no-hover" style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-2)', margin: 0 }}>
-              Nobody is waiting. Signups from allowlisted domains activate themselves.
-            </p>
-          </div>
+          <EmptyState icon="✅" title="Nobody is waiting">
+            Signups from allowlisted domains activate themselves. Anyone else lands
+            here for you to review.
+          </EmptyState>
         ) : (
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             <AnimatePresence initial={false}>
@@ -141,16 +120,14 @@ export default function UserManager() {
       </section>
 
       <section>
-        <div style={{
-          display: 'flex', gap: '1rem', alignItems: 'center',
-          justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: '1rem',
-        }}>
+        <div className="section-header" style={{ marginBottom: '1rem' }}>
           <div className="tab-navigation" style={{ marginBottom: 0 }}>
             {TABS.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 className={`tab-item ${tab === t.key ? 'active' : ''}`}
+                aria-pressed={tab === t.key}
                 onClick={() => setTab(t.key)}
               >
                 {t.label} ({all.filter(t.match).length})
@@ -175,9 +152,11 @@ export default function UserManager() {
           style={{ display: 'grid', gap: '0.75rem' }}
         >
           {shown.length === 0 ? (
-            <p style={{ color: 'var(--text-2)' }}>
-              {term ? `Nobody matches "${search}".` : 'No users in this group.'}
-            </p>
+            <EmptyState icon="🔍" title={term ? 'No matches' : 'Nobody here'}>
+              {term
+                ? `Nobody matches "${search}". Try part of a name or an email domain.`
+                : 'No users in this group yet.'}
+            </EmptyState>
           ) : (
             shown.map((u) => <UserRow key={u.id} user={u} isSelf={u.id === profile?.id} />)
           )}
@@ -188,11 +167,27 @@ export default function UserManager() {
 }
 
 function SignupCard({ user }) {
+  const { notify } = useToast();
   const review = useReviewSignup();
   const [role, setRole] = useState('trainee');
   const [confirmingReject, setConfirmingReject] = useState(false);
 
   const waited = waitedFor(user.createdAt);
+
+  // Approving removes the row. Without a word somewhere, that is
+  // indistinguishable from a click that did nothing.
+  function decide(decision) {
+    review.mutate(
+      { userId: user.id, decision, ...(decision === 'approve' ? { role } : {}) },
+      {
+        onSuccess: () => notify(
+          decision === 'approve'
+            ? `${displayName(user)} approved as ${role}.`
+            : `${displayName(user)} was rejected.`,
+        ),
+      },
+    );
+  }
 
   return (
     <motion.div
@@ -208,23 +203,19 @@ function SignupCard({ user }) {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-          <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }}>
-            {user.avatar || (user.name ?? '?').charAt(0).toUpperCase()}
+          <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
+            {initial(user)}
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              {user.name || 'Unnamed'}
+            <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>
+              {displayName(user)}
             </h3>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', wordBreak: 'break-all' }}>
-              {user.email}
-            </div>
-            {waited && (
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>waiting {waited}</div>
-            )}
+            <div className="data-row-meta">{user.email}</div>
+            {waited && <div className="data-row-meta">waiting {waited}</div>}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="data-row-actions">
           <label className="input-label" style={{ margin: 0 }} htmlFor={`role-${user.id}`}>
             Join as
           </label>
@@ -243,7 +234,7 @@ function SignupCard({ user }) {
             type="button"
             className="btn btn-primary btn-sm"
             disabled={review.isPending}
-            onClick={() => review.mutate({ userId: user.id, decision: 'approve', role })}
+            onClick={() => decide('approve')}
           >
             {review.isPending ? 'Working...' : 'Approve'}
           </button>
@@ -257,7 +248,7 @@ function SignupCard({ user }) {
                 type="button"
                 className="btn btn-sm btn-danger"
                 disabled={review.isPending}
-                onClick={() => review.mutate({ userId: user.id, decision: 'reject' })}
+                onClick={() => decide('reject')}
               >
                 Confirm reject
               </button>
@@ -281,12 +272,19 @@ function SignupCard({ user }) {
           )}
         </div>
       </div>
+      {confirmingReject && (
+        <Alert tone="warning">
+          Rejecting is permanent — a rejected account cannot be approved later,
+          only recreated.
+        </Alert>
+      )}
       <Alert error={review.error} />
     </motion.div>
   );
 }
 
 function UserRow({ user, isSelf }) {
+  const { notify } = useToast();
   const changeRole = useSetUserRole();
   const suspend = useSuspendUser();
 
@@ -301,25 +299,23 @@ function UserRow({ user, isSelf }) {
         justifyContent: 'space-between', flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-          <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }}>
-            {user.avatar || (user.name ?? '?').charAt(0).toUpperCase()}
+          <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
+            {initial(user)}
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              {user.name || 'Unnamed'}
+            <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>
+              {displayName(user)}
               {isSelf && (
                 <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: '0.8rem' }}>
                   {' '}- you
                 </span>
               )}
             </h3>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-2)', wordBreak: 'break-all' }}>
-              {user.email}
-            </div>
+            <div className="data-row-meta">{user.email}</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="data-row-actions">
           <StatusPill status={user.status} />
 
           {/* Acting on yourself is how an admin locks themselves out mid-session.
@@ -332,7 +328,10 @@ function UserRow({ user, isSelf }) {
             aria-label={`Role for ${user.name || user.email}`}
             value={user.role}
             disabled={busy || isSelf || !canAct}
-            onChange={(e) => changeRole.mutate({ userId: user.id, role: e.target.value })}
+            onChange={(e) => changeRole.mutate(
+              { userId: user.id, role: e.target.value },
+              { onSuccess: () => notify(`${displayName(user)} is now a ${e.target.value}.`) },
+            )}
           >
             {ROLES.map((r) => <option key={r} value={r}>{titleCase(r)}</option>)}
           </select>
@@ -342,7 +341,16 @@ function UserRow({ user, isSelf }) {
               type="button"
               className={`btn btn-sm ${isSuspended ? 'btn-primary' : 'btn-danger'}`}
               disabled={busy}
-              onClick={() => suspend.mutate({ userId: user.id, suspend: !isSuspended })}
+              onClick={() => suspend.mutate(
+                { userId: user.id, suspend: !isSuspended },
+                {
+                  onSuccess: () => notify(
+                    isSuspended
+                      ? `${displayName(user)} can sign in again.`
+                      : `${displayName(user)} is suspended.`,
+                  ),
+                },
+              )}
             >
               {busy ? 'Working...' : isSuspended ? 'Reinstate' : 'Suspend'}
             </button>

@@ -1,5 +1,8 @@
 import { useCourses, useMyEnrollments, useApplyForCourse } from '../../hooks/useCourses';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import Alert from '../../components/ui/Alert';
+import EmptyState from '../../components/ui/EmptyState';
 
 export default function CourseCatalog() {
   const { data: courses, isLoading, error } = useCourses();
@@ -11,7 +14,7 @@ export default function CourseCatalog() {
   // button is live. Rendering before it lands offers "Apply to enrol" on a
   // course the trainee already holds, and the click fails on the unique index.
   if (isLoading || enrollmentsLoading) {
-    return <div className="page-body" role="status">Loading courses…</div>;
+    return <PageSkeleton label="Loading courses" stats={0} rows={3} />;
   }
 
   const failure = error ?? enrollmentsError;
@@ -38,16 +41,13 @@ export default function CourseCatalog() {
         <p className="section-sub">Apply to join. Your trainer approves each request.</p>
       </div>
 
-      {apply.error && (
-        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
-          {apply.error.message}
-        </div>
-      )}
+      <Alert error={apply.error} />
 
       {available.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-2)' }}>No further courses are available to you right now.</p>
-        </div>
+        <EmptyState icon="🔍" title="Nothing new right now">
+          You have applied to or enrolled in every published course. New ones appear
+          here as trainers publish them.
+        </EmptyState>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
           {available.map((course) => {

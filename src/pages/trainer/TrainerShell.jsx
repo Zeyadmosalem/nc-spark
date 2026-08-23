@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
-import Sidebar from '../../components/shared/Sidebar';
+import RoleShell from '../../components/shared/RoleShell';
 import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import TrainerCatalog from './TrainerCatalog';
@@ -244,26 +244,23 @@ export default function TrainerShell() {
     (item.to === '/trainer/review' ? { ...item, badge: waiting } : item));
 
   return (
-    <div className="app-shell">
-      <Sidebar navItems={nav} />
-      <div className="main-content">
-        <Routes>
-          <Route index element={<Dashboard />} />
-          <Route path="courses" element={<TrainerCourses />} />
-          <Route path="catalog" element={<TrainerCatalog />} />
-          {/* The same builder the admin console mounts. modules_write and
-              activities_write authorise the owning trainer identically, so a
-              second implementation would only be a second thing to keep in
-              step. */}
-          <Route path="courses/:courseId" element={<CourseBuilder backTo="/trainer/courses" />} />
-          {/* The prototype's Create Content forms wrote to in-memory context.
-              Authoring now happens inside a course, which is the only place it
-              can: an activity needs a module to live in. */}
-          <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
-          <Route path="review" element={<TrainerReview />} />
-          <Route path="*" element={<Navigate to="/trainer" replace />} />
-        </Routes>
-      </div>
-    </div>
+    <RoleShell navItems={nav} title="NC Spark Teaching">
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="courses" element={<TrainerCourses />} />
+        <Route path="catalog" element={<TrainerCatalog />} />
+        {/* The same builder the admin console mounts. modules_write and
+        activities_write authorise the owning trainer identically, so a
+        second implementation would only be a second thing to keep in
+        step. */}
+        <Route path="courses/:courseId" element={<CourseBuilder backTo="/trainer/courses" />} />
+        {/* The prototype's Create Content forms wrote to in-memory context.
+        Authoring now happens inside a course, which is the only place it
+        can: an activity needs a module to live in. */}
+        <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
+        <Route path="review" element={<TrainerReview />} />
+        <Route path="*" element={<Navigate to="/trainer" replace />} />
+      </Routes>
+    </RoleShell>
   );
 }

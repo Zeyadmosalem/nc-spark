@@ -1,12 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { signUp } from '../../api/auth';
-
-const field = {
-  padding: '0.7rem 0.9rem', borderRadius: 'var(--r-md)',
-  border: '1.5px solid var(--border)', background: 'var(--surface-alt)',
-  color: 'var(--text)', fontFamily: 'var(--font-body)',
-};
+import Alert from '../../components/ui/Alert';
+import PasswordField from '../../components/ui/PasswordField';
 
 export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -60,20 +56,29 @@ export default function SignupPage() {
         </div>
         <form onSubmit={handleSubmit} className="card no-hover"
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
-          {error && <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>{error}</div>}
+          <Alert tone="error">{error}</Alert>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Full name</span>
-            <input type="text" value={form.name} required onChange={set('name')} style={field} />
+            <span className="input-label" style={{ margin: 0 }}>Full name</span>
+            <input type="text" className="input-field" value={form.name} required
+                   autoComplete="name" onChange={set('name')} />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email</span>
-            <input type="email" value={form.email} required autoComplete="email" onChange={set('email')} style={field} />
+            <span className="input-label" style={{ margin: 0 }}>Email</span>
+            <input type="email" className="input-field" value={form.email} required
+                   autoComplete="email" onChange={set('email')} />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</span>
-            <input type="password" value={form.password} required autoComplete="new-password" onChange={set('password')} style={field} />
-          </label>
+
+          {/* The rule is stated up front rather than only after it is broken.
+              There is no confirm field, so a typo here is only discovered at
+              the next sign-in — which is why this one can be revealed. */}
+          <PasswordField
+            value={form.password}
+            autoComplete="new-password"
+            minLength={8}
+            hint="At least 8 characters."
+            onChange={(v) => setForm((f) => ({ ...f, password: v }))}
+          />
 
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Creating account…' : 'Create account'}

@@ -27,6 +27,14 @@ vi.mock('../../hooks/useTeaching', () => ({
 const TrainerCourses = (await import('./TrainerCourses')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
+/**
+ * The variables a mutation was called with. mutate now takes a second argument
+ * — the per-call { onSuccess } that fires the confirmation toast — so a bare
+ * toHaveBeenCalledWith fails on the argument count while saying nothing about
+ * what reached the server.
+ */
+const varsOf = (spy) => spy.mock.calls.at(-1)?.[0];
+
 const show = () => render(<MemoryRouter><TrainerCourses /></MemoryRouter>);
 
 const course = (over) => ({
@@ -79,17 +87,18 @@ describe('my courses', () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
     const { rerender } = show();
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
-    expect(mocks.publish).toHaveBeenCalledWith({ courseId: 'c1', publish: true });
+    expect(varsOf(mocks.publish)).toEqual({ courseId: 'c1', publish: true });
 
     mocks.useCourses.mockReturnValue(query([course({ status: 'published' })]));
     rerender(<MemoryRouter><TrainerCourses /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish' }));
-    expect(mocks.publish).toHaveBeenLastCalledWith({ courseId: 'c1', publish: false });
+    expect(varsOf(mocks.publish)).toEqual({ courseId: 'c1', publish: false });
   });
 
   it('explains an empty roster rather than showing a bare page', () => {
     show();
-    expect(screen.getByText(/No courses are assigned to you yet/)).toBeInTheDocument();
+    expect(screen.getByText('No courses yet')).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is assigned to you/)).toBeInTheDocument();
   });
 });
 
@@ -105,7 +114,7 @@ describe('asking to teach', () => {
     ]));
     show();
     await userEvent.click(screen.getByRole('button', { name: 'Ask to teach this' }));
-    expect(mocks.ask).toHaveBeenCalledWith({ courseId: 'c2' });
+    expect(varsOf(mocks.ask)).toEqual({ courseId: 'c2' });
   });
 
   it('does not offer a course that already has a trainer', () => {

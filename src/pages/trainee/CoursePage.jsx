@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
 
 const TYPE_ICONS = {
   video: '🎬', reading: '📖', flashcards: '🃏',
@@ -36,7 +37,7 @@ export default function CoursePage() {
   }, [messages.length, activeTab]);
 
   if (isLoading || loadingEnrollments) {
-    return <div className="page-body" role="status">Loading course…</div>;
+    return <PageSkeleton label="Loading course" stats={0} rows={4} />;
   }
 
   const failure = error ?? enrollmentsError;

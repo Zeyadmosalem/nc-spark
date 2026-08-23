@@ -31,6 +31,14 @@ vi.mock('../../hooks/useAdmin', () => ({
 const ContentManager = (await import('./ContentManager')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
+
+/**
+ * The variables a mutation was called with. mutate now takes a second argument
+ * — the per-call { onSuccess } that fires the confirmation toast — so a bare
+ * toHaveBeenCalledWith fails on the argument count while saying nothing about
+ * what reached the server.
+ */
+const varsOf = (spy) => spy.mock.calls.at(-1)?.[0];
 const course = (over) => ({
   id: 'c1', title: 'Fire Safety', subtitle: 'Basics', description: '',
   status: 'draft', icon: 'F', color: '#dc3545', trainerId: null, ...over,
@@ -81,12 +89,12 @@ describe('the course list', () => {
     mocks.useCourses.mockReturnValue(query([course({ status: 'draft' })]));
     const { rerender } = render(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
-    expect(mocks.publish).toHaveBeenCalledWith({ courseId: 'c1', publish: true });
+    expect(varsOf(mocks.publish)).toEqual({ courseId: 'c1', publish: true });
 
     mocks.useCourses.mockReturnValue(query([course({ status: 'published' })]));
     rerender(<MemoryRouter><ContentManager /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish' }));
-    expect(mocks.publish).toHaveBeenLastCalledWith({ courseId: 'c1', publish: false });
+    expect(varsOf(mocks.publish)).toEqual({ courseId: 'c1', publish: false });
   });
 
   /**
@@ -112,7 +120,7 @@ describe('the course list', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(mocks.remove).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Delete for good' }));
-    expect(mocks.remove).toHaveBeenCalledWith({ id: 'c1' });
+    expect(varsOf(mocks.remove)).toEqual({ id: 'c1' });
   });
 });
 
@@ -124,7 +132,7 @@ describe('teaching requests', () => {
     render(<MemoryRouter><ContentManager /></MemoryRouter>);
     expect(screen.getByText(/wants to teach/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    expect(mocks.decide).toHaveBeenCalledWith({ requestId: 'r1', decision: 'approve' });
+    expect(varsOf(mocks.decide)).toEqual({ requestId: 'r1', decision: 'approve' });
   });
 
   it('hides the section entirely when nobody has asked', () => {

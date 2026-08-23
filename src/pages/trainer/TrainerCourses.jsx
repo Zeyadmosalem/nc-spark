@@ -4,6 +4,11 @@ import { useSession } from '../../hooks/useSession';
 import { useCourses, usePublishCourse, useCourseContentCounts } from '../../hooks/useCourses';
 import { useMyTeachingRequests, useRequestToTeach } from '../../hooks/useTeaching';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import StatusPill from '../../components/ui/StatusPill';
+import Alert from '../../components/ui/Alert';
+import EmptyState from '../../components/ui/EmptyState';
+import { useToast } from '../../components/ui/toast-context';
 
 /**
  * A trainer's own courses, and the ones they can ask to take on.
@@ -18,35 +23,6 @@ import QueryError from '../../components/shared/QueryError';
  * so there is no second implementation to keep in step.
  */
 
-const STATUS_STYLE = {
-  published: { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Published' },
-  draft:     { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Draft' },
-  archived:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Archived' },
-};
-
-function StatusPill({ status }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.archived;
-  return (
-    <span style={{
-      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
-      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
-      letterSpacing: '0.04em', whiteSpace: 'nowrap',
-    }}>
-      {s.label}
-    </span>
-  );
-}
-
-// Module scope: a component declared during render remounts on every pass.
-function Alert({ error }) {
-  if (!error) return null;
-  return (
-    <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-      {error.message}
-    </p>
-  );
-}
-
 export default function TrainerCourses() {
   const { profile } = useSession();
   const courses = useCourses();
@@ -54,7 +30,7 @@ export default function TrainerCourses() {
   const requests = useMyTeachingRequests();
 
   if (courses.isLoading) {
-    return <div className="page-body" role="status">Loading your courses…</div>;
+    return <PageSkeleton label="Loading your courses" stats={0} rows={4} />;
   }
   if (courses.error) {
     return (
@@ -83,12 +59,10 @@ export default function TrainerCourses() {
       </div>
 
       {mine.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '2.5rem' }}>
-          <p style={{ color: 'var(--text-2)', margin: 0 }}>
-            No courses are assigned to you yet. Ask to take one on below, or an
-            administrator can assign you one.
-          </p>
-        </div>
+        <EmptyState icon="📋" title="No courses yet">
+          Nothing is assigned to you. Ask to take a course on below, or an
+          administrator can assign you one.
+        </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
           {mine.map((course) => (
@@ -118,6 +92,7 @@ export default function TrainerCourses() {
 }
 
 function MyCourseRow({ course, content }) {
+  const { notify } = useToast();
   const publish = usePublishCourse();
 
   const isPublished = course.status === 'published';
@@ -170,7 +145,16 @@ function MyCourseRow({ course, content }) {
             className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}
             disabled={publish.isPending || cannotPublish}
             title={cannotPublish ? 'Add an activity first' : undefined}
-            onClick={() => publish.mutate({ courseId: course.id, publish: !isPublished })}
+            onClick={() => publish.mutate(
+              { courseId: course.id, publish: !isPublished },
+              {
+                onSuccess: () => notify(
+                  isPublished
+                    ? `${course.title} is back to draft.`
+                    : `${course.title} is live in the catalog.`,
+                ),
+              },
+            )}
           >
             {publish.isPending ? 'Working…' : isPublished ? 'Unpublish' : 'Publish'}
           </button>
@@ -182,6 +166,7 @@ function MyCourseRow({ course, content }) {
 }
 
 function ClaimRow({ course, alreadyAsked }) {
+  const { notify } = useToast();
   const ask = useRequestToTeach();
 
   return (
@@ -210,7 +195,10 @@ function ClaimRow({ course, alreadyAsked }) {
             type="button"
             className="btn btn-primary btn-sm"
             disabled={ask.isPending}
-            onClick={() => ask.mutate({ courseId: course.id })}
+            onClick={() => ask.mutate(
+              { courseId: course.id },
+              { onSuccess: () => notify(`Asked to teach ${course.title}. An admin decides next.`) },
+            )}
           >
             {ask.isPending ? 'Asking…' : 'Ask to teach this'}
           </button>

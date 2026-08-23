@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import QueryError from '../shared/QueryError';
+import PageSkeleton from '../ui/Skeleton';
+import Alert from '../ui/Alert';
+import EmptyState from '../ui/EmptyState';
+import { useToast } from '../ui/toast-context';
 import { AUTHORABLE_TYPES, EMPTY_CONTENT } from '../../api/authoring';
 import {
   useCourseForEditing,
@@ -38,17 +42,6 @@ const TYPE_ICON = {
   reading: '📖', video: '🎬', submission: '📎', quiz: '📝',
   flashcards: '🃏', matching: '🔗', scenario: '🧭',
 };
-
-// Module scope: a component declared during render is a new type every pass,
-// so React remounts it and the text being typed into it is lost.
-function Alert({ error }) {
-  if (!error) return null;
-  return (
-    <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-      {error.message}
-    </p>
-  );
-}
 
 /** The one field each authorable type needs beyond a title. */
 function ContentFields({ type, content, onChange }) {
@@ -104,11 +97,12 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
   const { courseId } = useParams();
   const course = useCourseForEditing(courseId);
   const addModule = useCreateModule();
+  const { notify } = useToast();
 
   const [newModuleTitle, setNewModuleTitle] = useState('');
 
   if (course.isLoading) {
-    return <div className="page-body" role="status">Loading the course…</div>;
+    return <PageSkeleton label="Loading the course" stats={0} rows={3} />;
   }
   if (course.error) {
     return (
@@ -141,7 +135,10 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
     const nextPosition = modules.reduce((max, m) => Math.max(max, m.position), 0) + 1;
     await addModule
       .mutateAsync({ courseId, title: trimmed, position: nextPosition })
-      .then(() => setNewModuleTitle(''))
+      .then(() => {
+        notify(`Module "${trimmed}" added.`);
+        setNewModuleTitle('');
+      })
       .catch(() => null);
   }
 
@@ -161,12 +158,10 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
       </div>
 
       {modules.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '2.5rem' }}>
-          <p style={{ color: 'var(--text-2)', margin: 0 }}>
-            No modules yet. A course is a list of modules, and each module is a list
-            of activities.
-          </p>
-        </div>
+        <EmptyState icon="🧱" title="No modules yet">
+          A course is a list of modules, and each module is a list of activities.
+          Add the first module below.
+        </EmptyState>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
           <AnimatePresence initial={false}>
@@ -203,6 +198,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
 }
 
 function ModuleCard({ courseId, module: mod, earlier }) {
+  const { notify } = useToast();
   const rename = useUpdateModule();
   const remove = useDeleteModule();
   const addActivity = useCreateActivity();
@@ -244,7 +240,10 @@ function ModuleCard({ courseId, module: mod, earlier }) {
           {dirty && (
             <button
               type="button" className="btn btn-primary btn-sm" disabled={busy}
-              onClick={() => rename.mutate({ id: mod.id, courseId, title: title.trim() })}
+              onClick={() => rename.mutate(
+                { id: mod.id, courseId, title: title.trim() },
+                { onSuccess: () => notify('Module renamed.') },
+              )}
             >
               Save
             </button>
@@ -276,7 +275,10 @@ function ModuleCard({ courseId, module: mod, earlier }) {
           {confirmingDelete ? (
             <>
               <button type="button" className="btn btn-sm btn-danger" disabled={busy}
-                      onClick={() => remove.mutate({ id: mod.id, courseId })}>
+                      onClick={() => remove.mutate(
+                        { id: mod.id, courseId },
+                        { onSuccess: () => notify(`Module "${mod.title}" deleted.`) },
+                      )}>
                 Delete module
               </button>
               <button type="button" className="btn btn-ghost btn-sm"
@@ -318,6 +320,7 @@ function ModuleCard({ courseId, module: mod, earlier }) {
           courseId={courseId}
           nextPosition={mod.activities.reduce((max, a) => Math.max(max, a.position), 0) + 1}
           mutation={addActivity}
+          onAdded={(name) => notify(`"${name}" added to ${mod.title}.`)}
           onDone={() => setAdding(false)}
         />
       ) : (
@@ -330,7 +333,7 @@ function ModuleCard({ courseId, module: mod, earlier }) {
   );
 }
 
-function ActivityForm({ moduleId, courseId, nextPosition, mutation, onDone }) {
+function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onDone }) {
   const [type, setType] = useState('reading');
   const [title, setTitle] = useState('');
   const [xp, setXp] = useState('10');
@@ -355,7 +358,10 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onDone }) {
         courseId, moduleId, type, title: title.trim(), position: nextPosition,
         xp: points, content,
       })
-      .then(onDone)
+      .then(() => {
+        onAdded?.(title.trim());
+        onDone();
+      })
       .catch(() => null);
   }
 
@@ -409,6 +415,7 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onDone }) {
 }
 
 function ActivityRow({ courseId, activity }) {
+  const { notify } = useToast();
   const update = useUpdateActivity();
   const remove = useDeleteActivity();
   const [open, setOpen] = useState(false);
@@ -439,7 +446,10 @@ function ActivityRow({ courseId, activity }) {
           </button>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
                   style={{ color: '#dc3545' }}
-                  onClick={() => remove.mutate({ id: activity.id, courseId })}>
+                  onClick={() => remove.mutate(
+                    { id: activity.id, courseId },
+                    { onSuccess: () => notify(`"${activity.title}" removed.`) },
+                  )}>
             Remove
           </button>
         </div>
@@ -469,9 +479,10 @@ function ActivityRow({ courseId, activity }) {
             <button
               type="button" className="btn btn-primary btn-sm"
               disabled={busy || !title.trim() || badXp}
-              onClick={() => update.mutate({
-                id: activity.id, courseId, title: title.trim(), xp: points, content,
-              })}
+              onClick={() => update.mutate(
+                { id: activity.id, courseId, title: title.trim(), xp: points, content },
+                { onSuccess: () => notify('Activity saved.') },
+              )}
             >
               {update.isPending ? 'Saving…' : 'Save changes'}
             </button>

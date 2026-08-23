@@ -15,7 +15,7 @@ describe('LoginPage', () => {
   it('renders email and password fields, not a role picker', () => {
     renderPage();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.queryByText(/Enter as Admin/i)).not.toBeInTheDocument();
   });
 
@@ -24,7 +24,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
     await user.type(screen.getByLabelText(/email/i), 'amira@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'secret123');
+    await user.type(screen.getByLabelText(/^password$/i), 'secret123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(mocks.signIn).toHaveBeenCalledWith('amira@example.com', 'secret123');
   });
@@ -34,7 +34,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
     await user.type(screen.getByLabelText(/email/i), 'a@b.com');
-    await user.type(screen.getByLabelText(/password/i), 'wrong');
+    await user.type(screen.getByLabelText(/^password$/i), 'wrong');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Invalid login credentials/);
   });
@@ -45,7 +45,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
     await user.type(screen.getByLabelText(/email/i), 'a@b.com');
-    await user.type(screen.getByLabelText(/password/i), 'pw');
+    await user.type(screen.getByLabelText(/^password$/i), 'pw');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
     resolve({ user: {} });
@@ -57,5 +57,15 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/email/i), 'a@b.com');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(mocks.signIn).not.toHaveBeenCalled();
+  });
+
+  it('lets you check what you typed before submitting', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const password = screen.getByLabelText(/^password$/i);
+    await user.type(password, 'Rv-y0ke');
+    expect(password).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(password).toHaveAttribute('type', 'text');
   });
 });

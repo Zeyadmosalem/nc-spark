@@ -1,12 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signIn } from '../../api/auth';
-
-const field = {
-  padding: '0.7rem 0.9rem', borderRadius: 'var(--r-md)',
-  border: '1.5px solid var(--border)', background: 'var(--surface-alt)',
-  color: 'var(--text)', fontFamily: 'var(--font-body)',
-};
+import Alert from '../../components/ui/Alert';
+import PasswordField from '../../components/ui/PasswordField';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -42,31 +38,40 @@ export default function LoginPage() {
           <p>Sign in to continue your training.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card no-hover"
-              style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
-          {error && (
-            <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
-              {error}
-            </div>
-          )}
+        <form
+          onSubmit={handleSubmit}
+          className="card no-hover"
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}
+        >
+          {/* Alert rather than a bare coloured <p>: it carries the assertive
+              live region, so a failed sign-in is actually announced. */}
+          <Alert tone="error">{error}</Alert>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email</span>
-            <input type="email" value={email} autoComplete="email" required
-                   onChange={(e) => setEmail(e.target.value)} style={field} />
+            <span className="input-label" style={{ margin: 0 }}>Email</span>
+            <input
+              type="email"
+              className="input-field"
+              value={email}
+              autoComplete="email"
+              autoFocus
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</span>
-            <input type="password" value={password} autoComplete="current-password" required
-                   onChange={(e) => setPassword(e.target.value)} style={field} />
-          </label>
+          <PasswordField
+            label="Password"
+            value={password}
+            autoComplete="current-password"
+            onChange={setPassword}
+          />
 
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.8rem' }}>
             <Link to="/reset-password">Forgot password?</Link>
             <Link to="/signup">Create an account</Link>
           </div>

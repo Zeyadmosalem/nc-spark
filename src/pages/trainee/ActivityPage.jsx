@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useActivity, useCompleteActivity } from '../../hooks/useActivities';
 import { useSession } from '../../hooks/useSession';
+import PageSkeleton from '../../components/ui/Skeleton';
+import Alert from '../../components/ui/Alert';
 import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
 import QuizActivity from '../../components/quiz/QuizActivity';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';
@@ -35,7 +37,7 @@ export default function ActivityPage() {
   const [chatOpen, setChatOpen] = useState(false);
 
   if (isLoading) {
-    return <div className="page-body" role="status">Loading activity…</div>;
+    return <PageSkeleton label="Loading activity" stats={0} rows={2} />;
   }
 
   if (error || !activity) {
@@ -68,11 +70,7 @@ export default function ActivityPage() {
     <>
       {complete.error && (
         <div className="page-body" style={{ paddingBottom: 0 }}>
-          <div role="alert" className="card no-hover"
-               style={{ padding: '1rem', borderLeft: '4px solid var(--brand-accent)',
-                        color: 'var(--brand-accent)' }}>
-            {complete.error.message}
-          </div>
+          <Alert error={complete.error} />
         </div>
       )}
 
