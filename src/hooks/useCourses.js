@@ -3,19 +3,24 @@ import {
   listCourses, getCourseOutline, createCourse, updateCourse, deleteCourse, publishCourse,
   courseContentCounts,
 } from '../api/courses';
-import { myEnrollments, applyForCourse } from '../api/enrollments';
+import { myEnrollments, applyForCourse, courseEnrollments } from '../api/enrollments';
 
 export const courseKeys = {
   all: ['courses'],
   outline: (id) => ['courses', 'outline', id],
   myEnrollments: ['enrollments', 'mine'],
   contentCounts: ['courses', 'content-counts'],
+  courseEnrollments: ['enrollments', 'my-courses'],
 };
 
 /**
  * Modules and activities per course, for deciding whether Publish is offered.
  * RLS scopes it, so an admin sees every course and a trainer sees their own.
  */
+/** Enrolments on the caller's own courses, trainee names included. */
+export const useCourseEnrollments = () =>
+  useQuery({ queryKey: courseKeys.courseEnrollments, queryFn: courseEnrollments });
+
 export const useCourseContentCounts = () =>
   useQuery({ queryKey: courseKeys.contentCounts, queryFn: courseContentCounts });
 

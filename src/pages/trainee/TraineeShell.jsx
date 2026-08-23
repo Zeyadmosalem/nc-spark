@@ -5,7 +5,6 @@ import QueryError from '../../components/shared/QueryError';
 import TraineeDashboard from './TraineeDashboard';
 import CoursePage from './CoursePage';
 import QuizPage from './QuizPage';
-import QuizPreview from './QuizPreview';
 import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
@@ -152,7 +151,6 @@ export default function TraineeShell() {
         <Route path="quizzes" element={<Navigate to="/trainee/courses" replace />} />
         <Route path="videos" element={<Navigate to="/trainee/courses" replace />} />
         <Route path="quiz/:quizId" element={<QuizPage />} />
-        <Route path="quiz/preview" element={<QuizPreview />} />
         <Route path="achievements" element={<AchievementsPage />} />
         <Route path="*" element={<Navigate to="/trainee" replace />} />
       </Routes>

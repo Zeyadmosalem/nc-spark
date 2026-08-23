@@ -24,9 +24,6 @@ vi.mock('../../api/courses', () => ({
 vi.mock('../../api/enrollments', () => ({
   myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,
 }));
-vi.mock('../../context/AppContext', () => ({
-  useApp: () => ({ chatMessages: {}, sendChatMessage: mocks.sendChatMessage }),
-}));
 
 const { default: CoursePage } = await import('./CoursePage');
 

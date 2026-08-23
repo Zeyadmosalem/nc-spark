@@ -1,10 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useApp } from '../../context/AppContext';
+import { useTheme } from '../../context/theme-context';
+import { useSession } from '../../hooks/useSession';
 import { signOut } from '../../api/auth';
 
 export default function Sidebar({ navItems, footerExtra }) {
-  const { currentUser, pendingRequests, theme, toggleTheme } = useApp();
+  // Identity from the session, not from a context the prototype kept in sync
+  // by hand. profile is the same row RLS authorises every request against.
+  const { profile } = useSession();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -29,7 +33,7 @@ export default function Sidebar({ navItems, footerExtra }) {
         <div className="sidebar-logo-mark">NCS</div>
         <div className="sidebar-logo-text">
           <strong>NC Spark</strong>
-          <span>{currentUser?.role || 'Portal'}</span>
+          <span>{profile?.role || 'Portal'}</span>
         </div>
       </div>
 
@@ -50,13 +54,15 @@ export default function Sidebar({ navItems, footerExtra }) {
               {/* A nav item can carry its own count. The Pending Requests
                   fallback is the prototype's hardcoded behaviour, kept so the
                   admin nav keeps working until it supplies a badge itself. */}
-              {(item.badge ?? (item.label === 'Pending Requests' ? pendingRequests.length : 0)) > 0 && (
+              {/* A nav item supplies its own count. The prototype had a
+                  hardcoded fallback keyed off the label "Pending Requests",
+                  reading a list of invented requests; nothing renders that
+                  label any more. */}
+              {item.badge > 0 && (
                 <span className="badge-dot">
-                  <span aria-hidden="true">{item.badge ?? pendingRequests.length}</span>
+                  <span aria-hidden="true">{item.badge}</span>
                   {/* On its own the badge announces a bare number. */}
-                  <span className="sr-only">
-                    {item.badge ?? pendingRequests.length} waiting
-                  </span>
+                  <span className="sr-only">{item.badge} waiting</span>
                 </span>
               )}
             </NavLink>
@@ -89,10 +95,10 @@ export default function Sidebar({ navItems, footerExtra }) {
           className="sidebar-user"
           onClick={handleLogout}
         >
-          <div className="avatar" aria-hidden="true">{currentUser?.avatar || '?'}</div>
+          <div className="avatar" aria-hidden="true">{profile?.avatar || '?'}</div>
           <div className="sidebar-user-info">
-            <strong>{currentUser?.name || 'User'}</strong>
-            <span>{currentUser?.role} · Log out</span>
+            <strong>{profile?.name || 'User'}</strong>
+            <span>{profile?.role} · Log out</span>
           </div>
         </button>
       </div>

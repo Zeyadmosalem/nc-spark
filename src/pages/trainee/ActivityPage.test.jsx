@@ -21,9 +21,6 @@ vi.mock('../../api/quizzes', () => ({
 // reads the Supabase session, which is absent under test, so it is stubbed.
 vi.mock('../../hooks/useSession', () => ({ useSession: mocks.useSession }));
 // CourseChatDrawer still reads the prototype's in-memory context until M5.
-vi.mock('../../context/AppContext', () => ({
-  useApp: () => ({ currentUser: { id: 's1' }, chatMessages: {}, sendChatMessage: vi.fn() }),
-}));
 
 const { default: ActivityPage } = await import('./ActivityPage');
 
@@ -123,19 +120,24 @@ describe('ActivityPage', () => {
     await waitFor(() => expect(mocks.completeActivity).toHaveBeenCalledWith('a1', {}));
   });
 
-  // The prototype offered a course discussion from inside an activity. It is
-  // still in-memory until M5, but dropping it here would quietly remove a
-  // feature trainees can already see.
-  it('keeps the course discussion available when arriving from a course', async () => {
+  /**
+   * The Discuss button is gone, and this test is the reverse of the one that
+   * used to keep it. The reasoning changed rather than being forgotten: the
+   * drawer behind it was the prototype's in-memory chat, so a message reached
+   * nobody and was lost on reload. Offering a trainee a way to ask their
+   * trainer a question that silently goes nowhere is worse than not offering
+   * one. It returns with M5 (backlog B8).
+   */
+  it('offers no discussion, because the chat behind it reached nobody', async () => {
     mocks.getActivity.mockResolvedValue({
       id: 'a1', type: 'reading', title: 'Chatty', xp: 5, body: 'x',
     });
     renderAt('a1', { courseId: 'c1' });
     await screen.findByText(/Chatty/);
-    expect(screen.getByRole('button', { name: /discuss/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /discuss/i })).not.toBeInTheDocument();
   });
 
-  it('omits the discussion button when there is no course context', async () => {
+  it('renders an activity reached without course context', async () => {
     mocks.getActivity.mockResolvedValue({
       id: 'a1', type: 'reading', title: 'Lonely', xp: 5, body: 'x',
     });

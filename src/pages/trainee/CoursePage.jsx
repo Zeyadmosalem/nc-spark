@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useApp } from '../../context/AppContext';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
@@ -14,7 +13,6 @@ const TYPE_ICONS = {
 export default function CoursePage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { chatMessages, sendChatMessage } = useApp();
 
   const { data: course, isLoading, error } = useCourseOutline(courseId);
   const {
@@ -22,19 +20,11 @@ export default function CoursePage() {
   } = useMyEnrollments();
 
   const [activeTab, setActiveTab] = useState('path');
-  const [chatText, setChatText] = useState('');
-  const chatScrollRef = useRef(null);
-  const messages = chatMessages[courseId] || [];
 
   // Every hook must run before the early returns below. This page used to
   // crash with "Rendered fewer hooks than expected" because router navigation
   // between two course ids reuses the same fiber, so returning early for an
   // unenrolled course changed the hook count between renders.
-  useEffect(() => {
-    if (activeTab === 'chat' && chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [messages.length, activeTab]);
 
   if (isLoading || loadingEnrollments) {
     return <PageSkeleton label="Loading course" stats={0} rows={4} />;
@@ -82,13 +72,6 @@ export default function CoursePage() {
   const accent = course.color || '#002F6C';
   const percent = enrollment.percent ?? 0;
   const modules = course.modules ?? [];
-
-  function handleSendChat(e) {
-    e.preventDefault();
-    if (!chatText.trim()) return;
-    sendChatMessage(courseId, chatText.trim());
-    setChatText('');
-  }
 
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
@@ -139,9 +122,6 @@ export default function CoursePage() {
         </button>
         <button className={`tab-item ${activeTab === 'materials' ? 'active' : ''}`} onClick={() => setActiveTab('materials')}>
           📎 Materials
-        </button>
-        <button className={`tab-item ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
-          💬 Course Chat
         </button>
       </div>
 
@@ -199,39 +179,6 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeTab === 'chat' && (
-            <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="card-title">💬 Course Discussion</div>
-              <div
-                ref={chatScrollRef}
-                style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-              >
-                {messages.length === 0 ? (
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
-                    No messages yet. Start the conversation.
-                  </p>
-                ) : (
-                  messages.map((m) => (
-                    <div key={m.id} style={{ padding: '0.6rem 0.8rem', borderRadius: 'var(--r-md)', background: 'var(--surface-alt)' }}>
-                      <strong style={{ fontSize: '0.8rem' }}>{m.author}</strong>
-                      <div style={{ fontSize: '0.9rem' }}>{m.text}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-              <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  className="input-field"
-                  aria-label="Message"
-                  placeholder="Ask a question…"
-                  value={chatText}
-                  onChange={(e) => setChatText(e.target.value)}
-                  style={{ flex: 1 }}
-                />
-                <button className="btn btn-primary btn-sm" type="submit">Send</button>
-              </form>
-            </div>
-          )}
         </motion.div>
       </AnimatePresence>
     </div>

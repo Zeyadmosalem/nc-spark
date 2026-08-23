@@ -28,7 +28,7 @@ process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
 
 const { supabase } = await import('../../src/api/client.js');
 const { myQuizResults, completedActivityCount } = await import('../../src/api/progress.js');
-const { myEnrollments } = await import('../../src/api/enrollments.js');
+const { myEnrollments, courseEnrollments } = await import('../../src/api/enrollments.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
@@ -169,5 +169,48 @@ describe('a trainee cannot reach another trainee record', () => {
   // Not vacuous: the same call returns one row for Alice, above.
   it('sees no quiz history that is not theirs', async () => {
     expect(await myQuizResults()).toEqual([]);
+  });
+});
+
+/**
+ * The trainer half of the same data.
+ *
+ * courseEnrollments carries `profiles!enrollments_trainee_id_fkey(...)`, which
+ * is a string only PostgREST can validate — the frontend tests mock `from`.
+ * It is also a deliberately different privacy posture from the supervisor's
+ * teamEnrollments, which omits trainee identity entirely, so the boundary is
+ * worth pinning rather than assuming.
+ */
+describe('a trainer reading their cohort', () => {
+  beforeAll(() => become(trainer.email));
+
+  it('sees the enrolments on their own course, with the trainees named', async () => {
+    const rows = await courseEnrollments();
+    const mine = rows.filter((r) => r.courseId === courseId);
+    expect(mine).toHaveLength(2);
+    expect(mine.map((r) => r.traineeName).sort())
+      .toEqual([alice.name, bob.name].sort());
+    expect(mine.every((r) => typeof r.percent === 'number')).toBe(true);
+  });
+
+  it('reads real progress, not a placeholder', async () => {
+    const rows = await courseEnrollments();
+    const hers = rows.find((r) => r.id === aliceEnrollment);
+    // Alice finished both activities in the fixture.
+    expect(hers.percent).toBe(100);
+  });
+});
+
+describe('a trainee calling the trainer read', () => {
+  beforeAll(() => become(bob.email));
+
+  /**
+   * enrollments_select_own still matches, so this is not empty — it is
+   * narrowed to the caller. Bob must not see Alice's row.
+   */
+  it('gets only their own enrolment back', async () => {
+    const rows = await courseEnrollments();
+    expect(rows.map((r) => r.id)).toContain(bobEnrollment);
+    expect(rows.map((r) => r.id)).not.toContain(aliceEnrollment);
   });
 });

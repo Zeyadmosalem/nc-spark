@@ -70,3 +70,42 @@ export async function pendingEnrollments() {
 
 export const decideEnrollment = (enrollmentId, decision) =>
   invokeFn('approve-enrollment', { enrollmentId, decision });
+
+/**
+ * Enrolments on the caller's own courses, with the trainee named.
+ *
+ * enrollments_select_course_staff scopes this to courses the caller trains
+ * (or all of them for an admin), and profiles_select_my_trainees is what makes
+ * the name readable — a trainer may see the people on their courses.
+ *
+ * Deliberately not supervisor.js's teamEnrollments, which is the same read
+ * with the identity left out. A supervisor oversees trainers and cannot
+ * resolve a trainee id to a name at all; a trainer teaches these people. Two
+ * postures, two functions, rather than one function that quietly returns more
+ * to whoever happens to have the privilege.
+ */
+export async function courseEnrollments() {
+  const client = requireClient();
+  const [rows, progress] = await Promise.all([
+    client
+      .from('enrollments')
+      .select(`
+        id, trainee_id, course_id, status, completed_at,
+        profiles!enrollments_trainee_id_fkey(id, name, avatar)
+      `)
+      .then(unwrap),
+    client.from('enrollment_progress').select('enrollment_id, percent').then(unwrap),
+  ]);
+
+  const percentOf = new Map((progress ?? []).map((p) => [p.enrollment_id, p.percent]));
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    traineeId: r.trainee_id,
+    traineeName: r.profiles?.name ?? 'Unknown',
+    traineeAvatar: r.profiles?.avatar ?? '?',
+    courseId: r.course_id,
+    status: r.status,
+    completedAt: r.completed_at ?? null,
+    percent: percentOf.get(r.id) ?? 0,
+  }));
+}

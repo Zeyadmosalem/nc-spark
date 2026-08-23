@@ -7,7 +7,6 @@ vi.mock('../../hooks/useCourses', () => ({
   useCourses: mocks.useCourses,
   useMyEnrollments: mocks.useMyEnrollments,
 }));
-vi.mock('../../context/AppContext', () => ({ useApp: () => ({}) }));
 
 const { MyCoursesPage } = await import('./TraineeShell');
 
