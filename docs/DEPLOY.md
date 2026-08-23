@@ -21,10 +21,21 @@ these steps use **Cloudflare Pages**, whose free tier permits commercial use.
 | Framework preset | None (or Vite) |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Root directory | `nc-spark` |
+| Root directory | **leave blank** |
 
-**Root directory matters.** The repository has the app in a `nc-spark/`
-subfolder, so leaving this blank makes the build fail with "no package.json".
+**Leave Root directory blank.** `package.json` is at the repository root — the
+repo *is* the app, despite the folder on disk being called `nc-spark`. Setting
+Root directory to `nc-spark` makes Cloudflare look for `nc-spark/package.json`
+inside the repo and fail with:
+
+```
+npm error code ENOENT
+npm error path /opt/buildhome/repo/nc-spark/package.json
+```
+
+Verified by cloning the repo fresh and running `npm ci && npm run build` at the
+root: it produces `dist/` with `_redirects`, which is exactly what Cloudflare
+does.
 
 ## 3. Environment variables
 
