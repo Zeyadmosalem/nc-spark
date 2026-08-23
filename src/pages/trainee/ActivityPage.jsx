@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useActivity, useCompleteActivity } from '../../hooks/useActivities';
 import { useSession } from '../../hooks/useSession';
 import PageSkeleton from '../../components/ui/Skeleton';
 import Alert from '../../components/ui/Alert';
-import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
 import QuizActivity from '../../components/quiz/QuizActivity';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';
 import VideoActivity from '../../components/activities/VideoActivity';
@@ -34,7 +32,6 @@ export default function ActivityPage() {
   const { profile } = useSession();
   const complete = useCompleteActivity();
   const [done, setDone] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   if (isLoading) {
     return <PageSkeleton label="Loading activity" stats={0} rows={2} />;
@@ -110,32 +107,6 @@ export default function ActivityPage() {
         </div>
       )}
 
-      {courseId && (
-        <>
-          <motion.button
-            className="btn btn-primary"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setChatOpen(true)}
-            style={{
-              position: 'fixed', bottom: '2rem', right: '2rem',
-              borderRadius: '50px', padding: '1rem 1.5rem',
-              boxShadow: 'var(--shadow-lg)', zIndex: 100,
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              fontSize: '1rem', fontWeight: 600,
-            }}
-          >
-            <span style={{ fontSize: '1.25rem' }}>💬</span> Discuss
-          </motion.button>
-
-          <CourseChatDrawer
-            isOpen={chatOpen}
-            onClose={() => setChatOpen(false)}
-            courseId={courseId}
-            courseTitle="Course Discussion"
-          />
-        </>
-      )}
     </>
   );
 }

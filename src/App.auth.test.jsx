@@ -20,22 +20,25 @@ vi.mock('./api/enrollments', () => ({
 }));
 
 const { default: App } = await import('./App');
-const { AppProvider } = await import('./context/AppContext');
-const { USERS } = await import('./data/dummyData');
 
-const trainee = USERS.trainees[0];
+// A profile shaped like the row fetchMyProfile returns. This used to come from
+// dummyData's USERS fixture, which was the last thing tying the routing tests
+// to the prototype store.
+const trainee = {
+  id: 'u-trainee', role: 'trainee', status: 'active',
+  name: 'Amira Hassan', email: 'amira@example.com', avatar: 'AH',
+  createdAt: '2026-01-01T00:00:00Z',
+};
 
 function session(status, profile = null) {
   mocks.useSession.mockReturnValue({ status, profile, session: null, isLoading: status === 'loading' });
 }
 
-function renderApp(path = '/', currentUser = null) {
+function renderApp(path = '/') {
   window.history.pushState({}, '', path);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <AppProvider currentUser={currentUser}><App /></AppProvider>
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}><App /></QueryClientProvider>
   );
 }
 
@@ -83,19 +86,19 @@ describe('routing by session status', () => {
 
   it('lets an active trainee reach the trainee area', async () => {
     session('active', { ...trainee, status: 'active' });
-    renderApp('/trainee/courses', trainee);
+    renderApp('/trainee/courses');
     expect(await screen.findByText(/Learning Library/i)).toBeInTheDocument();
   });
 
   it('shows the empty state when a trainee has no enrollments', async () => {
     session('active', { ...trainee, status: 'active' });
-    renderApp('/trainee/courses', trainee);
+    renderApp('/trainee/courses');
     expect(await screen.findByText(/not enrolled in any course yet/i)).toBeInTheDocument();
   });
 
   it('REDIRECTS a trainee away from the admin area', async () => {
     session('active', { ...trainee, status: 'active' });
-    renderApp('/admin', trainee);
+    renderApp('/admin');
     await waitFor(() => expect(window.location.pathname).toBe('/trainee'));
   });
 
@@ -113,7 +116,7 @@ describe('routing by session status', () => {
 
   it('keeps a signed-in user away from the login screen', async () => {
     session('active', { ...trainee, status: 'active' });
-    renderApp('/login', trainee);
+    renderApp('/login');
     await waitFor(() => expect(window.location.pathname).toBe('/trainee'));
   });
 });

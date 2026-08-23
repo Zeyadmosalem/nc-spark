@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -16,9 +15,6 @@ vi.mock('../../api/courses', () => ({
 }));
 vi.mock('../../api/enrollments', () => ({
   myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,
-}));
-vi.mock('../../context/AppContext', () => ({
-  useApp: () => ({ chatMessages: {}, sendChatMessage: mocks.sendChatMessage }),
 }));
 
 const { default: CoursePage } = await import('./CoursePage');
@@ -118,14 +114,17 @@ describe('CoursePage outline', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not load/i);
   });
 
-  // The prototype's course discussion is in-memory until M5, but it is
-  // visible to trainees today and must survive the move to real data.
-  it('keeps the course discussion tab', async () => {
+  /**
+   * The reverse of the test that used to keep this tab. The chat behind it was
+   * the prototype's in-memory implementation: messages persisted nowhere and
+   * reached no one, so a trainee asking a question got silence and then lost
+   * the question on reload. It returns with M5 (backlog B8).
+   */
+  it('offers no chat tab, because the chat behind it reached nobody', async () => {
     mocks.getCourseOutline.mockResolvedValue(outline);
     mocks.myEnrollments.mockResolvedValue(enrolled);
-    const user = userEvent.setup();
     renderAt();
-    await user.click(await screen.findByRole('button', { name: /course chat/i }));
-    expect(await screen.findByRole('button', { name: /^send$/i })).toBeInTheDocument();
+    await screen.findByRole('button', { name: /learning path/i });
+    expect(screen.queryByRole('button', { name: /course chat/i })).not.toBeInTheDocument();
   });
 });

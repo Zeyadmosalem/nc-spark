@@ -6,7 +6,6 @@ import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import NotificationToast from './components/shared/NotificationToast';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import ToastProvider from './components/ui/ToastProvider';
 import PageSkeleton from './components/ui/Skeleton';
@@ -34,7 +33,6 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
         <ToastProvider>
-          <NotificationToast />
           <AppRoutes />
         </ToastProvider>
       </BrowserRouter>
