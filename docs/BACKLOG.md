@@ -3,8 +3,9 @@
 Work that has been deliberately deferred, with the reasoning. Anything here was
 seen, weighed and postponed — not missed.
 
-Last reviewed: 2026-08-23, after the admin console was wired to the server.
-The site is live at `https://nc-spark.ncspark.workers.dev`.
+Last reviewed: 2026-08-23, after the admin console, the trainee record screens
+and the supervisor role were wired to the server. The site is live at
+`https://nc-spark.ncspark.workers.dev`.
 
 ## Next sprint
 
@@ -20,11 +21,11 @@ The site is live at `https://nc-spark.ncspark.workers.dev`.
 | **B3** | Scenario activities send `isCorrect` to the browser and grade client-side | Same class as the quiz leak M4 closed, materially lower severity: a scenario completes via "Mark as Complete", so correctness gates nothing. It is formative practice, and instant feedback needs the answer client-side. Reviewed and left. Revisit only if scenarios ever gate progression. |
 | **B4** | The repository is public | Fine in itself — no secrets remain in tracked files, and the anon key is public by design. It stops being fine the moment anything sensitive is committed, which is what B1 and the rotation in `seed-review-users.mjs` guard against. |
 
-## Latent gaps — no consumer yet
+## Closed
 
-| # | Item | Detail |
+| # | Item | Outcome |
 |---|---|---|
-| **B5** | A supervisor cannot read `quizzes` | `quizzes_select` covers admin, owning trainer and enrolled trainee. A supervisor sees quiz *attempts* for managed trainers but not the quiz they belong to, so any future supervisor report would render "attempt on \<unknown quiz\>". Same shape as the M2 gap where a trainer could not read an applicant's name. Not fixed because no supervisor assessment view exists yet; fix it when one is built, not speculatively. |
+| **B5** | A supervisor cannot read `quizzes` | **Fixed** in `20260825000100_supervisor_reads.sql`, on the condition B5 set: a supervisor oversight screen now exists to need it. The migration also adds `courses_select_supervisor`, because `enrollments_select_supervisor` does not filter on course status and a supervisor could otherwise hold an enrolment on a draft course they could not name. Mutation-tested live: reverting the policy makes the title come back as "Unknown quiz". |
 
 ## Deferred milestones
 
@@ -37,26 +38,29 @@ The site is live at `https://nc-spark.ncspark.workers.dev`.
 
 ## Frontend still on prototype data
 
-Counted 2026-08-23. A page is "wired" if it reads from `src/api/` or
-`src/hooks/`; the rest still read `AppContext` and `src/data/dummyData`.
+Counted 2026-08-23, after this sprint. A page is "wired" if it reads from
+`src/api/` or `src/hooks/`; the rest still read `AppContext` and
+`src/data/dummyData`.
 
 | Role | Wired | Still prototype |
 |---|---|---|
 | Auth | 4/4 | — |
 | Admin | 3/3 | — |
+| Supervisor | 2/2 | — |
+| Trainee | 7/8 | `QuizPreview` |
 | Trainer | 3/7 | `CourseManagement`, `CreateActivity`, `CreateQuiz`, `TrainerCoursePage` |
-| Trainee | 5/10 | `TraineeDashboard`, `AchievementsPage`, `TraineeQuizzesPage`, `VideosPage`, `QuizPreview` |
-| Supervisor | 0/4 | every page |
 
-Supervisor is the only role with no server-backed screen at all. Before one is
-built, B5 has to be fixed or any assessment view renders "attempt on \<unknown
-quiz\>".
+Trainer is the only role left with prototype screens, and all four of them are
+authoring — the same gap as B6 and B13. Nothing can create a module, an
+activity or a quiz from the app, which is why they could not be wired in this
+sprint: there is no server-side write to wire them to.
 
-`TraineeDashboard` is the highest-value of the remaining trainee pages — it is
-the first screen a trainee sees and every number on it is currently invented.
-Wiring it needs a decision on B7: with nothing awarding XP, the honest move is
-to render real progress and hide the XP, badge and streak widgets rather than
-show real zeros, which is what the admin dashboard now does.
+`QuizPreview` is a standalone demo of the quiz UI on canned questions. It is
+reachable at `/trainee/quiz/preview` and is not part of any flow.
+
+`SupervisorCoursePage` and `ContentReview` were deleted rather than wired.
+The first was built around course chat (M5, unbuilt); the second approved
+content through a workflow with no table, status or Edge Function behind it.
 
 ## Maintenance
 
