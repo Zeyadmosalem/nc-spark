@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listCourses, getCourseOutline } from '../api/courses';
+import {
+  listCourses, getCourseOutline, createCourse, updateCourse, deleteCourse, publishCourse,
+} from '../api/courses';
 import { myEnrollments, applyForCourse } from '../api/enrollments';
 
 export const courseKeys = {
@@ -34,5 +36,55 @@ export function useApplyForCourse() {
       queryClient.invalidateQueries({ queryKey: courseKeys.myEnrollments });
       queryClient.invalidateQueries({ queryKey: courseKeys.all });
     },
+  });
+}
+
+/**
+ * Curriculum writes. Every one of them changes what the catalog shows, so they
+ * all invalidate the same list; publishing also changes who can see the course
+ * at all, since courses_select_published is what puts it in front of trainees.
+ *
+ * Each mutationFn unpacks its variables rather than being passed by reference:
+ * TanStack calls it as fn(variables, context), and an api function taking
+ * positional arguments would receive a QueryClient as its second one.
+ */
+function invalidateCatalog(queryClient) {
+  queryClient.invalidateQueries({ queryKey: courseKeys.all });
+  queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+  queryClient.invalidateQueries({ queryKey: ['admin', 'content-counts'] });
+}
+
+export function useCreateCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fields) => createCourse(fields),
+    onSuccess: () => invalidateCatalog(queryClient),
+  });
+}
+
+export function useUpdateCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }) => updateCourse(id, patch),
+    onSuccess: (_data, { id }) => {
+      invalidateCatalog(queryClient);
+      queryClient.invalidateQueries({ queryKey: courseKeys.outline(id) });
+    },
+  });
+}
+
+export function useDeleteCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }) => deleteCourse(id),
+    onSuccess: () => invalidateCatalog(queryClient),
+  });
+}
+
+export function usePublishCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, publish }) => publishCourse(courseId, publish),
+    onSuccess: () => invalidateCatalog(queryClient),
   });
 }

@@ -7,16 +7,22 @@ const mocks = vi.hoisted(() => ({
   getCourseOutline: vi.fn(),
   myEnrollments: vi.fn(),
   applyForCourse: vi.fn(),
+  createCourse: vi.fn(), updateCourse: vi.fn(),
+  deleteCourse: vi.fn(), publishCourse: vi.fn(),
 }));
 vi.mock('../api/courses', () => ({
   listCourses: mocks.listCourses, getCourseOutline: mocks.getCourseOutline,
+  createCourse: mocks.createCourse, updateCourse: mocks.updateCourse,
+  deleteCourse: mocks.deleteCourse, publishCourse: mocks.publishCourse,
 }));
 vi.mock('../api/enrollments', () => ({
   myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,
 }));
 
-const { useCourses, useMyEnrollments, useApplyForCourse, useCourseOutline } =
-  await import('./useCourses');
+const {
+  useCourses, useMyEnrollments, useApplyForCourse, useCourseOutline,
+  useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
+} = await import('./useCourses');
 
 function wrapper({ children }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -77,5 +83,57 @@ describe('useApplyForCourse', () => {
     const { result } = renderHook(() => useApplyForCourse(), { wrapper });
     result.current.mutate('c1');
     await waitFor(() => expect(result.current.error?.message).toMatch(/already applied/));
+  });
+});
+
+describe('curriculum writes', () => {
+  /**
+   * TanStack calls mutationFn as fn(variables, context). An api function taking
+   * positional arguments would be handed a QueryClient as its second one and
+   * would post it. Each of these asserts the exact argument list, not just the
+   * first argument.
+   */
+  it('useCreateCourse passes only the fields', async () => {
+    mocks.createCourse.mockResolvedValue({ id: 'c9' });
+    const { result } = renderHook(() => useCreateCourse(), { wrapper });
+    result.current.mutate({ title: 'Fire Safety', icon: '🔥' });
+    await waitFor(() => expect(mocks.createCourse)
+      .toHaveBeenCalledWith({ title: 'Fire Safety', icon: '🔥' }));
+    expect(mocks.createCourse.mock.calls[0]).toHaveLength(1);
+  });
+
+  it('useUpdateCourse splits the id from the patch', async () => {
+    mocks.updateCourse.mockResolvedValue({ id: 'c1' });
+    const { result } = renderHook(() => useUpdateCourse(), { wrapper });
+    result.current.mutate({ id: 'c1', title: 'Renamed' });
+    await waitFor(() => expect(mocks.updateCourse)
+      .toHaveBeenCalledWith('c1', { title: 'Renamed' }));
+    expect(mocks.updateCourse.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('useDeleteCourse passes the id alone', async () => {
+    mocks.deleteCourse.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useDeleteCourse(), { wrapper });
+    result.current.mutate({ id: 'c1' });
+    await waitFor(() => expect(mocks.deleteCourse).toHaveBeenCalledWith('c1'));
+    expect(mocks.deleteCourse.mock.calls[0]).toHaveLength(1);
+  });
+
+  it('usePublishCourse sends the boolean', async () => {
+    mocks.publishCourse.mockResolvedValue({ ok: true });
+    const { result } = renderHook(() => usePublishCourse(), { wrapper });
+    result.current.mutate({ courseId: 'c1', publish: true });
+    await waitFor(() => expect(mocks.publishCourse).toHaveBeenCalledWith('c1', true));
+    expect(mocks.publishCourse.mock.calls[0]).toHaveLength(2);
+  });
+
+  // publish-course refuses an empty course with 422. The Curriculum page has to
+  // be able to show that, so the hook must not swallow it.
+  it('surfaces the empty-course refusal', async () => {
+    mocks.publishCourse.mockRejectedValue(
+      new Error('A course needs at least one activity before it can be published'));
+    const { result } = renderHook(() => usePublishCourse(), { wrapper });
+    result.current.mutate({ courseId: 'c1', publish: true });
+    await waitFor(() => expect(result.current.error?.message).toMatch(/at least one activity/));
   });
 });

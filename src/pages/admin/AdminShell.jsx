@@ -1,15 +1,24 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useApp } from '../../context/AppContext';
 import Sidebar from '../../components/shared/Sidebar';
-import { ADMIN_STATS } from '../../data/dummyData';
+import QueryError from '../../components/shared/QueryError';
+import { useUsers, usePendingSignups, usePlatformStats, useRecentAudit } from '../../hooks/useAdmin';
 import ContentManager from './ContentManager';
 import UserManager from './UserManager';
+
+/**
+ * The admin dashboard, on real numbers.
+ *
+ * What is deliberately absent: XP, streaks, badges and the leaderboard. They
+ * were the prototype's headline figures, but nothing in the product awards XP
+ * yet (backlog B7), so every one of them would read as a confident zero. A
+ * dashboard that quietly reports zeros is worse than one that does not claim
+ * to measure the thing at all. They come back with the gamification milestone.
+ */
 
 const NAV = [
   { to: '/admin', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/admin/users', icon: '👥', label: 'User Management' },
-  { to: '/admin/support', icon: '🎧', label: 'Support' },
   { to: '/admin/content', icon: '📚', label: 'Curriculum' },
 ];
 
@@ -22,20 +31,73 @@ const fadeUp = {
   }),
 };
 
-function Dashboard() {
-  const { trainees, courses, quizzes, pendingCourseTeachingRequests, approveTeachingRequest } = useApp();
+/** Turns an audit row into a sentence. Unknown actions still render usefully. */
+function describe(entry) {
+  const from = entry.before ?? {};
+  const to = entry.after ?? {};
+  switch (entry.action) {
+    case 'profile.role_changed':
+      return `changed a role from ${from.role ?? '?'} to ${to.role ?? '?'}`;
+    case 'profile.signup_reviewed':
+      return to.status === 'active'
+        ? `approved a signup as ${to.role ?? 'trainee'}`
+        : `rejected a signup`;
+    case 'profile.suspended':
+      return 'suspended an account';
+    case 'profile.reinstated':
+      return 'reinstated an account';
+    default:
+      return entry.action.replace(/[._]/g, ' ');
+  }
+}
 
-  // Compute live stats
-  const totalSubmissions = Object.values(quizzes)
-    .flatMap((q) => q.submissions || []).length;
-  const reviewedSubmissions = Object.values(quizzes)
-    .flatMap((q) => (q.submissions || []).filter((s) => s.status === 'reviewed')).length;
+const when = (iso) => {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return '';
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
 
-  const avgXP = trainees.length > 0
-    ? Math.round(trainees.reduce((a, t) => a + t.xp, 0) / trainees.length)
-    : 0;
+function Metric({ label, value, sub, color }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-card-value" style={{ color }}>{value}</div>
+      <div className="stat-card-label">{label}</div>
+      {sub && <div className="stat-card-sub">{sub}</div>}
+    </div>
+  );
+}
 
-  const activeLearners = trainees.filter((t) => t.streak > 0).length;
+// Exported for its test: rendering the whole shell would drag in the sidebar
+// and AppContext to assert numbers that have nothing to do with either.
+export function Dashboard() {
+  const users = useUsers();
+  const signups = usePendingSignups();
+  const stats = usePlatformStats();
+  const audit = useRecentAudit(8);
+
+  if (users.isLoading || stats.isLoading) {
+    return <div className="page-body" role="status">Loading the platform overview…</div>;
+  }
+
+  const failure = users.error ?? stats.error;
+  if (failure) {
+    return (
+      <div className="page-body">
+        <QueryError error={failure} what="the platform overview" />
+      </div>
+    );
+  }
+
+  const all = users.data ?? [];
+  const byRole = (role) => all.filter((u) => u.role === role).length;
+  const suspended = all.filter((u) => u.status === 'suspended').length;
+  const waiting = (signups.data ?? []).length;
+  const s = stats.data;
 
   return (
     <motion.div
@@ -44,7 +106,6 @@ function Dashboard() {
       initial="hidden"
       animate="visible"
     >
-      {/* Hero */}
       <motion.div
         variants={fadeUp}
         custom={0}
@@ -66,133 +127,113 @@ function Dashboard() {
           </div>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{activeLearners}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Active Learners</div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>
+                {all.length}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Accounts</div>
             </div>
             <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.15)' }} />
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{avgXP}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Avg XP</div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Stats */}
-      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        {[
-          { label: 'Trainees', value: ADMIN_STATS.totalTrainees, icon: '🎓', color: 'var(--brand-primary)' },
-          { label: 'Trainers', value: ADMIN_STATS.totalTrainers, icon: '📋', color: 'var(--brand-secondary)' },
-          { label: 'Supervisors', value: ADMIN_STATS.totalSupervisors, icon: '👁️', color: 'var(--brand-accent)' },
-          { label: 'Courses', value: ADMIN_STATS.totalCourses, icon: '📚', color: '#b8860b' },
-        ].map((s, i) => (
-          <motion.div key={s.label} className="stat-card" whileHover={{ scale: 1.03, boxShadow: 'var(--shadow-md)' }} custom={i}>
-            <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{s.icon}</div>
-            <div className="stat-card-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-card-label">{s.label}</div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Analytics Grid */}
-      <motion.div variants={fadeUp} custom={2} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        {/* Platform Health */}
-        <div className="card no-hover">
-          <div className="card-title">📊 Platform Analytics</div>
-          <div className="improve-list">
-            {[
-              { topic: 'Average Completion Rate', score: ADMIN_STATS.avgCompletion },
-              { topic: 'Quiz Pass Rate', score: ADMIN_STATS.quizPassRate },
-              { topic: 'Active Learners Today', score: Math.round((activeLearners / trainees.length) * 100) },
-            ].map((a) => (
-              <div key={a.topic}>
-                <div className="improve-item-row">
-                  <span style={{ fontSize: '0.875rem' }}>{a.topic}</span>
-                  <span className="improve-item-score">{a.score}%</span>
-                </div>
-                <div className="progress-track">
-                  <motion.div className="progress-fill" initial={{ width: 0 }} animate={{ width: `${a.score}%` }} transition={{ duration: 0.8 }} />
-                </div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>
+                {s.enrollments.active}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Submission Stats */}
-        <div className="card no-hover">
-          <div className="card-title">📝 Submission Overview</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
-            <div style={{ textAlign: 'center', padding: '1.25rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--heading)' }}>{totalSubmissions}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Total Submissions</div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '1.25rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: '#198754' }}>{reviewedSubmissions}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Reviewed</div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '1.25rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--brand-accent)' }}>{totalSubmissions - reviewedSubmissions}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Pending Review</div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '1.25rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--heading)' }}>{Object.keys(quizzes).length}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Total Quizzes</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Active Enrolments</div>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Teaching Requests */}
-      {pendingCourseTeachingRequests.length > 0 && (
-        <motion.div variants={fadeUp} custom={3} className="card no-hover" style={{ borderColor: 'var(--brand-accent)' }}>
-          <div className="card-title">👨‍🏫 Pending Course Teaching Requests</div>
-          <div style={{ display: 'grid', gap: '0.5rem' }}>
-            {pendingCourseTeachingRequests.map((req, idx) => {
-              const courseName = courses.find(c => c.id === req.courseId)?.title || req.courseId;
-              return (
-                <div key={idx} className="student-row" style={{ cursor: 'default' }}>
-                  <div className="student-row-info">
-                    <div className="student-row-name">{req.trainerName}</div>
-                    <div className="student-row-meta">Wants to teach: {courseName}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-primary btn-sm" onClick={() => approveTeachingRequest(req.trainerId, req.courseId)}>Approve</button>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Anything here is a person or a request blocked on an admin. It sits
+          above the statistics because statistics are not actionable. */}
+      {(waiting > 0 || s.enrollments.pending > 0) && (
+        <motion.div variants={fadeUp} custom={1} className="card no-hover"
+                    style={{ borderLeft: '4px solid #b8860b' }}>
+          <div className="card-title">Waiting on you</div>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {waiting > 0 && (
+              <Link to="/admin/users" className="btn btn-primary btn-sm">
+                {waiting} signup{waiting === 1 ? '' : 's'} to review →
+              </Link>
+            )}
+            {s.enrollments.pending > 0 && (
+              <span style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+                {s.enrollments.pending} course application
+                {s.enrollments.pending === 1 ? '' : 's'} pending a trainer&apos;s decision
+              </span>
+            )}
           </div>
         </motion.div>
       )}
 
-      {/* Top Performers */}
-      <motion.div variants={fadeUp} custom={4} className="card no-hover">
-        <div className="card-title">🏆 Top Performing Trainees</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {[...trainees].sort((a, b) => b.xp - a.xp).slice(0, 5).map((t, i) => (
-            <div key={t.id} className="student-row" style={{ cursor: 'default' }}>
-              <div style={{ width: '1.8rem', height: '1.8rem', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: '0.85rem', fontWeight: 700, background: i < 3 ? ['rgba(232,179,77,0.15)', 'rgba(192,192,192,0.15)', 'rgba(205,127,50,0.15)'][i] : 'var(--surface-alt)', color: i < 3 ? ['#e8b34d', '#999', '#cd7f32'][i] : 'var(--text-3)', flexShrink: 0 }}>
-                {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
+      <motion.div variants={fadeUp} custom={2} className="stat-grid stat-grid-4">
+        <Metric label="Trainees" value={byRole('trainee')} color="var(--brand-primary)" />
+        <Metric label="Trainers" value={byRole('trainer')} color="var(--brand-secondary)" />
+        <Metric label="Supervisors" value={byRole('supervisor')} color="var(--brand-accent)" />
+        <Metric label="Admins" value={byRole('admin')} color="#b8860b" />
+      </motion.div>
+
+      <motion.div variants={fadeUp} custom={3} className="stat-grid stat-grid-4">
+        <Metric
+          label="Courses"
+          value={s.courses.total}
+          sub={`${s.courses.published} published`}
+          color="var(--heading)"
+        />
+        <Metric label="Active enrolments" value={s.enrollments.active} color="#28a745" />
+        <Metric label="Quiz attempts" value={s.attempts.total} color="var(--heading)" />
+        <Metric
+          label="Awaiting marking"
+          value={s.attempts.pendingReview}
+          sub="paragraph answers"
+          color={s.attempts.pendingReview > 0 ? 'var(--brand-accent)' : 'var(--text-3)'}
+        />
+      </motion.div>
+
+      {suspended > 0 && (
+        <motion.div variants={fadeUp} custom={4} className="card no-hover">
+          <div className="card-title">Account health</div>
+          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
+            {suspended} account{suspended === 1 ? ' is' : 's are'} suspended.{' '}
+            <Link to="/admin/users" style={{ color: 'var(--brand-primary)' }}>Review them</Link>.
+          </p>
+        </motion.div>
+      )}
+
+      {/* The audit trail is append-only at the database level, enforced for
+          every role including service_role. Surfacing it is the only reason it
+          is worth writing. */}
+      <motion.div variants={fadeUp} custom={5} className="card no-hover">
+        <div className="card-title">Recent admin activity</div>
+        {audit.error ? (
+          <QueryError error={audit.error} what="the audit trail" />
+        ) : (audit.data ?? []).length === 0 ? (
+          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
+            Nothing recorded yet.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {audit.data.map((e) => (
+              <div key={e.id} className="student-row" style={{ cursor: 'default' }}>
+                <div className="student-row-info">
+                  <div className="student-row-name" style={{ fontSize: '0.9rem' }}>
+                    {e.actorEmail ?? 'Unknown admin'} {describe(e)}
+                  </div>
+                  <div className="student-row-meta">{e.entityType} · {e.entityId}</div>
+                </div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                  {when(e.createdAt)}
+                </span>
               </div>
-              <div className="avatar" style={{ width: '2rem', height: '2rem', fontSize: '0.7rem', flexShrink: 0 }}>{t.avatar}</div>
-              <div className="student-row-info">
-                <div className="student-row-name">{t.name}</div>
-                <div className="student-row-meta">{t.email}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>{t.xp} XP</span>
-                <span style={{ color: '#ff6b35', fontWeight: 600 }}>🔥 {t.streak}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{t.badges.length} badges</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
 }
 
-
+// useUsers is shared with UserManager on purpose: same query key, so the
+// dashboard and the directory are one fetch and can never disagree.
 
 export default function AdminShell() {
   return (
