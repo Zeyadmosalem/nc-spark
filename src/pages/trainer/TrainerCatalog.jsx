@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { usePendingEnrollments, useDecideEnrollment } from '../../hooks/useApprovals';
 import QueryError from '../../components/shared/QueryError';
+import Alert from '../../components/ui/Alert';
 
 function EnrollmentQueue() {
   const { data: queue, isLoading, error } = usePendingEnrollments();
@@ -23,9 +24,7 @@ function EnrollmentQueue() {
     <div className="card no-hover" style={{ marginBottom: '1.5rem' }}>
       <div className="card-title">📥 Pending Enrolment Requests ({queue.length})</div>
       {decide.error && (
-        <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
-          {decide.error.message}
-        </p>
+        <Alert error={decide.error} />
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
         {queue.map((req) => (

@@ -50,7 +50,8 @@ describe('TrainerReview', () => {
 
   it('says both queues are clear rather than showing a blank page', async () => {
     show();
-    expect(await screen.findByText(/nothing waiting/i)).toBeInTheDocument();
+    expect(await screen.findByText('All clear')).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is waiting on you/)).toBeInTheDocument();
   });
 
   it('reports a failed load instead of an empty queue', async () => {

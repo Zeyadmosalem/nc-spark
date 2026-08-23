@@ -4,6 +4,9 @@ import {
   useGradeParagraph, useGrantRetake,
 } from '../../hooks/useReview';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
+import Alert from '../../components/ui/Alert';
+import EmptyState from '../../components/ui/EmptyState';
 
 /**
  * The two actions only a trainer can take, in one place.
@@ -21,7 +24,7 @@ export default function TrainerReview() {
   const isLoading = pending.isLoading || blocked.isLoading || grants.isLoading;
   const failure = pending.error ?? blocked.error ?? grants.error;
 
-  if (isLoading) return <div className="page-body" role="status">Loading the review queue…</div>;
+  if (isLoading) return <PageSkeleton label="Loading the review queue" stats={0} rows={3} />;
   if (failure) {
     return <div className="page-body"><QueryError error={failure} what="the review queue" /></div>;
   }
@@ -41,10 +44,9 @@ export default function TrainerReview() {
       </div>
 
       {paragraphs.length === 0 && stuck.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-          <p style={{ color: 'var(--text-2)' }}>Nothing waiting. Every trainee can keep going.</p>
-        </div>
+        <EmptyState icon="✅" title="All clear">
+          Nothing is waiting on you. Every trainee can keep going.
+        </EmptyState>
       ) : (
         <>
           <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -107,9 +109,7 @@ function ParagraphCard({ attempt }) {
       </div>
 
       {grade.error && (
-        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
-          {grade.error.message}
-        </div>
+        <Alert error={grade.error} />
       )}
 
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -171,9 +171,7 @@ function RetakeCard({ attempt, alreadyGranted }) {
       </div>
 
       {grant.error && (
-        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
-          {grant.error.message}
-        </div>
+        <Alert error={grant.error} />
       )}
 
       {alreadyGranted ? (

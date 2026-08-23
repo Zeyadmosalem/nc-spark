@@ -1,22 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMyAttempt, useStartQuiz, useSubmitQuiz } from '../../hooks/useQuizzes';
+import Alert from '../ui/Alert';
+import PageSkeleton from '../ui/Skeleton';
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
-// Declared at module scope, not inside QuizRunner. A component defined during
-// render is a new type on every render, so React unmounts and remounts it and
-// any state it holds is lost. Neither of these holds state today, which is
-// exactly why it would be a trap for whoever adds some.
-function Alert({ error }) {
-  if (!error) return null;
-  return (
-    <div role="alert" className="card no-hover"
-         style={{ padding: '1rem', borderLeft: '4px solid var(--brand-accent)', color: 'var(--brand-accent)' }}>
-      {error.message}
-    </div>
-  );
-}
 
 /** The response shape submit-quiz expects, per question type. */
 function responseFor(question, value) {
@@ -59,7 +47,7 @@ export default function QuizRunner({ quiz, onPassed }) {
   }, [deadline, result]);
 
   if (!quiz) return null;
-  if (isLoading) return <div className="page-body" role="status">Loading quiz…</div>;
+  if (isLoading) return <PageSkeleton label="Loading quiz" stats={0} rows={2} />;
 
   async function begin() {
     const data = await start.mutateAsync(quiz.id).catch(() => null);
