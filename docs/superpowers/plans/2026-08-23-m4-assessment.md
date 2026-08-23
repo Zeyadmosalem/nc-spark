@@ -33,9 +33,9 @@ Two pieces of SQL in the spec do not work as written. Fixed here, not carried fo
 | 10. Trainer review queue | Done | Three bugs, two of them only visible after raising `testTimeout` above `asyncUtilTimeout` — they had been reported as a bare timeout. |
 | 11. Migrate `q1`, strip the bundle | Done | Seeder matches courses by slug; matching the dummy id would have reported success while seeding nothing. |
 | 12. Verification | Done | Mutation-verified: re-introducing one explanation into dummyData makes the bundle grep fail and the script exit non-zero. |
-| 13. Notifications | **Not done** | The approved "full review queue" option said "plus notifications". The queues and actions shipped; notifications did not. Tracked, not hidden. |
+| 13. Notifications | Done | Added after the gap was noticed: the approved review-queue option said "plus notifications" and the first twelve tasks shipped without them. Derived from existing tables rather than a notifications table — an attempt's status IS the notification, and a stored copy could disagree with it. |
 
-**Result:** 233 frontend tests, 338 database tests, 30 live checks in
+**Result:** 247 frontend tests, 338 database tests, 30 live checks in
 `npm run verify:m4`, all passing.
 
 ### Known and accepted

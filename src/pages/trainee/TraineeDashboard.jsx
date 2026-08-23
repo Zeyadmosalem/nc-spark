@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { XPHero, BadgeGrid, LeaderboardWidget } from '../../components/gamification/GamificationWidgets';
 import ProgressRing from '../../components/gamification/ProgressRing';
 import LearningPathMap from '../../components/journey/LearningPathMap';
+import TraineeNotices from '../../components/shared/TraineeNotices';
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] } }) };
 
@@ -26,6 +27,10 @@ export default function TraineeDashboard() {
       initial="hidden"
       animate="visible"
     >
+      {/* Anything a trainer did while the trainee was away. Renders nothing
+          when there is nothing to say, so it costs no space on a quiet day. */}
+      <TraineeNotices />
+
       {/* XP Hero */}
       <motion.div variants={fadeUp} custom={0}><XPHero /></motion.div>
 
