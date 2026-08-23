@@ -59,11 +59,21 @@ Deno.serve(async (req) => {
       .eq('enrollment_id', enrollment.id).single();
     if (pErr) throw new HttpError(500, pErr.message);
 
-    // Finishing every activity completes the enrollment.
+    // Finishing every activity completes the enrollment — UNLESS the course
+    // has a final assessment, in which case 100% only unlocks it and passing
+    // it is what completes the course. M4 supersedes the M3 rule here; a
+    // course with no final behaves exactly as it did before.
     if (progress.percent === 100 && enrollment.status !== 'completed') {
-      await service.from('enrollments')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', enrollment.id);
+      const { data: final, error: finalErr } = await service
+        .from('quizzes').select('id')
+        .eq('course_id', courseId).is('activity_id', null).maybeSingle();
+      if (finalErr) throw new HttpError(500, finalErr.message);
+
+      if (!final) {
+        await service.from('enrollments')
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq('id', enrollment.id);
+      }
     }
 
     return jsonResponse({
