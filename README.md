@@ -82,6 +82,13 @@ Database tests include **red-team suites** asserting that a trainee cannot
 promote itself, read another user's email, enumerate the user table, or award
 itself XP. Treat a failure there as a security regression, not a flaky test.
 
+## Deferred work
+
+[docs/BACKLOG.md](docs/BACKLOG.md) lists everything postponed on purpose, with
+the reasoning — including the access gate for the live site, the accepted
+client-side grading in scenario activities, and the two intermittent test
+failures that were never reproduced.
+
 ## Architecture notes
 
 - **Authentication** is Supabase Auth. Profiles are created by a database
