@@ -107,6 +107,9 @@ failures that were never reproduced.
   queued for admin approval.
 - `src/api/` is the only place Supabase is touched and the only place
   `snake_case` becomes `camelCase`.
+- `src/components/ui/` is the only place a pill, alert, skeleton, empty state,
+  stat card or toast is defined. See the design-system notes in
+  [docs/BACKLOG.md](docs/BACKLOG.md) for which to reach for.
 - **Privileged writes never touch a table.** Role changes, suspensions, signup
   decisions, publishing and trainer assignment all go through Edge Functions so
   they are validated and audited. `courses.trainer_id` and `courses.status` are
