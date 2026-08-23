@@ -20,7 +20,8 @@
     "db:seed-catalog": "node ./scripts/seed-catalog.mjs",
     "verify:m3": "node ./scripts/verify-m3.mjs",
     "db:seed-quizzes": "node ./scripts/seed-quizzes.mjs",
-    "verify:m4": "node ./scripts/verify-m4.mjs"
+    "verify:m4": "node ./scripts/verify-m4.mjs",
+    "db:seed-review": "node ./scripts/seed-review-users.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

@@ -1,0 +1,8 @@
+# The app uses BrowserRouter, so every route is a real URL the browser may
+# request directly — a refresh on /trainee/courses, or a link someone pastes.
+# A static host would return 404 for all of them. This serves index.html and
+# lets the router take over, while keeping the 200 status so it is a rewrite
+# rather than a redirect.
+#
+# Understood by both Cloudflare Pages and Netlify.
+/*    /index.html   200

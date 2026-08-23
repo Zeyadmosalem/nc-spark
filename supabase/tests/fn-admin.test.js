@@ -201,27 +201,46 @@ describe('admin-suspend-user', () => {
 });
 
 describe('last-admin protection', () => {
+  /**
+   * Runs `body` in a world where `keepId` really is the only active admin.
+   *
+   * The guard counts active admins, so these tests are meaningless unless that
+   * is true. They used to suspend one known secondAdmin and assume resetDb had
+   * cleared everyone else — which stopped holding once review accounts began
+   * surviving resetDb, and both tests failed. Establishing the precondition
+   * rather than assuming it makes them independent of whatever else exists.
+   */
+  async function asOnlyActiveAdmin(keepId, body) {
+    const { data: others } = await svc.from('profiles')
+      .select('id').eq('role', 'admin').eq('status', 'active').neq('id', keepId);
+    const ids = (others ?? []).map((o) => o.id);
+    if (ids.length) {
+      await svc.from('profiles').update({ status: 'suspended' }).in('id', ids);
+    }
+    try {
+      return await body();
+    } finally {
+      if (ids.length) {
+        await svc.from('profiles').update({ status: 'active' }).in('id', ids);
+      }
+    }
+  }
+
   // Locking everyone out of administration is unrecoverable without direct
   // database access, so both paths that could cause it are refused.
   it('refuses to demote the last active admin', async () => {
-    await svc.from('profiles').update({ status: 'suspended' }).eq('id', secondAdmin.id);
-    try {
+    await asOnlyActiveAdmin(admin.id, async () => {
       const res = await call('admin-set-role', cAdmin, { userId: admin.id, role: 'trainee' });
       expect(res.status).toBe(409);
       expect((await stateOf(admin.id)).role).toBe('admin');
-    } finally {
-      await svc.from('profiles').update({ status: 'active' }).eq('id', secondAdmin.id);
-    }
+    });
   });
 
   it('refuses to suspend the last active admin', async () => {
-    await svc.from('profiles').update({ status: 'suspended' }).eq('id', secondAdmin.id);
-    try {
+    await asOnlyActiveAdmin(admin.id, async () => {
       const res = await call('admin-suspend-user', cAdmin, { userId: admin.id, suspend: true });
       expect(res.status).toBe(409);
       expect((await stateOf(admin.id)).status).toBe('active');
-    } finally {
-      await svc.from('profiles').update({ status: 'active' }).eq('id', secondAdmin.id);
-    }
+    });
   });
 });

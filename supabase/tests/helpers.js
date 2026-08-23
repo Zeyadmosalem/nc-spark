@@ -66,10 +66,16 @@ export async function signIn(email, password = 'Test-Passw0rd!') {
 }
 
 /** Removes every auth user and their cascading rows. Dev project only. */
+// Accounts on this domain survive resetDb. The review environment shares one
+// Supabase project with the test suite, so without this every db test run
+// silently deletes the logins someone is using to look at the site.
+export const REVIEW_DOMAIN = 'ncspark-review.local';
+
 export async function resetDb() {
   const svc = serviceClient();
   const { data } = await svc.auth.admin.listUsers({ perPage: 1000 });
   for (const u of data?.users ?? []) {
+    if (u.email?.endsWith(`@${REVIEW_DOMAIN}`)) continue;
     await svc.auth.admin.deleteUser(u.id);
   }
   await svc.from('allowed_domains').delete().neq('domain', '');
