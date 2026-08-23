@@ -20,6 +20,17 @@ async function call(fn, client, body) {
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
+// Calls that are SUPPOSED to succeed assert it. Without this, a transient
+// non-2xx from the platform surfaces as a confusing downstream assertion
+// ("expected pending to be withdrawn") instead of naming the real cause.
+async function callOk(fn, client, body) {
+  const res = await call(fn, client, body);
+  if (res.status !== 200) {
+    throw new Error(`${fn} returned ${res.status}: ${JSON.stringify(res.body)}`);
+  }
+  return res;
+}
+
 const auditFor = async (entityId, action) =>
   (await svc.from('audit_log').select('*').eq('entity_id', entityId).eq('action', action)).data ?? [];
 
@@ -77,7 +88,7 @@ describe('approve-enrollment', () => {
 
   it('writes an audit entry', async () => {
     const e = await pendingEnrollment();
-    await call('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'approve' });
+    await callOk('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'approve' });
     const rows = await auditFor(e.id, 'enrollment.decided');
     expect(rows).toHaveLength(1);
     expect(rows[0].after.status).toBe('active');
@@ -86,7 +97,7 @@ describe('approve-enrollment', () => {
 
   it('denies by setting withdrawn', async () => {
     const e = await pendingEnrollment();
-    await call('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'deny' });
+    await callOk('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'deny' });
     const { data } = await svc.from('enrollments').select('status').eq('id', e.id).single();
     expect(data.status).toBe('withdrawn');
   });
@@ -107,7 +118,7 @@ describe('approve-enrollment', () => {
 
   it('refuses to decide an already-decided enrollment', async () => {
     const e = await pendingEnrollment();
-    await call('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'approve' });
+    await callOk('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'approve' });
     const res = await call('approve-enrollment', cAdmin, { enrollmentId: e.id, decision: 'deny' });
     expect(res.status).toBe(409);
   });
@@ -153,7 +164,7 @@ describe('approve-teaching-request', () => {
     await svc.from('courses').update({ trainer_id: null }).eq('id', id);
     const { data: req } = await svc.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: id }).select().single();
-    await call('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'deny' });
+    await callOk('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'deny' });
     const { data } = await svc.from('courses').select('trainer_id').eq('id', id).single();
     expect(data.trainer_id).toBeNull();
   });
@@ -162,7 +173,7 @@ describe('approve-teaching-request', () => {
     const id = await makeCourse('draft');
     const { data: req } = await svc.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: id }).select().single();
-    await call('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'deny' });
+    await callOk('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'deny' });
     const res = await call('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'approve' });
     expect(res.status).toBe(409);
   });
@@ -208,7 +219,7 @@ describe('publish-course', () => {
 
   it('writes an audit entry', async () => {
     const id = await makeCourse('draft', true);
-    await call('publish-course', cOwner, { courseId: id, publish: true });
+    await callOk('publish-course', cOwner, { courseId: id, publish: true });
     expect(await auditFor(id, 'course.published')).toHaveLength(1);
   });
 });

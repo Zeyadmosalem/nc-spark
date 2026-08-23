@@ -1,11 +1,12 @@
 import { requireRole, readJson, jsonResponse, errorResponse, HttpError } from '../_shared/auth.ts';
 import { writeAudit } from '../_shared/audit.ts';
-import { corsHeaders, handleOptions } from '../_shared/cors.ts';
+import { corsFor, handleOptions } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
+  const cors = corsFor(req);
   try {
     const { profile: actor, service } = await requireRole(req, ['admin', 'trainer']);
     const { courseId, publish } = await readJson(req) as
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
 
     const nextStatus = publish ? 'published' : 'draft';
     if (course.status === nextStatus) {
-      return jsonResponse({ ok: true, course, unchanged: true }, corsHeaders);
+      return jsonResponse({ ok: true, course, unchanged: true }, cors);
     }
 
     const { data: updated, error: updErr } = await service
@@ -54,8 +55,8 @@ Deno.serve(async (req) => {
       after: { status: updated.status },
     });
 
-    return jsonResponse({ ok: true, course: updated }, corsHeaders);
+    return jsonResponse({ ok: true, course: updated }, cors);
   } catch (err) {
-    return errorResponse(err, corsHeaders);
+    return errorResponse(err, cors);
   }
 });

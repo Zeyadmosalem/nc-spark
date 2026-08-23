@@ -1,11 +1,12 @@
 import { requireRole, readJson, jsonResponse, errorResponse, HttpError } from '../_shared/auth.ts';
 import { writeAudit } from '../_shared/audit.ts';
-import { corsHeaders, handleOptions } from '../_shared/cors.ts';
+import { corsFor, handleOptions } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
+  const cors = corsFor(req);
   try {
     // Admin only. A trainer approving their own request would defeat the whole
     // point of the workflow.
@@ -45,8 +46,8 @@ Deno.serve(async (req) => {
       after: { status: updated.status, trainerAssigned: decision === 'approve' },
     });
 
-    return jsonResponse({ ok: true, request: updated }, corsHeaders);
+    return jsonResponse({ ok: true, request: updated }, cors);
   } catch (err) {
-    return errorResponse(err, corsHeaders);
+    return errorResponse(err, cors);
   }
 });

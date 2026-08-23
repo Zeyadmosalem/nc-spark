@@ -1,10 +1,11 @@
 import { requireRole, readJson, jsonResponse, errorResponse, HttpError } from '../_shared/auth.ts';
-import { corsHeaders, handleOptions } from '../_shared/cors.ts';
+import { corsFor, handleOptions } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
+  const cors = corsFor(req);
   try {
     const { profile: actor, service } = await requireRole(req, ['trainee']);
     const { activityId, payload } = await readJson(req) as
@@ -73,8 +74,8 @@ Deno.serve(async (req) => {
         completed: progress.completed_activities,
         total: progress.total_activities,
       },
-    }, corsHeaders);
+    }, cors);
   } catch (err) {
-    return errorResponse(err, corsHeaders);
+    return errorResponse(err, cors);
   }
 });

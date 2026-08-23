@@ -73,9 +73,25 @@ export function jsonResponse(body: unknown, headers: Record<string, string>, sta
   });
 }
 
+/**
+ * Turns a thrown error into a response.
+ *
+ * Deliberate 4xx messages are the API's contract and are returned verbatim —
+ * "Finish the previous module first" is meant to be read by a trainee. A 5xx
+ * is different: its message is usually raw Postgres text naming columns and
+ * constraints, which tells an attacker about the schema and tells the user
+ * nothing useful. Those are logged in full and replaced with a reference the
+ * caller can quote, so a support request stays traceable to one log line.
+ */
 export function errorResponse(err: unknown, headers: Record<string, string>): Response {
   const status = err instanceof HttpError ? err.status : 500;
+
+  if (status >= 500) {
+    const ref = crypto.randomUUID().slice(0, 8);
+    console.error(`[${ref}] Unhandled function error:`, err);
+    return jsonResponse({ error: 'Something went wrong. Reference: ' + ref, ref }, headers, status);
+  }
+
   const message = err instanceof Error ? err.message : 'Unexpected error';
-  if (status >= 500) console.error('Unhandled function error:', err);
   return jsonResponse({ error: message }, headers, status);
 }
