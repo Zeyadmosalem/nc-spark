@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import QueryError from '../shared/QueryError';
+import CourseMaterials from '../shared/CourseMaterials';
 import PageSkeleton from '../ui/Skeleton';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
@@ -176,6 +177,15 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
           </AnimatePresence>
         </div>
       )}
+
+      <section>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Materials</h2>
+        {/* The same component a trainee sees, with the controls turned on.
+            course_materials_write already limits those to an admin or the
+            owning trainer, so canManage decides what to render and the
+            database decides what is allowed. */}
+        <CourseMaterials courseId={courseId} canManage />
+      </section>
 
       <form onSubmit={submitModule} className="card no-hover"
             style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>

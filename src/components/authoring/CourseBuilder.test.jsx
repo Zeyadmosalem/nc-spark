@@ -31,6 +31,12 @@ vi.mock('../../hooks/useAuthoring', () => ({
   useDeleteActivity: () => asMutation(mocks.deleteActivity),
 }));
 
+// Materials have their own tests and their own queries; this file is about
+// modules and activities.
+vi.mock('../shared/CourseMaterials', () => ({
+  default: ({ canManage }) => <div data-testid="materials" data-can-manage={String(canManage)} />,
+}));
+
 const CourseBuilder = (await import('./CourseBuilder')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
@@ -337,5 +343,19 @@ describe('failures', () => {
     mocks.useCourseForEditing.mockReturnValue(query(null));
     show();
     expect(screen.getByText(/does not exist, or you cannot edit it/)).toBeInTheDocument();
+  });
+});
+
+describe('materials', () => {
+  /**
+   * course_materials, its RLS and the private bucket have existed since M3
+   * with nothing reading them. The same component the trainee sees is mounted
+   * here with its controls on: course_materials_write already limits those to
+   * an admin or the owning trainer.
+   */
+  it('offers the materials editor with management turned on', () => {
+    mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
+    show();
+    expect(screen.getByTestId('materials')).toHaveAttribute('data-can-manage', 'true');
   });
 });

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
+import CourseMaterials from '../../components/shared/CourseMaterials';
 
 const TYPE_ICONS = {
   video: '🎬', reading: '📖', flashcards: '🃏',
@@ -171,13 +172,10 @@ export default function CoursePage() {
             )
           )}
 
-          {activeTab === 'materials' && (
-            <div className="card no-hover" style={{ textAlign: 'center', padding: '2rem' }}>
-              <p style={{ color: 'var(--text-2)' }}>
-                No learning materials uploaded for this course yet.
-              </p>
-            </div>
-          )}
+          {/* This tab was a hardcoded "nothing uploaded yet" that could never
+              say anything else: course_materials, its RLS and the private
+              bucket have existed since M3 with nothing reading them. */}
+          {activeTab === 'materials' && <CourseMaterials courseId={courseId} />}
 
         </motion.div>
       </AnimatePresence>
