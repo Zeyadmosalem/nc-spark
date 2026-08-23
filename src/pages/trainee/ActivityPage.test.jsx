@@ -1,0 +1,119 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const mocks = vi.hoisted(() => ({
+  getActivity: vi.fn(), completeActivity: vi.fn(),
+  useSession: vi.fn(() => ({ profile: { id: 's1', role: 'trainee' }, status: 'active' })),
+}));
+vi.mock('../../api/activities', () => ({
+  getActivity: mocks.getActivity, completeActivity: mocks.completeActivity,
+}));
+// Task 7 adds useSession to this page to supply traineeId for uploads. It
+// reads the Supabase session, which is absent under test, so it is stubbed.
+vi.mock('../../hooks/useSession', () => ({ useSession: mocks.useSession }));
+// CourseChatDrawer still reads the prototype's in-memory context until M5.
+vi.mock('../../context/AppContext', () => ({
+  useApp: () => ({ currentUser: { id: 's1' }, chatMessages: {}, sendChatMessage: vi.fn() }),
+}));
+
+const { default: ActivityPage } = await import('./ActivityPage');
+
+function renderAt(activityId = 'a1', state = undefined) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[{ pathname: `/activity/${activityId}`, state }]}>
+        <Routes>
+          <Route path="/activity/:activityId" element={<ActivityPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('ActivityPage', () => {
+  it('shows a loading state first', () => {
+    mocks.getActivity.mockReturnValue(new Promise(() => {}));
+    renderAt();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a reading activity', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'reading', title: 'Safety Guide', xp: 8, body: '## Rules',
+    });
+    renderAt();
+    expect(await screen.findByText(/Safety Guide/)).toBeInTheDocument();
+  });
+
+  it('renders a flashcards activity', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'flashcards', title: 'Keywords', xp: 12,
+      cards: [{ front: 'Q', back: 'A' }],
+    });
+    renderAt();
+    expect(await screen.findByText(/Keywords/)).toBeInTheDocument();
+  });
+
+  it('shows not-found for a missing activity', async () => {
+    mocks.getActivity.mockResolvedValue(null);
+    renderAt();
+    expect(await screen.findByText(/Activity not found/i)).toBeInTheDocument();
+  });
+
+  it('explains an activity type it cannot render yet', async () => {
+    mocks.getActivity.mockResolvedValue({ id: 'a1', type: 'quiz', title: 'Mini Quiz', xp: 0 });
+    renderAt();
+    expect(await screen.findByText(/not available yet/i)).toBeInTheDocument();
+  });
+
+  it('surfaces a locked-module refusal as an alert', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'reading', title: 'Locked One', xp: 5, body: 'x',
+    });
+    mocks.completeActivity.mockRejectedValue(new Error('Finish the previous module first'));
+    const user = userEvent.setup();
+    renderAt();
+    await screen.findByText(/Locked One/);
+    await user.click(screen.getByRole('button', { name: /mark as complete/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/previous module/);
+  });
+
+  it('calls the api when completing', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'reading', title: 'Done One', xp: 5, body: 'x',
+    });
+    mocks.completeActivity.mockResolvedValue({ ok: true, progress: { percent: 100 } });
+    const user = userEvent.setup();
+    renderAt();
+    await screen.findByText(/Done One/);
+    await user.click(screen.getByRole('button', { name: /mark as complete/i }));
+    await waitFor(() => expect(mocks.completeActivity).toHaveBeenCalledWith('a1', {}));
+  });
+
+  // The prototype offered a course discussion from inside an activity. It is
+  // still in-memory until M5, but dropping it here would quietly remove a
+  // feature trainees can already see.
+  it('keeps the course discussion available when arriving from a course', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'reading', title: 'Chatty', xp: 5, body: 'x',
+    });
+    renderAt('a1', { courseId: 'c1' });
+    await screen.findByText(/Chatty/);
+    expect(screen.getByRole('button', { name: /discuss/i })).toBeInTheDocument();
+  });
+
+  it('omits the discussion button when there is no course context', async () => {
+    mocks.getActivity.mockResolvedValue({
+      id: 'a1', type: 'reading', title: 'Lonely', xp: 5, body: 'x',
+    });
+    renderAt();
+    await screen.findByText(/Lonely/);
+    expect(screen.queryByRole('button', { name: /discuss/i })).not.toBeInTheDocument();
+  });
+});
