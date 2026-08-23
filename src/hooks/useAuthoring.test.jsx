@@ -97,7 +97,7 @@ describe('what goes stale', () => {
     const keys = spy.mock.calls.map((c) => JSON.stringify(c[0].queryKey));
     expect(keys).toContain(JSON.stringify(['authoring', 'course', 'c1']));
     expect(keys).toContain(JSON.stringify(['courses', 'outline', 'c1']));
-    expect(keys).toContain(JSON.stringify(['admin', 'content-counts']));
+    expect(keys).toContain(JSON.stringify(['courses', 'content-counts']));
   });
 
   it('skips the outline when no course was named, rather than invalidating everything', async () => {
@@ -108,7 +108,7 @@ describe('what goes stale', () => {
 
     const keys = spy.mock.calls.map((c) => JSON.stringify(c[0].queryKey));
     expect(keys.some((k) => k.includes('outline'))).toBe(false);
-    expect(keys).toContain(JSON.stringify(['admin', 'content-counts']));
+    expect(keys).toContain(JSON.stringify(['courses', 'content-counts']));
   });
 });
 

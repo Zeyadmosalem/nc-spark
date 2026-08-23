@@ -1,5 +1,5 @@
 import { requireClient } from './client';
-import { unwrap, invokeFn } from './helpers';
+import { unwrap, invokeFn, currentUserId } from './helpers';
 
 /**
  * Who teaches what.
@@ -39,3 +39,40 @@ export async function pendingTeachingRequests() {
 
 export const decideTeachingRequest = (requestId, decision) =>
   invokeFn('approve-teaching-request', { requestId, decision });
+
+/**
+ * A trainer's own requests, whatever their state.
+ *
+ * teaching_requests_select matches own rows or an admin, so this is already
+ * scoped; trainer_id is named anyway so an admin calling it gets their own
+ * requests rather than everyone's.
+ */
+export async function myTeachingRequests() {
+  const rows = unwrap(await requireClient()
+    .from('teaching_requests')
+    .select('id, course_id, status, created_at')
+    .eq('trainer_id', await currentUserId())
+    .order('created_at', { ascending: false }));
+  return (rows ?? []).map((r) => ({
+    id: r.id, courseId: r.course_id, status: r.status, createdAt: r.created_at,
+  }));
+}
+
+/**
+ * Asks to teach a course. The INSERT grant covers only (trainer_id, course_id)
+ * and teaching_requests_insert_self requires the row to be the caller's own
+ * and their role to be trainer, so status cannot be set from here — it always
+ * lands as pending, waiting on an admin.
+ *
+ * `teaching_requests_one_open` is a partial unique index over pending rows, so
+ * asking twice is a duplicate-key error rather than two entries in the queue.
+ */
+export async function requestToTeach(courseId) {
+  const row = unwrap(await requireClient()
+    .from('teaching_requests')
+    .insert({ trainer_id: await currentUserId(), course_id: courseId })
+    .select('id, course_id, status, created_at').single());
+  return {
+    id: row.id, courseId: row.course_id, status: row.status, createdAt: row.created_at,
+  };
+}

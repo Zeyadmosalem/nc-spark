@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
+  useCourseContentCounts,
 } from '../../hooks/useCourses';
-import {
-  useUsers, useTeachingRequests, useDecideTeachingRequest, useCourseContentCounts,
-} from '../../hooks/useAdmin';
+import { useUsers, useTeachingRequests, useDecideTeachingRequest } from '../../hooks/useAdmin';
 import QueryError from '../../components/shared/QueryError';
 
 /**

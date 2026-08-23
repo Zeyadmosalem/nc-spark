@@ -33,7 +33,7 @@ function useAuthoringMutation(mutationFn) {
         queryClient.invalidateQueries({ queryKey: editorKeys.course(variables.courseId) });
         queryClient.invalidateQueries({ queryKey: courseKeys.outline(variables.courseId) });
       }
-      queryClient.invalidateQueries({ queryKey: ['admin', 'content-counts'] });
+      queryClient.invalidateQueries({ queryKey: courseKeys.contentCounts });
       queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     },
   });

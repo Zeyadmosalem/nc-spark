@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import QueryError from '../../components/shared/QueryError';
+import QueryError from '../shared/QueryError';
 import { AUTHORABLE_TYPES, EMPTY_CONTENT } from '../../api/authoring';
 import {
   useCourseForEditing,
@@ -95,7 +95,12 @@ function ContentFields({ type, content, onChange }) {
   );
 }
 
-export default function CourseBuilder() {
+/**
+ * @param backTo  where the breadcrumb goes. The same policies authorise an
+ *                admin and the owning trainer, so both roles mount this; only
+ *                the route they came from differs.
+ */
+export default function CourseBuilder({ backTo = '/admin/content' }) {
   const { courseId } = useParams();
   const course = useCourseForEditing(courseId);
   const addModule = useCreateModule();
@@ -118,7 +123,7 @@ export default function CourseBuilder() {
         <p style={{ color: 'var(--text-2)' }}>
           That course does not exist, or you cannot edit it.
         </p>
-        <Link to="/admin/content" className="btn btn-ghost btn-sm">← Back to the curriculum</Link>
+        <Link to={backTo} className="btn btn-ghost btn-sm">← Back</Link>
       </div>
     );
   }
@@ -143,8 +148,8 @@ export default function CourseBuilder() {
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div>
-        <Link to="/admin/content" style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
-          ← Curriculum
+        <Link to={backTo} style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
+          ← Back
         </Link>
         <h1 className="section-heading" style={{ margin: '0.5rem 0 0.35rem' }}>{title}</h1>
         <p className="section-sub">

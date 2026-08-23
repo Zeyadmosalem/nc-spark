@@ -25,6 +25,7 @@ and the supervisor role were wired to the server. The site is live at
 
 | # | Item | Outcome |
 |---|---|---|
+| **B15** | Trainer authoring screens | **Closed.** The four prototype trainer pages are gone. `/trainer/courses` lists a trainer's own courses and the unassigned ones they can ask to teach; `/trainer/courses/:id` mounts the same `CourseBuilder` the admin console uses, because `modules_write` and `activities_write` authorise the owning trainer identically and a second implementation would only be a second thing to keep in step. The teaching-request loop is now closed end to end and tested live: a trainer asks, an admin approves, `trainer_id` is set. |
 | **B13** | Module and activity authoring | **Closed.** `src/pages/admin/CourseBuilder.jsx` at `/admin/content/:courseId`. No migration was needed: `modules_write` and `activities_write` have been `for all` policies covering an admin or the owning trainer since M2, with full grants — the database was ready and nothing called it. A live test now creates a course, adds an activity and publishes it, which is a loop that had never once closed. |
 | **B5** | A supervisor cannot read `quizzes` | **Fixed** in `20260825000100_supervisor_reads.sql`, on the condition B5 set: a supervisor oversight screen now exists to need it. The migration also adds `courses_select_supervisor`, because `enrollments_select_supervisor` does not filter on course status and a supervisor could otherwise hold an enrolment on a draft course they could not name. Mutation-tested live: reverting the policy makes the title come back as "Unknown quiz". |
 
@@ -37,36 +38,32 @@ and the supervisor role were wired to the server. The site is live at
 | **B7** | **XP and gamification awarding** | XP has been display-only since M1 — nothing grants it. Deferred deliberately so M4 stayed about grading integrity. Badges, streaks and the leaderboard should land together with it. |
 | **B8** | **M5 — realtime chat** | `CourseChatDrawer` and the course chat tab are still the prototype's in-memory implementation. Messages do not persist or reach anyone else. |
 
-## Frontend still on prototype data
+## Frontend on prototype data
 
-Counted 2026-08-23, after this sprint. A page is "wired" if it reads from
-`src/api/` or `src/hooks/`; the rest still read `AppContext` and
-`src/data/dummyData`.
+Counted 2026-08-24. A page is "wired" if it reads from `src/api/` or
+`src/hooks/`; the rest still read `AppContext` and `src/data/dummyData`.
 
 | Role | Wired | Still prototype |
 |---|---|---|
 | Auth | 4/4 | — |
-| Admin | 3/3 | — |
+| Admin | 4/4 | — |
+| Trainer | 4/4 | — |
 | Supervisor | 2/2 | — |
 | Trainee | 7/8 | `QuizPreview` |
-| Trainer | 3/7 | `CourseManagement`, `CreateActivity`, `CreateQuiz`, `TrainerCoursePage` |
 
-The admin course builder is reachable by the owning trainer too — same
-policies — but there is no trainer-side route to it yet. Pointing the four
-trainer authoring screens at `CourseBuilder` rather than rebuilding them is
-the cheap next step.
+`QuizPreview` is a standalone demo of the quiz UI on canned questions, reachable
+at `/trainee/quiz/preview` and part of no flow. It is the last file importing
+`dummyData` from a routed page, and one of the five lint warnings (B11).
 
-Trainer is the only role left with prototype screens, and all four are
-authoring. Modules and activities can now be authored (B13, closed), so these
-are no longer blocked on missing backend — they are blocked only on a
-trainer-side route into the builder.
+`AppContext` is still mounted: `Sidebar` reads `theme`, `toggleTheme` and
+`currentUser` from it, and `CourseChatDrawer` is still the prototype chat (B8).
+Retiring it is a follow-up, not a gap in any screen.
 
-`QuizPreview` is a standalone demo of the quiz UI on canned questions. It is
-reachable at `/trainee/quiz/preview` and is not part of any flow.
-
-`SupervisorCoursePage` and `ContentReview` were deleted rather than wired.
-The first was built around course chat (M5, unbuilt); the second approved
-content through a workflow with no table, status or Edge Function behind it.
+Deleted rather than wired, because each was a UI for something with no
+server-side model: `SupervisorCoursePage` and `CourseChatDrawer`'s host page
+(course chat is M5), `ContentReview` (content approval has no table or status),
+and the trainer's `CourseManagement`, `CreateActivity`, `CreateQuiz` and
+`TrainerCoursePage`, all replaced by the shared `CourseBuilder`.
 
 ## Maintenance
 

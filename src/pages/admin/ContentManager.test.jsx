@@ -20,11 +20,11 @@ vi.mock('../../hooks/useCourses', () => ({
   useUpdateCourse: () => asMutation(mocks.update),
   useDeleteCourse: () => asMutation(mocks.remove),
   usePublishCourse: () => asMutation(mocks.publish, mocks.state.publish),
+  useCourseContentCounts: mocks.useCourseContentCounts,
 }));
 vi.mock('../../hooks/useAdmin', () => ({
   useUsers: mocks.useUsers,
   useTeachingRequests: mocks.useTeachingRequests,
-  useCourseContentCounts: mocks.useCourseContentCounts,
   useDecideTeachingRequest: () => asMutation(mocks.decide),
 }));
 

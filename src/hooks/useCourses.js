@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listCourses, getCourseOutline, createCourse, updateCourse, deleteCourse, publishCourse,
+  courseContentCounts,
 } from '../api/courses';
 import { myEnrollments, applyForCourse } from '../api/enrollments';
 
@@ -8,7 +9,15 @@ export const courseKeys = {
   all: ['courses'],
   outline: (id) => ['courses', 'outline', id],
   myEnrollments: ['enrollments', 'mine'],
+  contentCounts: ['courses', 'content-counts'],
 };
+
+/**
+ * Modules and activities per course, for deciding whether Publish is offered.
+ * RLS scopes it, so an admin sees every course and a trainer sees their own.
+ */
+export const useCourseContentCounts = () =>
+  useQuery({ queryKey: courseKeys.contentCounts, queryFn: courseContentCounts });
 
 export function useCourses() {
   return useQuery({ queryKey: courseKeys.all, queryFn: listCourses });
@@ -51,7 +60,7 @@ export function useApplyForCourse() {
 function invalidateCatalog(queryClient) {
   queryClient.invalidateQueries({ queryKey: courseKeys.all });
   queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
-  queryClient.invalidateQueries({ queryKey: ['admin', 'content-counts'] });
+  queryClient.invalidateQueries({ queryKey: courseKeys.contentCounts });
 }
 
 export function useCreateCourse() {

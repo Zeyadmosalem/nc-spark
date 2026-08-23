@@ -4,7 +4,7 @@ import Sidebar from '../../components/shared/Sidebar';
 import QueryError from '../../components/shared/QueryError';
 import { useUsers, usePendingSignups, usePlatformStats, useRecentAudit } from '../../hooks/useAdmin';
 import ContentManager from './ContentManager';
-import CourseBuilder from './CourseBuilder';
+import CourseBuilder from '../../components/authoring/CourseBuilder';
 import UserManager from './UserManager';
 
 /**
@@ -245,7 +245,7 @@ export default function AdminShell() {
           <Route index element={<Dashboard />} />
           <Route path="users" element={<UserManager />} />
           <Route path="content" element={<ContentManager />} />
-          <Route path="content/:courseId" element={<CourseBuilder />} />
+          <Route path="content/:courseId" element={<CourseBuilder backTo="/admin/content" />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </div>

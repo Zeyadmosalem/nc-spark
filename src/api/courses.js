@@ -88,3 +88,28 @@ export async function deleteCourse(id) {
 /** Status is never written directly; the Edge Function validates content first. */
 export const publishCourse = (courseId, publish) =>
   invokeFn('publish-course', { courseId, publish });
+
+/**
+ * How much content each course actually has.
+ *
+ * publish-course refuses a course with zero activities (422). Without this the
+ * Curriculum page can only discover that by pressing Publish and reading the
+ * error, which makes a correct refusal look like a broken button.
+ *
+ * Counted through `courses` rather than `modules` so courses_select_admin is
+ * the policy doing the work, and a course with no modules still appears.
+ */
+export async function courseContentCounts() {
+  const rows = unwrap(await requireClient()
+    .from('courses')
+    .select('id, modules(id, activities(id))'));
+  const counts = {};
+  for (const c of rows ?? []) {
+    const modules = c.modules ?? [];
+    counts[c.id] = {
+      modules: modules.length,
+      activities: modules.reduce((n, m) => n + (m.activities?.length ?? 0), 0),
+    };
+  }
+  return counts;
+}

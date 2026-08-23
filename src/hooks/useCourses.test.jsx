@@ -8,12 +8,13 @@ const mocks = vi.hoisted(() => ({
   myEnrollments: vi.fn(),
   applyForCourse: vi.fn(),
   createCourse: vi.fn(), updateCourse: vi.fn(),
-  deleteCourse: vi.fn(), publishCourse: vi.fn(),
+  deleteCourse: vi.fn(), publishCourse: vi.fn(), courseContentCounts: vi.fn(),
 }));
 vi.mock('../api/courses', () => ({
   listCourses: mocks.listCourses, getCourseOutline: mocks.getCourseOutline,
   createCourse: mocks.createCourse, updateCourse: mocks.updateCourse,
   deleteCourse: mocks.deleteCourse, publishCourse: mocks.publishCourse,
+  courseContentCounts: mocks.courseContentCounts,
 }));
 vi.mock('../api/enrollments', () => ({
   myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,

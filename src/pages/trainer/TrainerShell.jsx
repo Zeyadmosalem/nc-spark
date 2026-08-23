@@ -3,20 +3,16 @@ import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
 import Sidebar from '../../components/shared/Sidebar';
 import TrainerReview from './TrainerReview';
-import CreateActivity from './CreateActivity';
-import CreateQuiz from './CreateQuiz';
-import CourseManagement from './CourseManagement';
-import TrainerCoursePage from './TrainerCoursePage';
+import TrainerCourses from './TrainerCourses';
 import TrainerCatalog from './TrainerCatalog';
+import CourseBuilder from '../../components/authoring/CourseBuilder';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
 const NAV = [
   { to: '/trainer', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/trainer/courses', icon: '📚', label: 'My Courses' },
   { to: '/trainer/catalog', icon: '🔍', label: 'Course Catalog' },
-  { to: '/trainer/create', icon: '✨', label: 'Create Content' },
   { to: '/trainer/review', icon: '✅', label: 'Review Work' },
-  { to: '/trainee/support', icon: '🎧', label: 'Support' },
 ];
 
 const fadeUp = {
@@ -253,12 +249,17 @@ export default function TrainerShell() {
       <div className="main-content">
         <Routes>
           <Route index element={<Dashboard />} />
-          <Route path="courses" element={<CourseManagement />} />
+          <Route path="courses" element={<TrainerCourses />} />
           <Route path="catalog" element={<TrainerCatalog />} />
-          <Route path="courses/:courseId" element={<TrainerCoursePage />} />
-          <Route path="create" element={<CreateActivity />} />
-          <Route path="create/activity" element={<CreateActivity />} />
-          <Route path="create/quiz" element={<CreateQuiz />} />
+          {/* The same builder the admin console mounts. modules_write and
+              activities_write authorise the owning trainer identically, so a
+              second implementation would only be a second thing to keep in
+              step. */}
+          <Route path="courses/:courseId" element={<CourseBuilder backTo="/trainer/courses" />} />
+          {/* The prototype's Create Content forms wrote to in-memory context.
+              Authoring now happens inside a course, which is the only place it
+              can: an activity needs a module to live in. */}
+          <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
           <Route path="review" element={<TrainerReview />} />
           <Route path="*" element={<Navigate to="/trainer" replace />} />
         </Routes>

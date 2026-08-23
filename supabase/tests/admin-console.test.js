@@ -34,9 +34,12 @@ process.env.VITE_SUPABASE_URL = env.SUPABASE_URL;
 process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
 
 const { supabase } = await import('../../src/api/client.js');
-const { listUsers, pendingSignups, platformStats, recentAudit, courseContentCounts } =
+const { listUsers, pendingSignups, platformStats, recentAudit } =
   await import('../../src/api/admin.js');
-const { pendingTeachingRequests } = await import('../../src/api/teaching.js');
+// Lives in courses.js: it is course data, and the trainer screens read it too.
+const { courseContentCounts } = await import('../../src/api/courses.js');
+const { pendingTeachingRequests, decideTeachingRequest, requestToTeach } =
+  await import('../../src/api/teaching.js');
 const { setUserRole, reviewSignup, suspendUser } = await import('../../src/api/profiles.js');
 
 const svc = serviceClient();
@@ -217,5 +220,65 @@ describe('a trainee calling the admin reads', () => {
     await expect(suspendUser(admin.id, true)).rejects.toThrow();
     const { data } = await svc.from('profiles').select('role,status').eq('id', admin.id).single();
     expect(data).toEqual({ role: 'admin', status: 'active' });
+  });
+});
+
+/**
+ * The whole teaching-request loop, end to end, through the api both screens
+ * use. courses.trainer_id is excluded from the UPDATE grant, so this is the
+ * ONLY way a course gets an owner — a trainer asks, an admin decides, and
+ * approve-teaching-request sets the column with the service role.
+ */
+describe('a course changing hands', () => {
+  let secondCourse;
+
+  beforeAll(async () => {
+    const { data } = await svc.from('courses').insert({
+      slug: `${PREFIX}-handover`, title: 'Handover Course', created_by: admin.id,
+    }).select().single();
+    secondCourse = data.id;
+  });
+
+  afterAll(async () => {
+    await svc.from('courses').delete().eq('id', secondCourse);
+  });
+
+  it('starts with no trainer', async () => {
+    const { data } = await svc.from('courses').select('trainer_id').eq('id', secondCourse).single();
+    expect(data.trainer_id).toBeNull();
+  });
+
+  it('lets a trainer ask, without letting them set the status', async () => {
+    await become(trainer.email);
+    const request = await requestToTeach(secondCourse);
+    expect(request.status).toBe('pending');
+  });
+
+  // teaching_requests_one_open is a partial unique index over pending rows.
+  it('refuses a second open ask for the same course', async () => {
+    await expect(requestToTeach(secondCourse)).rejects.toThrow();
+  });
+
+  it('shows up in the admin queue with both names resolved', async () => {
+    await become(admin.email);
+    const queue = await pendingTeachingRequests();
+    const row = queue.find((r) => r.courseId === secondCourse);
+    expect(row).toBeDefined();
+    expect(row.trainerName).toBe(trainer.name ?? row.trainerName);
+    expect(row.courseTitle).toBe('Handover Course');
+  });
+
+  it('assigns the trainer when the admin approves', async () => {
+    const queue = await pendingTeachingRequests();
+    const row = queue.find((r) => r.courseId === secondCourse);
+    await decideTeachingRequest(row.id, 'approve');
+
+    const { data } = await svc.from('courses').select('trainer_id').eq('id', secondCourse).single();
+    expect(data.trainer_id).toBe(trainer.id);
+  });
+
+  it('leaves the queue empty afterwards', async () => {
+    const queue = await pendingTeachingRequests();
+    expect(queue.map((r) => r.courseId)).not.toContain(secondCourse);
   });
 });

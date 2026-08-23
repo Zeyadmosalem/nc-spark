@@ -8,7 +8,8 @@ vi.mock('./client', () => ({
   supabase: client, isConfigured: true, requireClient: () => client,
 }));
 
-const { courseToCamel, listCourses, publishCourse, getCourseOutline } = await import('./courses');
+const { courseToCamel, listCourses, publishCourse, getCourseOutline, courseContentCounts } =
+  await import('./courses');
 const { enrollmentToCamel, applyForCourse } = await import('./enrollments');
 
 beforeEach(() => vi.clearAllMocks());
@@ -120,5 +121,43 @@ describe('applyForCourse', () => {
     expect(arg.course_id).toBe('c1');
     expect(arg.trainee_id).toBe('u1');
     expect(arg.status).toBeUndefined();
+  });
+});
+
+describe('courseContentCounts', () => {
+  /**
+   * Counted through `courses` rather than `modules` so the policy doing the
+   * work is the one on courses, and a course with no modules still appears —
+   * which is exactly the case that has to disable Publish.
+   */
+  it('counts a course with no modules as zero rather than omitting it', async () => {
+    from.mockReturnValue(chain({
+      data: [{ id: 'c1', modules: [] }, { id: 'c2', modules: null }],
+      error: null,
+    }));
+    expect(await courseContentCounts()).toEqual({
+      c1: { modules: 0, activities: 0 },
+      c2: { modules: 0, activities: 0 },
+    });
+  });
+
+  it('sums activities across modules', async () => {
+    from.mockReturnValue(chain({
+      data: [{
+        id: 'c1',
+        modules: [
+          { id: 'm1', activities: [{ id: 'a1' }, { id: 'a2' }] },
+          { id: 'm2', activities: [{ id: 'a3' }] },
+          { id: 'm3', activities: null },
+        ],
+      }],
+      error: null,
+    }));
+    expect(await courseContentCounts()).toEqual({ c1: { modules: 3, activities: 3 } });
+  });
+
+  it('throws rather than reporting every course as empty', async () => {
+    from.mockReturnValue(chain({ data: null, error: { message: 'permission denied' } }));
+    await expect(courseContentCounts()).rejects.toThrow(/permission denied/);
   });
 });
