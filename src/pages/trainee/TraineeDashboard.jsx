@@ -1,24 +1,83 @@
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
-import { XPHero, BadgeGrid, LeaderboardWidget } from '../../components/gamification/GamificationWidgets';
+import { Link } from 'react-router-dom';
+import { useSession } from '../../hooks/useSession';
+import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
 import ProgressRing from '../../components/gamification/ProgressRing';
-import LearningPathMap from '../../components/journey/LearningPathMap';
 import TraineeNotices from '../../components/shared/TraineeNotices';
+import QueryError from '../../components/shared/QueryError';
 
-const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] } }) };
+/**
+ * The first screen a trainee sees, on real enrolment progress.
+ *
+ * `percent` comes from the enrollment_progress view, which counts actual
+ * activity completions. Every number on this page used to be invented by
+ * dummyData, including the progress rings.
+ *
+ * Deliberately absent: the XP hero, the leaderboard, the badge grid and the
+ * learning-path map. Nothing awards XP yet (backlog B7) and learning paths
+ * have no server-side counterpart, so wired to real data all four render zeros
+ * or nothing. A dashboard reporting a confident 0 XP and an empty leaderboard
+ * tells a trainee they are behind; the honest version does not claim to
+ * measure what the product does not yet measure. They return with B7.
+ */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] },
+  }),
+};
+
+function Stat({ label, value, icon, color }) {
+  return (
+    <div className="stat-card">
+      <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{icon}</div>
+      <div className="stat-card-value" style={{ color }}>{value}</div>
+      <div className="stat-card-label">{label}</div>
+    </div>
+  );
+}
 
 export default function TraineeDashboard() {
-  const { currentUser, courses, learningPaths, pendingCourseEnrollments } = useApp();
-  const navigate = useNavigate();
+  const { profile } = useSession();
+  const enrollments = useMyEnrollments();
+  const courses = useCourses();
 
-  const enrolledCourses = courses.filter((c) => currentUser.enrolledCourses?.includes(c.id));
-  const pendingCourseIds = pendingCourseEnrollments?.filter(req => req.traineeId === currentUser.id).map(req => req.courseId) || [];
-  const pendingCourses = courses.filter((c) => pendingCourseIds.includes(c.id));
-  const allDisplayCourses = [...enrolledCourses, ...pendingCourses];
-  
-  const currentCourse = enrolledCourses[0] || pendingCourses[0];
-  const activePath = learningPaths.find(p => p.courseId === currentCourse?.id) || learningPaths[0];
+  // Both queries draw a single card: the enrollment carries progress, the
+  // course carries its name. Rendering on one of them shows nameless cards.
+  if (enrollments.isLoading || courses.isLoading) {
+    return <div className="page-body" role="status">Loading your dashboard…</div>;
+  }
+
+  const failure = enrollments.error ?? courses.error;
+  if (failure) {
+    return (
+      <div className="page-body">
+        <QueryError error={failure} what="your dashboard" />
+      </div>
+    );
+  }
+
+  const byId = new Map((courses.data ?? []).map((c) => [c.id, c]));
+  const all = enrollments.data ?? [];
+  const active = all.filter((e) => e.status === 'active');
+  const completed = all.filter((e) => e.status === 'completed');
+  const waiting = all.filter((e) => e.status === 'pending');
+
+  const started = [...active, ...completed];
+  const overall = started.length
+    ? Math.round(started.reduce((sum, e) => sum + (e.percent ?? 0), 0) / started.length)
+    : 0;
+
+  // The course to resume: the one furthest along that is not finished. Picking
+  // the least-progressed would send a trainee back to whatever they abandoned.
+  const resume = active
+    .filter((e) => (e.percent ?? 0) < 100)
+    .sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0))[0];
+  const resumeCourse = resume && byId.get(resume.courseId);
+
+  const firstName = (profile?.name ?? '').split(' ')[0];
 
   return (
     <motion.div
@@ -31,121 +90,127 @@ export default function TraineeDashboard() {
           when there is nothing to say, so it costs no space on a quiet day. */}
       <TraineeNotices />
 
-      {/* XP Hero */}
-      <motion.div variants={fadeUp} custom={0}><XPHero /></motion.div>
-
-      {/* Quick Stats */}
-      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        {[
-          { label: 'Overall Progress', value: `${Math.round(enrolledCourses.reduce((a, c) => a + c.progress, 0) / (enrolledCourses.length || 1))}%`, icon: '📈', color: 'var(--brand-primary)' },
-          { label: 'Courses Enrolled', value: enrolledCourses.length, icon: '📚', color: 'var(--brand-secondary)' },
-          { label: 'Weekly Goal', value: '3 / 5', icon: '🎯', color: 'var(--brand-accent)' },
-          { label: 'Badges Earned', value: currentUser.badges.length, icon: '🏅', color: '#b8860b' },
-        ].map((s, i) => (
-          <motion.div key={s.label} className="stat-card" whileHover={{ scale: 1.03, boxShadow: 'var(--shadow-md)' }} custom={i}>
-            <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{s.icon}</div>
-            <div className="stat-card-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-card-label">{s.label}</div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Learning Path */}
-      {activePath && (
-        <motion.div variants={fadeUp} custom={2} className="card no-hover">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div>
-              <p className="eyebrow">Your Learning Path</p>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', color: 'var(--heading)' }}>{activePath.title}</h2>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => navigate(`/trainee/courses/${currentCourse?.id}`)}>
-                Resume Path →
-              </button>
-            </div>
+      <motion.div
+        variants={fadeUp}
+        custom={0}
+        className="xp-hero"
+        style={{ background: 'linear-gradient(145deg, rgba(0,0,0,0.92), rgba(10,10,18,0.95)), radial-gradient(500px 300px at 10% 10%, rgba(0,163,224,0.2), transparent), radial-gradient(500px 400px at 95% 5%, rgba(107,44,141,0.25), transparent)' }}
+      >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: '1rem',
+        }}>
+          <div>
+            <p style={{
+              fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase',
+              letterSpacing: '0.08em', marginBottom: '0.5rem',
+            }}>
+              Your training
+            </p>
+            <h1 style={{
+              fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 4vw, 2.1rem)',
+              color: '#fff', lineHeight: 1.1, marginBottom: '0.5rem',
+            }}>
+              {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0 }}>
+              {started.length === 0
+                ? 'You have not started a course yet.'
+                : `${overall}% through ${started.length} course${started.length === 1 ? '' : 's'}.`}
+            </p>
           </div>
-          <LearningPathMap path={activePath} />
-        </motion.div>
-      )}
-
-      {/* Dashboard Grid */}
-      <motion.div variants={fadeUp} custom={3} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-        {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* My Courses */}
-          <div className="card no-hover">
-            <div className="card-title">📚 My Courses</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {allDisplayCourses.map((course) => {
-                const isPending = pendingCourseIds.includes(course.id);
-                return (
-                  <motion.div
-                    key={course.id}
-                    className="student-row"
-                    whileHover={{ x: isPending ? 0 : 4 }}
-                    onClick={() => !isPending && navigate(`/trainee/courses/${course.id}`)}
-                    style={{ cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
-                  >
-                    <div style={{ fontSize: '1.5rem', width: '2.5rem', height: '2.5rem', background: `${course.color}22`, borderRadius: 'var(--r-lg)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{course.icon}</div>
-                    <div className="student-row-info">
-                      <div className="student-row-name">{course.title} {isPending && '(Pending)'}</div>
-                      <div className="student-row-meta">{course.subtitle}</div>
-                    </div>
-                    {isPending ? (
-                      <span className="chip">⏳ Pending Approval</span>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <ProgressRing radius={24} stroke={4} progress={course.progress} />
-                        <span style={{ fontSize: '0.9rem', color: 'var(--text-3)' }}>→</span>
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Improvement Areas */}
-          {currentCourse && (
-            <div className="card no-hover">
-              <div className="card-title">📊 Areas to Improve — {currentCourse.title}</div>
-              <div className="improve-list">
-                {currentCourse.improvementAreas.map((area) => (
-                  <div key={area.topic}>
-                    <div className="improve-item-row">
-                      <span style={{ fontSize: '0.875rem' }}>{area.topic}</span>
-                      <span className="improve-item-score">{area.score}%</span>
-                    </div>
-                    <div className="progress-track">
-                      <motion.div className="progress-fill" initial={{ width: 0 }} animate={{ width: `${area.score}%` }} transition={{ duration: 0.8, delay: 0.2 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {resumeCourse && (
+            <Link
+              to={`/trainee/courses/${resumeCourse.id}`}
+              className="btn btn-primary"
+              style={{ textDecoration: 'none' }}
+            >
+              Continue {resumeCourse.title} →
+            </Link>
           )}
         </div>
+      </motion.div>
 
-        {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Leaderboard */}
-          <div className="card no-hover">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div className="card-title" style={{ marginBottom: 0 }}>🏆 Leaderboard</div>
-              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/trainee/achievements')}>View all</button>
-            </div>
-            <LeaderboardWidget limit={5} currentUserId={currentUser.id} />
-          </div>
+      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
+        <Stat label="Overall progress" value={`${overall}%`} icon="📈" color="var(--brand-primary)" />
+        <Stat label="In progress" value={active.length} icon="📚" color="var(--brand-secondary)" />
+        <Stat label="Completed" value={completed.length} icon="✅" color="#28a745" />
+        <Stat
+          label="Awaiting approval"
+          value={waiting.length}
+          icon="⏳"
+          color={waiting.length > 0 ? 'var(--brand-accent)' : 'var(--text-3)'}
+        />
+      </motion.div>
 
-          {/* Badges preview */}
-          <div className="card no-hover">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div className="card-title" style={{ marginBottom: 0 }}>🏅 Your Badges</div>
-              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/trainee/achievements')}>View all</button>
-            </div>
-            <BadgeGrid earned={currentUser.badges} />
+      <motion.div variants={fadeUp} custom={2} className="card no-hover">
+        <div className="card-title">📚 My courses</div>
+        {started.length === 0 && waiting.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+            <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
+              You are not enrolled in any course yet.
+            </p>
+            <Link to="/trainee/catalog" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+              Browse the catalog
+            </Link>
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {started.map((e) => {
+              const course = byId.get(e.courseId);
+              if (!course) return null;
+              return (
+                <Link
+                  key={e.id}
+                  to={`/trainee/courses/${course.id}`}
+                  className="student-row"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  <div style={{
+                    fontSize: '1.5rem', width: '2.5rem', height: '2.5rem', flexShrink: 0,
+                    background: `${course.color ?? '#00a3e0'}22`, borderRadius: 'var(--r-lg)',
+                    display: 'grid', placeItems: 'center',
+                  }}>
+                    {course.icon ?? '📘'}
+                  </div>
+                  <div className="student-row-info">
+                    <div className="student-row-name">{course.title}</div>
+                    <div className="student-row-meta">
+                      {e.status === 'completed' ? 'Completed' : course.subtitle}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <ProgressRing radius={24} stroke={4} progress={e.percent ?? 0} />
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-3)' }}>→</span>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* A pending application is not a course yet: no progress, nowhere
+                to click. Showing it stops a trainee re-applying. */}
+            {waiting.map((e) => {
+              const course = byId.get(e.courseId);
+              if (!course) return null;
+              return (
+                <div key={e.id} className="student-row" style={{ cursor: 'default', opacity: 0.75 }}>
+                  <div style={{
+                    fontSize: '1.5rem', width: '2.5rem', height: '2.5rem', flexShrink: 0,
+                    background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)',
+                    display: 'grid', placeItems: 'center',
+                  }}>
+                    {course.icon ?? '📘'}
+                  </div>
+                  <div className="student-row-info">
+                    <div className="student-row-name">{course.title}</div>
+                    <div className="student-row-meta">Waiting for a trainer to approve you</div>
+                  </div>
+                  <span className="chip">⏳ Pending</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
