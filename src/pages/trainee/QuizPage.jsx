@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuiz } from '../../hooks/useQuizzes';
 import QuizRunner from '../../components/quiz/QuizRunner';
 import QueryError from '../../components/shared/QueryError';
+import PageSkeleton from '../../components/ui/Skeleton';
 
 /**
  * The standalone quiz route. All the behaviour lives in QuizRunner, which the
@@ -13,7 +14,7 @@ export default function QuizPage() {
   const navigate = useNavigate();
   const { data: quiz, isLoading, error } = useQuiz(quizId);
 
-  if (isLoading) return <div className="page-body" role="status">Loading quiz…</div>;
+  if (isLoading) return <PageSkeleton label="Loading quiz" stats={0} rows={2} />;
 
   if (error) {
     return <div className="page-body"><QueryError error={error} what="this quiz" /></div>;

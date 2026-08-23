@@ -9,6 +9,7 @@ import QuizPreview from './QuizPreview';
 import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
+import PageSkeleton from '../../components/ui/Skeleton';
 
 const NAV = [
   { to: '/trainee', end: true, icon: '🏠', label: 'Dashboard' },
@@ -27,7 +28,7 @@ export function MyCoursesPage() {
   // progress, the course supplies its name. Waiting on only one of them means
   // every card misses its course lookup and the page renders blank mid-flight.
   if (isLoading || coursesLoading) {
-    return <div className="page-body" role="status">Loading your courses…</div>;
+    return <PageSkeleton label="Loading your courses" stats={0} rows={3} />;
   }
 
   // A failure is otherwise indistinguishable from "you are not enrolled in any

@@ -1,6 +1,7 @@
 import { useQuizForActivity } from '../../hooks/useQuizzes';
 import QueryError from '../shared/QueryError';
 import QuizRunner from './QuizRunner';
+import PageSkeleton from '../ui/Skeleton';
 
 /**
  * A quiz activity inside a module.
@@ -12,7 +13,7 @@ import QuizRunner from './QuizRunner';
 export default function QuizActivity({ activity }) {
   const { data: quiz, isLoading, error } = useQuizForActivity(activity?.id);
 
-  if (isLoading) return <div className="page-body" role="status">Loading quiz…</div>;
+  if (isLoading) return <PageSkeleton label="Loading quiz" stats={0} rows={2} />;
   if (error) return <div className="page-body"><QueryError error={error} what="this quiz" /></div>;
 
   if (!quiz) {
