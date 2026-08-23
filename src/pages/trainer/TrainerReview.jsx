@@ -1,61 +1,207 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import {
+  usePendingReviews, useBlockedAttempts, useOpenRetakeGrants,
+  useGradeParagraph, useGrantRetake,
+} from '../../hooks/useReview';
+import QueryError from '../../components/shared/QueryError';
 
+/**
+ * The two actions only a trainer can take, in one place.
+ *
+ * One attempt per quiz, must-pass to progress, and paragraphs graded by hand
+ * together mean a trainee can be blocked indefinitely with no way to unblock
+ * themselves. This page is what makes that recoverable, which is why it ships
+ * with the assessment rather than after it.
+ */
 export default function TrainerReview() {
-  const { quizzes, reviewSubmission } = useApp();
-  const submissions = Object.values(quizzes).flatMap((q) => (q.submissions || []).map((s) => ({ ...s, quizId: q.id, quizTitle: q.title })));
-  const pending = submissions.filter((s) => s.status === 'pending');
-  const [selected, setSelected] = useState(null);
+  const pending = usePendingReviews();
+  const blocked = useBlockedAttempts();
+  const grants = useOpenRetakeGrants();
 
-  function handleApprove(sub) {
-    reviewSubmission(sub.quizId, sub.id, { status: 'reviewed', feedback: 'Approved.' });
-    setSelected(null);
+  const isLoading = pending.isLoading || blocked.isLoading || grants.isLoading;
+  const failure = pending.error ?? blocked.error ?? grants.error;
+
+  if (isLoading) return <div className="page-body" role="status">Loading the review queue…</div>;
+  if (failure) {
+    return <div className="page-body"><QueryError error={failure} what="the review queue" /></div>;
   }
 
-  function handleFeedback(sub, text) {
-    reviewSubmission(sub.quizId, sub.id, { status: 'reviewed', feedback: text });
-    setSelected(null);
-  }
+  const paragraphs = pending.data ?? [];
+  const stuck = blocked.data ?? [];
+  const granted = new Set((grants.data ?? []).map((g) => `${g.quiz_id}:${g.trainee_id}`));
 
   return (
-    <div className="page-body">
-      <p className="eyebrow">Review Submissions</p>
-      <h1 className="section-heading">Paragraph Responses</h1>
-      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-        <div style={{ flex: 1 }}>
-          {pending.length === 0 ? <div className="card no-hover">No pending paragraph responses.</div> : pending.map((s) => (
-            <div key={s.id} className="card no-hover" style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 700 }}>{s.traineeName} — {s.quizTitle}</div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-2)' }}>{new Date(s.createdAt).toLocaleString()}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-primary" onClick={() => setSelected(s)}>Open</button>
-                <button className="btn btn-secondary" onClick={() => handleApprove(s)}>Mark Reviewed</button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ width: 520 }}>
-          {selected ? (
-            <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{selected.traineeName} — {selected.quizTitle}</div>
-              <div style={{ fontSize: '0.95rem', color: 'var(--text-2)', marginBottom: '0.75rem' }}>
-                {Object.entries(selected.answers).map(([qid, ans]) => (
-                  <div key={qid} style={{ marginBottom: '0.5rem' }}><strong>{qid}:</strong> {String(ans)}</div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-primary" onClick={() => handleFeedback(selected, 'Thanks — good answer.')}>Approve + Feedback</button>
-                <button className="btn btn-secondary" onClick={() => handleFeedback(selected, 'Please elaborate on point 2.')}>Request Revision</button>
-                <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
-              </div>
-            </div>
-          ) : (
-            <div className="card no-hover small-note">Select a submission to review its paragraph answers and leave feedback.</div>
-          )}
-        </div>
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div>
+        <p className="eyebrow">Review</p>
+        <h1 className="section-heading">Waiting on You</h1>
+        <p className="section-sub">
+          Trainees cannot move past these on their own.
+        </p>
       </div>
+
+      {paragraphs.length === 0 && stuck.length === 0 ? (
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+          <p style={{ color: 'var(--text-2)' }}>Nothing waiting. Every trainee can keep going.</p>
+        </div>
+      ) : (
+        <>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem' }}>
+              ✍️ Paragraphs awaiting a grade ({paragraphs.length})
+            </h2>
+            {paragraphs.length === 0
+              ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
+              : paragraphs.map((a) => <ParagraphCard key={a.attemptId} attempt={a} />)}
+          </section>
+
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem' }}>🔁 Blocked on a retake ({stuck.length})</h2>
+            {stuck.length === 0
+              ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
+              : stuck.map((a) => (
+                <RetakeCard
+                  key={a.attemptId}
+                  attempt={a}
+                  alreadyGranted={granted.has(`${a.quizId}:${a.traineeId}`)}
+                />
+              ))}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ParagraphCard({ attempt }) {
+  const grade = useGradeParagraph();
+  const first = attempt.paragraphs[0];
+  // Held as a string: clearing the field would otherwise put NaN in the value
+  // attribute, which React rejects and which leaves the input unusable.
+  const [awarded, setAwarded] = useState('0');
+  const [comment, setComment] = useState('');
+
+  if (!first) return null;
+  const marks = Number(awarded);
+  const invalid = awarded.trim() === '' || Number.isNaN(marks)
+    || marks < 0 || marks > first.points;
+
+  return (
+    <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
+          {attempt.traineeAvatar}
+        </span>
+        <strong>{attempt.traineeName}</strong>
+        <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
+          {attempt.courseTitle} · {attempt.quizTitle} · auto-marked {attempt.autoScore}%
+        </span>
+      </div>
+
+      <div style={{ background: 'var(--surface-alt)', padding: '0.75rem', borderRadius: 'var(--r-md)' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', marginBottom: '0.35rem' }}>
+          {first.prompt}
+        </p>
+        <p style={{ whiteSpace: 'pre-wrap' }}>{first.text}</p>
+      </div>
+
+      {grade.error && (
+        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+          {grade.error.message}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <label style={{ fontSize: '0.8rem', color: 'var(--text-2)' }}>
+          Marks awarded (out of {first.points})
+          <input
+            className="input-field" type="number" min={0} max={first.points}
+            aria-label={`Marks awarded, out of ${first.points}`}
+            value={awarded}
+            onChange={(e) => setAwarded(e.target.value)}
+            style={{ width: 110, display: 'block', marginTop: '0.25rem' }}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 200, fontSize: '0.8rem', color: 'var(--text-2)' }}>
+          Comment for the trainee
+          <input
+            className="input-field" aria-label="Comment for the trainee"
+            value={comment} onChange={(e) => setComment(e.target.value)}
+            style={{ display: 'block', marginTop: '0.25rem', width: '100%' }}
+          />
+        </label>
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={invalid || grade.isPending}
+          onClick={() => grade.mutate({
+            attemptId: attempt.attemptId, questionId: first.questionId,
+            awarded: marks, comment,
+          })}
+        >
+          {grade.isPending ? 'Saving…' : 'Save grade'}
+        </button>
+      </div>
+
+      {attempt.paragraphs.length > 1 && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
+          {attempt.paragraphs.length - 1} more paragraph
+          {attempt.paragraphs.length > 2 ? 's' : ''} on this attempt; it stays pending until all are marked.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RetakeCard({ attempt, alreadyGranted }) {
+  const grant = useGrantRetake();
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
+          {attempt.traineeAvatar}
+        </span>
+        <strong>{attempt.traineeName}</strong>
+        <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
+          {attempt.courseTitle} · {attempt.quizTitle} ·{' '}
+          {attempt.status === 'expired' ? 'ran out of time' : 'did not pass'} at {attempt.score}%
+        </span>
+      </div>
+
+      {grant.error && (
+        <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+          {grant.error.message}
+        </div>
+      )}
+
+      {alreadyGranted ? (
+        // Without this a trainer keeps clicking and keeps getting a 409.
+        <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+          ✓ Retake already granted — waiting for the trainee to use it.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label style={{ flex: 1, minWidth: 220, fontSize: '0.8rem', color: 'var(--text-2)' }}>
+            Reason (kept in the audit log)
+            <input
+              className="input-field" aria-label="Reason for the retake"
+              value={reason} onChange={(e) => setReason(e.target.value)}
+              style={{ display: 'block', marginTop: '0.25rem', width: '100%' }}
+            />
+          </label>
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={grant.isPending}
+            onClick={() => grant.mutate({
+              quizId: attempt.quizId, traineeId: attempt.traineeId, reason,
+            })}
+          >
+            {grant.isPending ? 'Granting…' : 'Allow retake'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
