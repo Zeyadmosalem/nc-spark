@@ -82,6 +82,13 @@ Database tests include **red-team suites** asserting that a trainee cannot
 promote itself, read another user's email, enumerate the user table, or award
 itself XP. Treat a failure there as a security regression, not a flaky test.
 
+`supabase/tests/admin-console.test.js` is the odd one out: instead of
+reimplementing the queries it checks, it imports `src/api/` and runs the code
+the browser runs against the live project. That is the only way to catch a
+wrong PostgREST embed name — `profiles!teaching_requests_trainer_id_fkey(...)`
+is a string, and the frontend unit tests mock `from`, so they pass whatever is
+written there while the browser gets a 400.
+
 ## Deferred work
 
 [docs/BACKLOG.md](docs/BACKLOG.md) lists everything postponed on purpose, with
@@ -100,6 +107,11 @@ failures that were never reproduced.
   queued for admin approval.
 - `src/api/` is the only place Supabase is touched and the only place
   `snake_case` becomes `camelCase`.
+- **Privileged writes never touch a table.** Role changes, suspensions, signup
+  decisions, publishing and trainer assignment all go through Edge Functions so
+  they are validated and audited. `courses.trainer_id` and `courses.status` are
+  excluded from the column-level UPDATE grant, which is what makes that
+  structural rather than a convention.
 
 ### Gotchas worth knowing
 
