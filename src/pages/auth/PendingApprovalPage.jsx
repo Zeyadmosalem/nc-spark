@@ -17,7 +17,7 @@ export default function PendingApprovalPage({ status = 'pending' }) {
     <div className="login-page">
       <div className="login-container" style={{ maxWidth: 460 }}>
         <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '3rem' }}>{copy.icon}</div>
+          <div style={{ fontSize: '3rem' }} aria-hidden="true">{copy.icon}</div>
           <h2 style={{ fontFamily: 'var(--font-heading)', margin: '1rem 0 0.5rem' }}>{copy.title}</h2>
           <p style={{ color: 'var(--text-2)', maxWidth: '44ch', margin: '0 auto 1.5rem' }}>{copy.body}</p>
           <button className="btn btn-ghost" onClick={() => signOut()}>Sign out</button>

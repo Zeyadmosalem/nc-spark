@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, waitForElementToBeRemoved } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +8,7 @@ import Alert from './Alert';
 import EmptyState from './EmptyState';
 import StatCard from './StatCard';
 import PageSkeleton, { Skeleton, SkeletonList, LoadingLabel } from './Skeleton';
+import PasswordField from './PasswordField';
 import ToastProvider from './ToastProvider';
 import { useToast } from './toast-context';
 
@@ -95,6 +97,16 @@ describe('Alert', () => {
   it('renders nothing for an error with no message', () => {
     const { container } = render(<Alert error={new Error('')} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  /**
+   * A title alone is enough. QueryError puts "Could not load the catalog." in
+   * the title and the server's message in the body — and an Error whose
+   * message is empty must not silence the half that says what failed.
+   */
+  it('still renders when only a title is given', () => {
+    render(<Alert title="Could not load the catalog." error={new Error('')} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load the catalog.');
   });
 
   it('hides its decorative icon from assistive technology', () => {
@@ -235,5 +247,57 @@ describe('ToastProvider', () => {
     render(<Trigger message="nowhere to go" />);
     await userEvent.click(screen.getByRole('button', { name: 'Do it' }));
     expect(screen.queryByText('nowhere to go')).not.toBeInTheDocument();
+  });
+});
+
+describe('PasswordField', () => {
+  function Harness(props) {
+    const [value, setValue] = useState('');
+    return <PasswordField value={value} onChange={setValue} {...props} />;
+  }
+
+  /**
+   * Every password field in the app was write-only. That is how somebody
+   * mistypes a password three times and concludes the account is broken — and
+   * it matters most on signup, where there is no confirm field and the typo is
+   * only discovered at the next sign-in.
+   */
+  it('reveals and re-hides what was typed', async () => {
+    render(<Harness />);
+    const input = screen.getByLabelText('Password');
+    expect(input).toHaveAttribute('type', 'password');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(input).toHaveAttribute('type', 'text');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
+  it('reports its state to assistive technology', async () => {
+    render(<Harness />);
+    const toggle = screen.getByRole('button', { name: 'Show password' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Hide password' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  /**
+   * The toggle's accessible name deliberately is not just "Password", so a
+   * query for the input does not also match the button.
+   */
+  it('does not collide with a query for the field itself', () => {
+    render(<Harness />);
+    expect(screen.getByLabelText(/^password$/i).tagName).toBe('INPUT');
+  });
+
+  // Stating the rule up front beats stating it after the form is rejected.
+  it('ties its hint to the input for a screen reader', () => {
+    render(<Harness hint="At least 8 characters." minLength={8} />);
+    const input = screen.getByLabelText('Password');
+    expect(input).toHaveAttribute('minLength', '8');
+    const hintId = input.getAttribute('aria-describedby');
+    expect(document.getElementById(hintId)).toHaveTextContent('At least 8 characters.');
   });
 });

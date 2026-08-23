@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '../../api/auth';
+import Alert from '../../components/ui/Alert';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
@@ -28,7 +29,7 @@ export default function ResetPasswordPage() {
         <div className="login-header"><h1>Reset your password</h1></div>
         <form onSubmit={handleSubmit} className="card no-hover"
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
-          {error && <div role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem' }}>{error}</div>}
+          <Alert tone="error">{error}</Alert>
           {sent
             ? (
               // Deliberately does not reveal whether the address exists.

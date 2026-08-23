@@ -21,7 +21,11 @@ export default function Alert({ tone = 'error', title, children, error }) {
   // Accepts either an Error or arbitrary children, because most callers have
   // a TanStack mutation error and nothing else to say about it.
   const body = children ?? error?.message;
-  if (!body) return null;
+
+  // A title alone is enough. QueryError supplies "Could not load the catalog."
+  // as the title and the server's message as the body, and an Error with an
+  // empty message must not silence the part that says what failed.
+  if (!body && !title) return null;
 
   const assertive = tone === 'error' || tone === 'warning';
 
