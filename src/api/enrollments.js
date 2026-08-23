@@ -1,4 +1,5 @@
-import { supabase } from './client';
+import { requireClient } from './client';
+import { unwrap, invokeFn, currentUserId } from './helpers';
 
 export function enrollmentToCamel(row) {
   if (!row) return null;
@@ -13,14 +14,9 @@ export function enrollmentToCamel(row) {
   };
 }
 
-function unwrap({ data, error }) {
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 /** The caller's own enrollments, with derived progress joined in. */
 export async function myEnrollments() {
-  const rows = unwrap(await supabase
+  const rows = unwrap(await requireClient()
     .from('enrollments')
     .select('*, enrollment_progress(percent)'));
   return (rows ?? []).map((r) =>
@@ -33,16 +29,15 @@ export async function myEnrollments() {
  * always lands as pending.
  */
 export async function applyForCourse(courseId) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const row = unwrap(await supabase.from('enrollments')
-    .insert({ course_id: courseId, trainee_id: user.id })
+  const row = unwrap(await requireClient().from('enrollments')
+    .insert({ course_id: courseId, trainee_id: await currentUserId() })
     .select().single());
   return enrollmentToCamel(row);
 }
 
 /** Pending applications visible to the caller: their courses, or all for an admin. */
 export async function pendingEnrollments() {
-  const rows = unwrap(await supabase
+  const rows = unwrap(await requireClient()
     .from('enrollments')
     .select('*, profiles!enrollments_trainee_id_fkey(name, avatar), courses(title)')
     .eq('status', 'pending'));
@@ -52,13 +47,6 @@ export async function pendingEnrollments() {
     traineeAvatar: r.profiles?.avatar ?? '?',
     courseTitle: r.courses?.title ?? '',
   }));
-}
-
-async function invokeFn(fn, body) {
-  const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data;
 }
 
 export const decideEnrollment = (enrollmentId, decision) =>

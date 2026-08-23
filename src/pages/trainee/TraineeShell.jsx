@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
 import Sidebar from '../../components/shared/Sidebar';
+import QueryError from '../../components/shared/QueryError';
 import TraineeDashboard from './TraineeDashboard';
 import CoursePage from './CoursePage';
 import QuizPage from './QuizPage';
@@ -19,11 +20,27 @@ const NAV = [
   { to: '/trainee/support', icon: '🎧', label: 'Support' },
 ];
 
-function MyCoursesPage() {
-  const { data: enrollments, isLoading } = useMyEnrollments();
-  const { data: courses } = useCourses();
+export function MyCoursesPage() {
+  const { data: enrollments, isLoading, error } = useMyEnrollments();
+  const { data: courses, isLoading: coursesLoading, error: coursesError } = useCourses();
 
-  if (isLoading) return <div className="page-body" role="status">Loading your courses…</div>;
+  // Both queries are needed to draw a single card: the enrollment supplies
+  // progress, the course supplies its name. Waiting on only one of them means
+  // every card misses its course lookup and the page renders blank mid-flight.
+  if (isLoading || coursesLoading) {
+    return <div className="page-body" role="status">Loading your courses…</div>;
+  }
+
+  // A failure is otherwise indistinguishable from "you are not enrolled in any
+  // course yet", and the trainee is sent off to browse the catalog.
+  const failure = error ?? coursesError;
+  if (failure) {
+    return (
+      <div className="page-body">
+        <QueryError error={failure} what="your courses" />
+      </div>
+    );
+  }
 
   const byId = new Map((courses ?? []).map((c) => [c.id, c]));
   const active = (enrollments ?? []).filter(

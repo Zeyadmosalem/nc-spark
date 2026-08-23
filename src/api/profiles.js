@@ -1,4 +1,5 @@
-import { supabase } from './client';
+import { supabase, requireClient } from './client';
+import { unwrap, invokeFn, currentUserId } from './helpers';
 
 /** The single place snake_case becomes camelCase. */
 export function toCamel(row) {
@@ -14,36 +15,31 @@ export function toCamel(row) {
   };
 }
 
+/**
+ * Runs on first paint from useSession, so — like getSession — it reports
+ * "nobody is signed in" rather than throwing. The readable configuration
+ * error belongs on an action the user took, not on page load.
+ */
 export async function fetchMyProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data, error } = await supabase
-    .from('profiles').select('*').eq('id', user.id).maybeSingle();
-  if (error) throw new Error(error.message);
-  return toCamel(data);
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  const id = data?.session?.user?.id;
+  if (!id) return null;
+  return toCamel(unwrap(await supabase
+    .from('profiles').select('*').eq('id', id).maybeSingle()));
 }
 
 export async function updateMyProfile({ name, avatar }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not signed in');
-  const { data, error } = await supabase
-    .from('profiles').update({ name, avatar }).eq('id', user.id).select().single();
-  if (error) throw new Error(error.message);
-  return toCamel(data);
-}
-
-async function invokeAdmin(fn, body) {
-  const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data;
+  const id = await currentUserId();
+  return toCamel(unwrap(await requireClient()
+    .from('profiles').update({ name, avatar }).eq('id', id).select().single()));
 }
 
 export const setUserRole = (userId, role) =>
-  invokeAdmin('admin-set-role', { userId, role });
+  invokeFn('admin-set-role', { userId, role });
 
 export const reviewSignup = (userId, decision, role) =>
-  invokeAdmin('admin-review-signup', { userId, decision, role });
+  invokeFn('admin-review-signup', { userId, decision, role });
 
 export const suspendUser = (userId, suspend) =>
-  invokeAdmin('admin-suspend-user', { userId, suspend });
+  invokeFn('admin-suspend-user', { userId, suspend });

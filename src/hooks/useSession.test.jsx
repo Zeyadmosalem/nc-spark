@@ -44,6 +44,14 @@ describe('useSession', () => {
     await waitFor(() => expect(result.current.status).toBe('suspended'));
   });
 
+  // Without a catch on the session lookup the effect never settles, so the app
+  // sits on "Loading…" forever rather than showing a login page.
+  it('falls back to signed-out when the session lookup rejects', async () => {
+    mocks.getSession.mockRejectedValue(new Error('Supabase is not configured'));
+    const { result } = renderHook(() => useSession());
+    await waitFor(() => expect(result.current.status).toBe('signed-out'));
+  });
+
   it('subscribes to auth changes and unsubscribes on unmount', async () => {
     const unsub = vi.fn();
     mocks.onAuthChange.mockReturnValue(unsub);

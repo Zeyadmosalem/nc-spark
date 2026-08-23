@@ -1,20 +1,24 @@
 import { useCourses, useMyEnrollments, useApplyForCourse } from '../../hooks/useCourses';
+import QueryError from '../../components/shared/QueryError';
 
 export default function CourseCatalog() {
   const { data: courses, isLoading, error } = useCourses();
-  const { data: enrollments } = useMyEnrollments();
+  const { data: enrollments, isLoading: enrollmentsLoading, error: enrollmentsError } =
+    useMyEnrollments();
   const apply = useApplyForCourse();
 
-  if (isLoading) {
+  // Enrolment state decides both which courses appear here and whether their
+  // button is live. Rendering before it lands offers "Apply to enrol" on a
+  // course the trainee already holds, and the click fails on the unique index.
+  if (isLoading || enrollmentsLoading) {
     return <div className="page-body" role="status">Loading courses…</div>;
   }
 
-  if (error) {
+  const failure = error ?? enrollmentsError;
+  if (failure) {
     return (
       <div className="page-body">
-        <div className="card no-hover" role="alert" style={{ padding: '2rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--brand-accent)' }}>Could not load the catalog: {error.message}</p>
-        </div>
+        <QueryError error={failure} what="the catalog" />
       </div>
     );
   }

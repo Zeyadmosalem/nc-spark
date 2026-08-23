@@ -1,4 +1,5 @@
-import { supabase } from './client';
+import { requireClient } from './client';
+import { unwrap, invokeFn } from './helpers';
 
 /** The single place course rows become camelCase. */
 export function courseToCamel(row) {
@@ -17,25 +18,31 @@ export function courseToCamel(row) {
   };
 }
 
-function unwrap({ data, error }) {
-  if (error) throw new Error(error.message);
-  return data;
-}
+/**
+ * Exactly the columns courseToCamel reads.
+ *
+ * select('*') would ship every column a future migration adds — internal
+ * notes, review comments, cost fields — to every signed-in browser, silently.
+ * Listing them means a new column has to be opted in.
+ */
+const COURSE_COLUMNS =
+  'id, slug, title, subtitle, description, trainer_id, color, icon, status, created_at';
 
 export async function listCourses() {
-  const rows = unwrap(await supabase.from('courses').select('*').order('title'));
+  const rows = unwrap(await requireClient().from('courses').select(COURSE_COLUMNS).order('title'));
   return (rows ?? []).map(courseToCamel);
 }
 
 export async function getCourse(id) {
-  return courseToCamel(unwrap(await supabase.from('courses').select('*').eq('id', id).maybeSingle()));
+  return courseToCamel(unwrap(await requireClient()
+    .from('courses').select(COURSE_COLUMNS).eq('id', id).maybeSingle()));
 }
 
 /** Course with its modules and their activities, ordered for display. */
 export async function getCourseOutline(id) {
-  const data = unwrap(await supabase
+  const data = unwrap(await requireClient()
     .from('courses')
-    .select('*, modules(id, title, position, activities(id, type, title, position, xp))')
+    .select(`${COURSE_COLUMNS}, modules(id, title, position, activities(id, type, title, position, xp))`)
     .eq('id', id)
     .maybeSingle());
   if (!data) return null;
@@ -58,14 +65,14 @@ const slugify = (title) =>
   String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export async function createCourse({ title, subtitle, description, color, icon }) {
-  const row = unwrap(await supabase.from('courses')
+  const row = unwrap(await requireClient().from('courses')
     .insert({ slug: slugify(title), title, subtitle, description, color, icon })
     .select().single());
   return courseToCamel(row);
 }
 
 export async function updateCourse(id, patch) {
-  const row = unwrap(await supabase.from('courses')
+  const row = unwrap(await requireClient().from('courses')
     .update({
       title: patch.title, subtitle: patch.subtitle, description: patch.description,
       color: patch.color, icon: patch.icon,
@@ -75,14 +82,7 @@ export async function updateCourse(id, patch) {
 }
 
 export async function deleteCourse(id) {
-  unwrap(await supabase.from('courses').delete().eq('id', id));
-}
-
-async function invokeFn(fn, body) {
-  const { data, error } = await supabase.functions.invoke(fn, { body });
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data;
+  unwrap(await requireClient().from('courses').delete().eq('id', id));
 }
 
 /** Status is never written directly; the Edge Function validates content first. */

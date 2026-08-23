@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useApp } from '../../context/AppContext';
+import { useActivity, useCompleteActivity } from '../../hooks/useActivities';
+import { useSession } from '../../hooks/useSession';
 import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';
 import VideoActivity from '../../components/activities/VideoActivity';
@@ -11,57 +12,100 @@ import MatchingActivity from '../../components/activities/MatchingActivity';
 import ScenarioActivity from '../../components/activities/ScenarioActivity';
 import FileSubmissionActivity from '../../components/activities/FileSubmissionActivity';
 
+const RENDERERS = {
+  video: VideoActivity,
+  reading: ReadingActivity,
+  flashcards: FlashcardActivity,
+  matching: MatchingActivity,
+  scenario: ScenarioActivity,
+  submission: FileSubmissionActivity,
+};
+
 export default function ActivityPage() {
   const { activityId } = useParams();
-  const { activities, currentUser, completeActivity } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const courseId = location.state?.courseId;
+
+  const { data: activity, isLoading, error } = useActivity(activityId);
+  const { profile } = useSession();
+  const complete = useCompleteActivity();
+  const [done, setDone] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
-  const courseId = location.state?.courseId;
-  const activity = activities[activityId];
-  
-  if (!activity) {
+  if (isLoading) {
+    return <div className="page-body" role="status">Loading activity…</div>;
+  }
+
+  if (error || !activity) {
     return (
       <div className="page-body">
         <h2>Activity not found</h2>
+        {error && <p style={{ color: 'var(--text-2)' }}>{error.message}</p>}
         <button className="btn btn-ghost" onClick={() => navigate(-1)}>Go Back</button>
       </div>
     );
   }
 
-  const isCompleted = currentUser?.activityCompletions?.includes(activityId);
+  const Renderer = RENDERERS[activity.type];
+  const back = () => (courseId ? navigate(`/trainee/courses/${courseId}`) : navigate(-1));
 
-  function handleComplete() {
-    completeActivity(activityId);
-    if (courseId) navigate(`/trainee/courses/${courseId}`);
-    else navigate(-1);
-  }
-
-  function handleBack() {
-    if (courseId) navigate(`/trainee/courses/${courseId}`);
-    else navigate(-1);
+  // Renderers that produce evidence — a quiz score, an uploaded file — pass a
+  // payload describing HOW the activity was completed. The plain "Mark as
+  // Complete" button has nothing to say, so it sends an empty one.
+  async function handleComplete(payload = {}) {
+    try {
+      await complete.mutateAsync({ activityId, payload });
+      setDone(true);
+      back();
+    } catch {
+      // The mutation holds the error; the alert below renders it.
+    }
   }
 
   return (
     <>
-      <ActivityWrapper 
-        activity={activity} 
-        onComplete={handleComplete} 
-        onBack={handleBack}
-        isCompleted={isCompleted}
-      >
-        {activity.type === 'video' && <VideoActivity activity={activity} />}
-        {activity.type === 'reading' && <ReadingActivity activity={activity} />}
-        {activity.type === 'flashcards' && <FlashcardActivity activity={activity} />}
-        {activity.type === 'matching' && <MatchingActivity activity={activity} />}
-        {activity.type === 'scenario' && <ScenarioActivity activity={activity} />}
-        {activity.type === 'submission' && <FileSubmissionActivity activity={activity} onComplete={handleComplete} />}
-      </ActivityWrapper>
+      {complete.error && (
+        <div className="page-body" style={{ paddingBottom: 0 }}>
+          <div role="alert" className="card no-hover"
+               style={{ padding: '1rem', borderLeft: '4px solid var(--brand-accent)',
+                        color: 'var(--brand-accent)' }}>
+            {complete.error.message}
+          </div>
+        </div>
+      )}
+
+      {/* ActivityWrapper owns the header, the XP badge, the back button and the
+          "Mark as Complete" button. This page must not repeat any of them. */}
+      {Renderer ? (
+        <ActivityWrapper
+          activity={activity}
+          onComplete={() => handleComplete({})}
+          onBack={back}
+          isCompleted={done || complete.isPending}
+        >
+          {/* The submission renderer uploads straight to Storage, whose policy
+              authorises on {courseId}/{traineeId}/, so it needs both ids. */}
+          <Renderer
+            activity={{ ...activity, courseId, traineeId: profile?.id }}
+            onComplete={handleComplete}
+          />
+        </ActivityWrapper>
+      ) : (
+        <div className="page-body" style={{ maxWidth: 800, margin: '0 auto' }}>
+          <button className="btn btn-ghost btn-sm" onClick={back}>← Back to Path</button>
+          <div className="card no-hover" style={{ padding: '2rem', marginTop: '1rem' }}>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem' }}>{activity.title}</h1>
+            <p style={{ color: 'var(--text-2)' }}>
+              This activity type ({activity.type}) is not available yet.
+            </p>
+          </div>
+        </div>
+      )}
 
       {courseId && (
         <>
-          <motion.button 
+          <motion.button
             className="btn btn-primary"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -71,16 +115,16 @@ export default function ActivityPage() {
               borderRadius: '50px', padding: '1rem 1.5rem',
               boxShadow: 'var(--shadow-lg)', zIndex: 100,
               display: 'flex', alignItems: 'center', gap: '0.75rem',
-              fontSize: '1rem', fontWeight: 600
+              fontSize: '1rem', fontWeight: 600,
             }}
           >
             <span style={{ fontSize: '1.25rem' }}>💬</span> Discuss
           </motion.button>
 
-          <CourseChatDrawer 
-            isOpen={chatOpen} 
-            onClose={() => setChatOpen(false)} 
-            courseId={courseId} 
+          <CourseChatDrawer
+            isOpen={chatOpen}
+            onClose={() => setChatOpen(false)}
+            courseId={courseId}
             courseTitle="Course Discussion"
           />
         </>

@@ -1,10 +1,21 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { usePendingEnrollments, useDecideEnrollment } from '../../hooks/useApprovals';
+import QueryError from '../../components/shared/QueryError';
 
 function EnrollmentQueue() {
-  const { data: queue, isLoading } = usePendingEnrollments();
+  const { data: queue, isLoading, error } = usePendingEnrollments();
   const decide = useDecideEnrollment();
+
+  // A failed queue must not render as an empty one: trainees waiting for
+  // approval would sit there indefinitely with nobody aware of it.
+  if (error) {
+    return (
+      <div style={{ marginBottom: '1.5rem' }}>
+        <QueryError error={error} what="the enrolment queue" />
+      </div>
+    );
+  }
 
   if (isLoading || !queue || queue.length === 0) return null;
 

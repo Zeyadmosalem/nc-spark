@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeHtml } from '../../lib/sanitizeHtml';
+import { uploadSubmission } from '../../api/storage';
 
 export default function FileSubmissionActivity({ activity, onComplete }) {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
   if (!activity) return <div>No activity provided.</div>;
@@ -24,26 +26,30 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
     }
   };
 
-  const simulateUpload = () => {
-    if (!file) return;
+  // The file goes straight to Storage, not through an Edge Function: the
+  // bucket policy authorises on the path prefix, so a trainee can only write
+  // beneath their own id. The completion carries the resulting path so the
+  // trainer can find what was actually submitted.
+  const handleUpload = async () => {
+    if (!file || isUploading) return;
     setIsUploading(true);
-    setProgress(0);
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setIsSubmitted(true);
-          // Auto-mark activity as complete in parent
-          setTimeout(() => {
-            if (onComplete) onComplete();
-          }, 1500);
-          return 100;
-        }
-        return prev + 15;
+    setUploadError(null);
+    setProgress(50);
+    try {
+      const { path } = await uploadSubmission({
+        courseId: activity.courseId,
+        traineeId: activity.traineeId,
+        file,
       });
-    }, 200);
+      setProgress(100);
+      setIsSubmitted(true);
+      onComplete?.({ storagePath: path, filename: file.name });
+    } catch (err) {
+      setUploadError(err.message);
+      setProgress(0);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -92,9 +98,15 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
               </p>
             </div>
 
+            {uploadError && (
+              <div role="alert" style={{ marginTop: '1rem', color: 'var(--brand-accent)', fontSize: '0.85rem' }}>
+                {uploadError}
+              </div>
+            )}
+
             {file && !isUploading && (
               <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-                <button className="btn btn-primary" onClick={simulateUpload}>
+                <button className="btn btn-primary" onClick={handleUpload}>
                   Upload File
                 </button>
               </div>

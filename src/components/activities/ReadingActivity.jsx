@@ -1,12 +1,16 @@
 import { safeHtml } from '../../lib/sanitizeHtml';
 
 export default function ReadingActivity({ activity }) {
-  if (!activity?.content) return <div>No content provided.</div>;
+  // The api layer flattens the stored content payload, so the markdown body
+  // arrives as activity.body. The activity.content fallback keeps the
+  // prototype's dummy data rendering while the rest of the app migrates.
+  const source = activity?.body ?? activity?.content;
+  if (typeof source !== 'string' || !source) return <div>No content provided.</div>;
 
   // Simple markdown-to-html conversion for the demo. This deliberately does
   // not escape the source first, so the output is sanitized below before it
   // reaches the DOM.
-  const htmlContent = activity.content
+  const htmlContent = source
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
