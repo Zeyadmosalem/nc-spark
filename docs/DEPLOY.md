@@ -51,6 +51,25 @@ compiled into the JavaScript that every visitor downloads; the anon key is
 designed for that, and RLS is what actually protects the data. The secret key
 would hand every visitor full database access.
 
+**On a Worker, put these under Build variables, not runtime variables.** The
+dashboard has two places called "Variables and Secrets":
+
+| Location | Applies |
+|---|---|
+| Settings → Variables and Secrets | at **runtime**, to the Worker script |
+| Settings → Build → Build variables | during **`npm run build`** ← the one Vite needs |
+
+Vite compiles `VITE_*` values into the JavaScript while building, so a runtime
+variable arrives long after the bundle is finished. Getting this wrong produces
+a site that deploys cleanly and then cannot reach Supabase at all. Check by
+fetching the built bundle and grepping for the project URL:
+
+```bash
+curl -s https://<your-url>/assets/index-*.js | grep -c 'supabase.co'
+```
+
+`0` means the variables did not reach the build.
+
 Without these the app builds fine and then shows a configuration error at
 runtime rather than a blank screen — that is deliberate.
 
