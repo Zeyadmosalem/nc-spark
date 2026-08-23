@@ -20,20 +20,25 @@ export function attemptToCamel(row) {
   };
 }
 
+const QUIZ_COLUMNS = 'id, title, pass_mark, time_limit_seconds';
+
+const quizToCamel = (row) => (row ? {
+  id: row.id,
+  title: row.title,
+  passMark: Number(row.pass_mark),
+  timeLimitSeconds: row.time_limit_seconds,
+} : null);
+
+/** A quiz by id, for the standalone quiz route. */
+export async function getQuiz(quizId) {
+  return quizToCamel(unwrap(await requireClient()
+    .from('quizzes').select(QUIZ_COLUMNS).eq('id', quizId).maybeSingle()));
+}
+
 /** The quiz attached to a quiz activity, or null if none has been authored. */
 export async function quizForActivity(activityId) {
-  const row = unwrap(await requireClient()
-    .from('quizzes')
-    .select('id, title, pass_mark, time_limit_seconds')
-    .eq('activity_id', activityId)
-    .maybeSingle());
-  if (!row) return null;
-  return {
-    id: row.id,
-    title: row.title,
-    passMark: Number(row.pass_mark),
-    timeLimitSeconds: row.time_limit_seconds,
-  };
+  return quizToCamel(unwrap(await requireClient()
+    .from('quizzes').select(QUIZ_COLUMNS).eq('activity_id', activityId).maybeSingle()));
 }
 
 /** The caller's most recent attempt at a quiz, or null before the first. */

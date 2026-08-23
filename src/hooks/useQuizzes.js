@@ -1,11 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { quizForActivity, myAttempt, startQuiz, submitQuiz } from '../api/quizzes';
+import { getQuiz, quizForActivity, myAttempt, startQuiz, submitQuiz } from '../api/quizzes';
 import { courseKeys } from './useCourses';
 
 export const quizKeys = {
+  one: (quizId) => ['quizzes', 'one', quizId],
   forActivity: (activityId) => ['quizzes', 'forActivity', activityId],
   attempt: (quizId) => ['quizzes', 'attempt', quizId],
 };
+
+export function useQuiz(quizId) {
+  return useQuery({
+    queryKey: quizKeys.one(quizId),
+    queryFn: () => getQuiz(quizId),
+    enabled: Boolean(quizId),
+  });
+}
 
 export function useQuizForActivity(activityId) {
   return useQuery({
