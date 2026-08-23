@@ -47,8 +47,13 @@ export default function Sidebar({ navItems, footerExtra }) {
             >
               <span style={{ fontSize: '1rem' }}>{item.icon}</span>
               <span>{item.label}</span>
-              {item.label === 'Pending Requests' && pendingRequests.length > 0 && (
-                <span className="badge-dot">{pendingRequests.length}</span>
+              {/* A nav item can carry its own count. The Pending Requests
+                  fallback is the prototype's hardcoded behaviour, kept so the
+                  admin nav keeps working until it supplies a badge itself. */}
+              {(item.badge ?? (item.label === 'Pending Requests' ? pendingRequests.length : 0)) > 0 && (
+                <span className="badge-dot">
+                  {item.badge ?? pendingRequests.length}
+                </span>
               )}
             </NavLink>
           )

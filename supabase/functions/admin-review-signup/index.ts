@@ -1,6 +1,6 @@
 import { requireRole, readJson, jsonResponse, errorResponse, HttpError, type Role } from '../_shared/auth.ts';
 import { writeAudit } from '../_shared/audit.ts';
-import { corsHeaders, handleOptions } from '../_shared/cors.ts';
+import { corsFor, handleOptions } from '../_shared/cors.ts';
 
 const VALID_ROLES: Role[] = ['admin', 'supervisor', 'trainer', 'trainee'];
 
@@ -8,6 +8,7 @@ Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
+  const cors = corsFor(req);
   try {
     const { profile: actor, service } = await requireRole(req, ['admin']);
     const body = await readJson(req) as { userId?: string; decision?: string; role?: Role };
@@ -45,8 +46,8 @@ Deno.serve(async (req) => {
       after: { role: updated.role, status: updated.status },
     });
 
-    return jsonResponse({ ok: true, profile: updated }, corsHeaders);
+    return jsonResponse({ ok: true, profile: updated }, cors);
   } catch (err) {
-    return errorResponse(err, corsHeaders);
+    return errorResponse(err, cors);
   }
 });

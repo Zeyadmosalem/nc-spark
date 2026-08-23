@@ -1,11 +1,12 @@
 import { requireRole, readJson, jsonResponse, errorResponse, HttpError } from '../_shared/auth.ts';
 import { writeAudit, assertNotLastAdmin } from '../_shared/audit.ts';
-import { corsHeaders, handleOptions } from '../_shared/cors.ts';
+import { corsFor, handleOptions } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
 
+  const cors = corsFor(req);
   try {
     const { profile: actor, service } = await requireRole(req, ['admin']);
     const { userId, suspend } = await readJson(req) as { userId?: string; suspend?: boolean };
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
     // are compliance evidence, survive.
     const nextStatus = suspend ? 'suspended' : 'active';
     if (target.status === nextStatus) {
-      return jsonResponse({ ok: true, profile: target, unchanged: true }, corsHeaders);
+      return jsonResponse({ ok: true, profile: target, unchanged: true }, cors);
     }
 
     const { data: updated, error: updErr } = await service
@@ -41,8 +42,8 @@ Deno.serve(async (req) => {
       after: { status: updated.status },
     });
 
-    return jsonResponse({ ok: true, profile: updated }, corsHeaders);
+    return jsonResponse({ ok: true, profile: updated }, cors);
   } catch (err) {
-    return errorResponse(err, corsHeaders);
+    return errorResponse(err, cors);
   }
 });

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useActivity, useCompleteActivity } from '../../hooks/useActivities';
 import { useSession } from '../../hooks/useSession';
 import CourseChatDrawer from '../../components/shared/CourseChatDrawer';
+import QuizActivity from '../../components/quiz/QuizActivity';
 import ActivityWrapper from '../../components/activities/ActivityWrapper';
 import VideoActivity from '../../components/activities/VideoActivity';
 import ReadingActivity from '../../components/activities/ReadingActivity';
@@ -75,9 +76,17 @@ export default function ActivityPage() {
         </div>
       )}
 
-      {/* ActivityWrapper owns the header, the XP badge, the back button and the
-          "Mark as Complete" button. This page must not repeat any of them. */}
-      {Renderer ? (
+      {/* A quiz completes by being passed, not by a trainee saying so, which
+          is why it bypasses ActivityWrapper and its "Mark as Complete"
+          button. submit-quiz writes the completion row; nothing else can. */}
+      {activity.type === 'quiz' ? (
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <div className="page-body" style={{ paddingBottom: 0 }}>
+            <button className="btn btn-ghost btn-sm" onClick={back}>← Back to Path</button>
+          </div>
+          <QuizActivity activity={activity} />
+        </div>
+      ) : Renderer ? (
         <ActivityWrapper
           activity={activity}
           onComplete={() => handleComplete({})}

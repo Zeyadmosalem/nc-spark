@@ -8,6 +8,7 @@ import CreateQuiz from './CreateQuiz';
 import CourseManagement from './CourseManagement';
 import TrainerCoursePage from './TrainerCoursePage';
 import TrainerCatalog from './TrainerCatalog';
+import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
 const NAV = [
   { to: '/trainer', end: true, icon: '🏠', label: 'Dashboard' },
@@ -236,9 +237,19 @@ function Dashboard() {
 }
 
 export default function TrainerShell() {
+  // Both queues are blocking for a trainee, so the count belongs where a
+  // trainer looks first. Without it they only discover work by visiting the
+  // page, and a trainee waits until they happen to.
+  const pending = usePendingReviews();
+  const blocked = useBlockedAttempts();
+  const waiting = (pending.data?.length ?? 0) + (blocked.data?.length ?? 0);
+
+  const nav = NAV.map((item) =>
+    (item.to === '/trainer/review' ? { ...item, badge: waiting } : item));
+
   return (
     <div className="app-shell">
-      <Sidebar navItems={NAV} />
+      <Sidebar navItems={nav} />
       <div className="main-content">
         <Routes>
           <Route index element={<Dashboard />} />

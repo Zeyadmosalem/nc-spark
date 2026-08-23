@@ -6,10 +6,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mocks = vi.hoisted(() => ({
   getActivity: vi.fn(), completeActivity: vi.fn(),
+  quizForActivity: vi.fn(), getQuiz: vi.fn(), myAttempt: vi.fn(),
+  startQuiz: vi.fn(), submitQuiz: vi.fn(),
   useSession: vi.fn(() => ({ profile: { id: 's1', role: 'trainee' }, status: 'active' })),
 }));
 vi.mock('../../api/activities', () => ({
   getActivity: mocks.getActivity, completeActivity: mocks.completeActivity,
+}));
+vi.mock('../../api/quizzes', () => ({
+  quizForActivity: mocks.quizForActivity, getQuiz: mocks.getQuiz,
+  myAttempt: mocks.myAttempt, startQuiz: mocks.startQuiz, submitQuiz: mocks.submitQuiz,
 }));
 // Task 7 adds useSession to this page to supply traineeId for uploads. It
 // reads the Supabase session, which is absent under test, so it is stubbed.
@@ -67,9 +73,30 @@ describe('ActivityPage', () => {
   });
 
   it('explains an activity type it cannot render yet', async () => {
-    mocks.getActivity.mockResolvedValue({ id: 'a1', type: 'quiz', title: 'Mini Quiz', xp: 0 });
+    mocks.getActivity.mockResolvedValue({ id: 'a1', type: 'podcast', title: 'Listen', xp: 0 });
     renderAt();
     expect(await screen.findByText(/not available yet/i)).toBeInTheDocument();
+  });
+
+  // A quiz is completed by passing it, so it must NOT get ActivityWrapper's
+  // "Mark as Complete" button — that would let a trainee complete an
+  // assessment without answering it.
+  it('runs a quiz activity and offers no Mark as Complete button', async () => {
+    mocks.getActivity.mockResolvedValue({ id: 'a1', type: 'quiz', title: 'Mini Quiz', xp: 0 });
+    mocks.quizForActivity.mockResolvedValue({
+      id: 'q1', title: 'Mini Quiz', passMark: 0.7, timeLimitSeconds: null,
+    });
+    mocks.myAttempt.mockResolvedValue(null);
+    renderAt();
+    expect(await screen.findByRole('button', { name: /start quiz/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark as complete/i })).not.toBeInTheDocument();
+  });
+
+  it('says so when the quiz has no questions yet', async () => {
+    mocks.getActivity.mockResolvedValue({ id: 'a1', type: 'quiz', title: 'Empty Quiz', xp: 0 });
+    mocks.quizForActivity.mockResolvedValue(null);
+    renderAt();
+    expect(await screen.findByText(/no questions yet/i)).toBeInTheDocument();
   });
 
   it('surfaces a locked-module refusal as an alert', async () => {

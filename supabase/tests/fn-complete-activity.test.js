@@ -124,6 +124,33 @@ describe('complete-activity', () => {
     expect(data.status).toBe('completed');
     expect(data.completed_at).not.toBeNull();
   });
+
+  // M4 supersedes the rule above for any course carrying a final assessment:
+  // 100% of activities only unlocks the final, and passing it is what
+  // completes the course. The test above still stands for a course with none.
+  it('does NOT complete a course that has a final, even at 100%', async () => {
+    const { data: c } = await svc.from('courses').insert({
+      slug: `${PREFIX}-final`, title: 'With Final', status: 'published',
+      trainer_id: trainer.id, created_by: trainer.id,
+    }).select().single();
+    const { data: m } = await svc.from('modules')
+      .insert({ course_id: c.id, title: 'M', position: 1 }).select().single();
+    const { data: a } = await svc.from('activities').insert({
+      module_id: m.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
+    }).select().single();
+    await svc.from('quizzes').insert({ course_id: c.id, activity_id: null, title: 'Final' });
+    const { data: e } = await svc.from('enrollments')
+      .insert({ trainee_id: trainee.id, course_id: c.id, status: 'active' }).select().single();
+
+    const res = await call(cTrainee, { activityId: a.id });
+    expect(res.status).toBe(200);
+    expect(res.body.progress.percent).toBe(100);
+
+    const { data: after } = await svc.from('enrollments')
+      .select('status, completed_at').eq('id', e.id).single();
+    expect(after.status).toBe('active');
+    expect(after.completed_at).toBeNull();
+  });
 });
 
 describe('RED TEAM: a trainee cannot write completions directly', () => {

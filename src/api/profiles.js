@@ -1,6 +1,12 @@
 import { supabase, requireClient } from './client';
 import { unwrap, invokeFn, currentUserId } from './helpers';
 
+/**
+ * Exactly the columns toCamel reads. Named rather than select('*') so a column
+ * a later migration adds does not reach the browser just by existing.
+ */
+const PROFILE_COLUMNS = 'id, role, status, name, email, avatar, created_at';
+
 /** The single place snake_case becomes camelCase. */
 export function toCamel(row) {
   if (!row) return null;
@@ -26,7 +32,7 @@ export async function fetchMyProfile() {
   const id = data?.session?.user?.id;
   if (!id) return null;
   return toCamel(unwrap(await supabase
-    .from('profiles').select('*').eq('id', id).maybeSingle()));
+    .from('profiles').select(PROFILE_COLUMNS).eq('id', id).maybeSingle()));
 }
 
 export async function updateMyProfile({ name, avatar }) {

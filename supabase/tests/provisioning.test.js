@@ -20,7 +20,12 @@ async function profileOf(id) {
 
 beforeEach(async () => {
   await resetDb();
-  await svc.from('allowed_domains').insert({ domain: 'speedpro-logis.com' });
+  // Asserted, not assumed. Every auto-approval test here depends on this row
+  // existing; if the insert quietly fails, they instead report "expected
+  // pending to be active", which points at the trigger rather than the
+  // fixture and sends you looking in the wrong place.
+  const { error } = await svc.from('allowed_domains').insert({ domain: 'speedpro-logis.com' });
+  if (error) throw new Error(`fixture failed to seed allowed_domains: ${error.message}`);
 });
 afterAll(resetDb);
 

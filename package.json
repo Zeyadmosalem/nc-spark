@@ -18,11 +18,13 @@
     "db:env": "node ./scripts/write-local-env.mjs",
     "db:status": "supabase status",
     "db:seed-catalog": "node ./scripts/seed-catalog.mjs",
-    "verify:m3": "node ./scripts/verify-m3.mjs"
+    "verify:m3": "node ./scripts/verify-m3.mjs",
+    "db:seed-quizzes": "node ./scripts/seed-quizzes.mjs",
+    "verify:m4": "node ./scripts/verify-m4.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
-    "@tanstack/react-query": "^5.102.0",
+    "@tanstack/react-query": "^5.102.1",
     "dompurify": "^3.4.14",
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.33.0",

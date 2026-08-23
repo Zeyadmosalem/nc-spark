@@ -53,6 +53,20 @@ hosts (`db.<ref>.supabase.co`) are IPv6-only and unreachable on many networks.
 
 Deploy Edge Functions without Docker using `npx supabase functions deploy <name> --use-api`.
 
+### `ALLOWED_ORIGINS`
+
+Edge Functions read a comma-separated allowlist of browser origins:
+
+```bash
+npx supabase secrets set ALLOWED_ORIGINS="https://your-app.example.com" --project-ref <ref>
+```
+
+Currently set to `http://localhost:5173,http://localhost:4173` — the Vite dev
+and preview ports. **Add the production origin before deploying the frontend,
+or the browser will block every function call.** That failure is loud and
+immediate, which is the intended trade: leaving it unset falls back to `*` and
+logs a warning instead.
+
 ## Testing
 
 | Command | Scope |
@@ -60,6 +74,7 @@ Deploy Edge Functions without Docker using `npx supabase functions deploy <name>
 | `npm test` | Frontend unit and component tests |
 | `npm run test:db` | RLS policies and Edge Functions |
 | `npm run verify:m3` | Live end-to-end check of the learning loop |
+| `npm run verify:m4` | Live check of assessment integrity, including a grep of the built bundle |
 | `npm run lint` | oxlint |
 | `npm run build` | Production build |
 
