@@ -97,9 +97,12 @@ the script, or delete the accounts, before anyone outside the team has the URL.
 
 ## Notes
 
-- `public/_redirects` sends every path to `index.html`. Without it, refreshing
-  on `/trainee/courses` returns 404, because the router runs in the browser and
-  the host has no such file.
+- **Do not add a `_redirects` file with `/* /index.html 200`.** Cloudflare
+  rejects it at deploy time — *"Infinite loop detected in this rule"* — because
+  Pages already serves `index.html` for any path that does not match a static
+  file, provided the build output has no top-level `404.html`. That default is
+  what makes a refresh on `/trainee/courses` work. Adding the rule by hand
+  fails the deployment; this project learned that the hard way.
 - `npm run test:db` **deletes every user except the review accounts**, and all
   courses. Re-run `npm run db:seed-catalog`, `db:seed-quizzes` and
   `db:seed-review` afterwards to restore the review environment.
