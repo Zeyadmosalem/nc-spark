@@ -7,10 +7,19 @@
 //
 // Usage: npm run db:seed-review
 
+import { randomBytes } from 'node:crypto';
 import { serviceClient, createUser, REVIEW_DOMAIN } from '../supabase/tests/helpers.js';
 
 const svc = serviceClient();
-const PASSWORD = 'ReviewMe-2026!';
+
+// Never hardcoded. A literal here was committed to a PUBLIC repository while
+// the site was live, which handed admin to anyone who read it — the password,
+// the account names and the URL were all public at once.
+//
+// Supply REVIEW_PASSWORD to choose one, otherwise a fresh one is generated and
+// printed once. Either way nothing lands in git.
+const PASSWORD = process.env.REVIEW_PASSWORD
+  ?? `Rv-${randomBytes(12).toString('base64url')}`;
 
 const PEOPLE = [
   { key: 'admin',      role: 'admin',      name: 'Review Admin' },
@@ -90,4 +99,6 @@ console.log(' Sign in with any of these:\n');
 for (const p of PEOPLE) console.log(`   ${p.role.padEnd(11)} ${emailFor(p.key)}`);
 console.log(`\n   password    ${PASSWORD}`);
 console.log('─────────────────────────────────────────────');
-console.log('\nThese survive `npm run test:db`. Everything else does not.');
+console.log('\nPrinted once and stored nowhere. Put it in a password manager,');
+console.log('not in a file in this repository.');
+console.log('\nThese accounts survive `npm run test:db`. Everything else does not.');

@@ -109,10 +109,18 @@ and no visible error in the UI.
 | supervisor | `supervisor@ncspark-review.local` |
 | trainee | `trainee@ncspark-review.local` |
 
-Password for all four: `ReviewMe-2026!`
+The script generates the password and prints it **once**. It is deliberately
+not written down here: this file is in a public repository, and a password
+committed beside the account names and the live URL is the whole break.
 
-These are **review credentials on a shared project**. Change the password in
-the script, or delete the accounts, before anyone outside the team has the URL.
+Set your own instead if you prefer:
+
+```bash
+REVIEW_PASSWORD='...' npm run db:seed-review
+```
+
+Delete these accounts once the review is over — they are admin-capable logins
+on a domain nobody can receive mail at, so there is no password-reset path.
 
 ## Notes
 
