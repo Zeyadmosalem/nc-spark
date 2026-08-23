@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
 import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
-import Sidebar from '../../components/shared/Sidebar';
+import RoleShell from '../../components/shared/RoleShell';
 import QueryError from '../../components/shared/QueryError';
 import TraineeDashboard from './TraineeDashboard';
 import CoursePage from './CoursePage';
@@ -132,37 +131,30 @@ function SupportPage() {
   );
 }
 
+/*
+ * The sidebar used to carry an XP panel here: a number from dummyData and a
+ * progress bar hardcoded to 48% full. Nothing awards XP (backlog B7), so it
+ * was a fabricated figure above a fabricated bar, on every trainee screen.
+ * It returns with the gamification milestone.
+ */
 export default function TraineeShell() {
-  const { currentUser } = useApp();
-
   return (
-    <div className="app-shell">
-      <Sidebar navItems={NAV} footerExtra={
-        <div style={{ padding: '0.75rem', marginBottom: '0.5rem', background: 'rgba(0,47,108,0.15)', borderRadius: 'var(--r-lg)', border: '1px solid rgba(0,47,108,0.2)', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '0.25rem' }}>XP</div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>{currentUser?.xp || 0}</div>
-          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 'var(--r-pill)', marginTop: '0.4rem', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: '48%', background: 'linear-gradient(90deg, #002F6C, #00A3E0)', borderRadius: 'inherit' }} />
-          </div>
-        </div>
-      } />
-      <div className="main-content">
-        <Routes>
-          <Route index element={<TraineeDashboard />} />
-          <Route path="courses" element={<MyCoursesPage />} />
-          <Route path="catalog" element={<CourseCatalog />} />
-          <Route path="courses/:courseId" element={<CoursePage />} />
-          <Route path="activity/:activityId" element={<ActivityPage />} />
-          <Route path="support" element={<SupportPage />} />
-          {/* Legacy routes, now accessible via course page */}
-          <Route path="quizzes" element={<Navigate to="/trainee/courses" replace />} />
-          <Route path="videos" element={<Navigate to="/trainee/courses" replace />} />
-          <Route path="quiz/:quizId" element={<QuizPage />} />
-          <Route path="quiz/preview" element={<QuizPreview />} />
-          <Route path="achievements" element={<AchievementsPage />} />
-          <Route path="*" element={<Navigate to="/trainee" replace />} />
-        </Routes>
-      </div>
-    </div>
+    <RoleShell navItems={NAV} title="NC Spark">
+      <Routes>
+        <Route index element={<TraineeDashboard />} />
+        <Route path="courses" element={<MyCoursesPage />} />
+        <Route path="catalog" element={<CourseCatalog />} />
+        <Route path="courses/:courseId" element={<CoursePage />} />
+        <Route path="activity/:activityId" element={<ActivityPage />} />
+        <Route path="support" element={<SupportPage />} />
+        {/* Legacy routes, now accessible via course page */}
+        <Route path="quizzes" element={<Navigate to="/trainee/courses" replace />} />
+        <Route path="videos" element={<Navigate to="/trainee/courses" replace />} />
+        <Route path="quiz/:quizId" element={<QuizPage />} />
+        <Route path="quiz/preview" element={<QuizPreview />} />
+        <Route path="achievements" element={<AchievementsPage />} />
+        <Route path="*" element={<Navigate to="/trainee" replace />} />
+      </Routes>
+    </RoleShell>
   );
 }

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Sidebar from '../../components/shared/Sidebar';
+import RoleShell from '../../components/shared/RoleShell';
 import QueryError from '../../components/shared/QueryError';
 import {
   useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
@@ -191,15 +191,12 @@ export function Dashboard() {
 
 export default function SupervisorShell() {
   return (
-    <div className="app-shell">
-      <Sidebar navItems={NAV} />
-      <div className="main-content">
-        <Routes>
-          <Route index element={<Dashboard />} />
-          <Route path="courses" element={<SupervisorCourses />} />
-          <Route path="*" element={<Navigate to="/supervisor" replace />} />
-        </Routes>
-      </div>
-    </div>
+    <RoleShell navItems={NAV} title="NC Spark Oversight">
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="courses" element={<SupervisorCourses />} />
+        <Route path="*" element={<Navigate to="/supervisor" replace />} />
+      </Routes>
+    </RoleShell>
   );
 }

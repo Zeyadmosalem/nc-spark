@@ -371,3 +371,33 @@ button.sidebar-user {
 }
 
 .badge-dot { display: inline-flex; align-items: center; }
+
+/* =============================================
+   Skip link
+   ============================================= */
+
+/*
+ * Off-screen until focused. Without it, reaching the content of any page by
+ * keyboard means tabbing past the whole sidebar again — six links, a theme
+ * toggle and the account button — on every single navigation.
+ */
+.skip-link {
+  position: absolute;
+  top: var(--sp-3);
+  left: var(--sp-3);
+  z-index: 2000;
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--brand-primary);
+  color: #fff;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-200%);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.skip-link:focus-visible,
+.skip-link:focus {
+  transform: translateY(0);
+}
