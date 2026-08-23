@@ -10,6 +10,25 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-21-nc-spark-backend-design.md` — sections 4.3, 4.4 and 7.
 
+## Progress
+
+| Task | Status | Correction found during execution |
+|---|---|---|
+| 1. Server-side module unlocking | Done | `is_module_unlocked_probe` took an enrollment id with no ownership check, so any signed-in user could enumerate another trainee's progress. Guarded with `owns_enrollment`. `module_of_activity_probe` made service_role only. |
+| 1b. Probe grants | Done | A `security invoker` probe cannot reach schema `app` as service_role, and `revoke ... from public` does not lock out `authenticated` — Supabase's default privileges grant EXECUTE to that role directly. Both roles must be named. |
+| 2. `complete-activity` | Done | Fatal: the plan called `is_module_unlocked_probe` from the function. `auth.uid()` is NULL for service_role and it cannot reach schema `app`, so every request would have 500'd. Added `is_module_unlocked_for` as a service-role-only entry point. Also `unlocked !== true`, so a NULL reads as locked. |
+| 3. Storage buckets | Done | I claimed the plan's UPDATE policies were a hole for lacking `WITH CHECK`. Wrong: Postgres applies `USING` to the new row when `WITH CHECK` is omitted. Kept anyway — on `submissions` it adds `is_enrolled`, which stops a withdrawn trainee renaming their work. |
+| 4. Activity api | Done | The plan spread `content` last, so an authored payload key could overwrite the row's own `id` or `type`. Row fields now win. |
+| 5. Activity hooks | Done | — |
+| 6. ActivityPage | Done | The plan rendered the title both on the page and in `ActivityWrapper`, which breaks its own tests (`findByText` throws on multiple matches). It also dropped `CourseChatDrawer`; kept. |
+| 7. Storage uploads | Done | The plan's wiring snippet dropped `onBack` and `isCompleted` from `ActivityWrapper`. Kept. |
+| 8. Course outline | Done | The plan replaced the whole page, dropping all four tabs, and retired the conditional-hook regression test. Chat and Materials kept; the regression test adapted rather than deleted, and re-verified by mutation. |
+| 9. Verification | Done | The plan's script never exercised Storage, and its "insert blocked" check used a bogus enrollment id that would fail on the foreign key regardless of the grant. Both fixed. |
+
+**Result:** 183 frontend tests, 222 database tests, 16 live checks in
+`npm run verify:m3`, all passing.
+
+
 ## Global Constraints
 
 - Every `SECURITY DEFINER` function MUST declare `SET search_path = ''` and use fully qualified names.

@@ -59,6 +59,7 @@ Deploy Edge Functions without Docker using `npx supabase functions deploy <name>
 |---|---|
 | `npm test` | Frontend unit and component tests |
 | `npm run test:db` | RLS policies and Edge Functions |
+| `npm run verify:m3` | Live end-to-end check of the learning loop |
 | `npm run lint` | oxlint |
 | `npm run build` | Production build |
 
