@@ -1,5 +1,5 @@
 import { requireClient } from './client';
-import { unwrap } from './helpers';
+import { unwrap, invokeFn } from './helpers';
 import { toCamel } from './profiles';
 
 /**
@@ -13,6 +13,10 @@ import { toCamel } from './profiles';
  * The three privileged *writes* are not here. They live in profiles.js and go
  * through Edge Functions, because approving a signup or changing a role has to
  * be validated and audited server-side.
+ *
+ * The domain allowlist at the bottom is the exception: it is BOTH read and
+ * written through a function, because allowed_domains has RLS enabled and no
+ * policy at all. No browser session can touch it.
  */
 
 /** Exactly the columns profiles.toCamel reads. */
@@ -102,3 +106,23 @@ export async function recentAudit(limit = 25) {
     createdAt: r.created_at,
   }));
 }
+
+/**
+ * The email domains that skip administrator approval at signup.
+ *
+ * allowed_domains has RLS on and no policy, so it is unreadable from a browser
+ * even by an admin — only the service role sees it. Every operation therefore
+ * goes through admin-allowed-domains, which is also where the audit entry is
+ * written. That was a deliberate choice at M1 and it stays: one audited door
+ * beats a policy letting any admin's browser write the table directly.
+ */
+export async function listAllowedDomains() {
+  const { domains } = await invokeFn('admin-allowed-domains', { action: 'list' });
+  return (domains ?? []).map((d) => ({ domain: d.domain, createdAt: d.created_at }));
+}
+
+export const addAllowedDomain = (domain) =>
+  invokeFn('admin-allowed-domains', { action: 'add', domain });
+
+export const removeAllowedDomain = (domain) =>
+  invokeFn('admin-allowed-domains', { action: 'remove', domain });

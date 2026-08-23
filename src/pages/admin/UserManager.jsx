@@ -9,6 +9,7 @@ import PageSkeleton from '../../components/ui/Skeleton';
 import StatusPill from '../../components/ui/StatusPill';
 import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
+import AllowedDomains from '../../components/admin/AllowedDomains';
 import { useToast } from '../../components/ui/toast-context';
 
 /**
@@ -117,6 +118,16 @@ export default function UserManager() {
             </AnimatePresence>
           </div>
         ))}
+      </section>
+
+      {/* Directly above the directory, and directly below the queue it
+          controls: allowlisting a domain is what stops signups landing there
+          in the first place. */}
+      <section>
+        <div className="section-header" style={{ marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Who skips approval</h2>
+        </div>
+        <AllowedDomains />
       </section>
 
       <section>

@@ -30,6 +30,9 @@ vi.mock('../../hooks/useAdmin', () => ({
   useSuspendUser: () => ({ mutate: mocks.suspend, ...mocks.state.suspend }),
 }));
 vi.mock('../../hooks/useSession', () => ({ useSession: mocks.useSession }));
+// The allowlist has its own tests and its own queries; this file is about the
+// approval queue and the directory.
+vi.mock('../../components/admin/AllowedDomains', () => ({ default: () => null }));
 
 const UserManager = (await import('./UserManager')).default;
 

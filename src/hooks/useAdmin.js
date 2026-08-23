@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listUsers, pendingSignups, platformStats, recentAudit } from '../api/admin';
+import {
+  listUsers, pendingSignups, platformStats, recentAudit,
+  listAllowedDomains, addAllowedDomain, removeAllowedDomain,
+} from '../api/admin';
 import { pendingTeachingRequests, decideTeachingRequest } from '../api/teaching';
 import { setUserRole, reviewSignup, suspendUser } from '../api/profiles';
 
@@ -7,6 +10,7 @@ export const adminKeys = {
   users: ['admin', 'users'],
   pendingSignups: ['admin', 'signups', 'pending'],
   stats: ['admin', 'stats'],
+  allowedDomains: ['admin', 'allowed-domains'],
   // `audit` is the prefix the mutations invalidate; `auditPage` is what a
   // component subscribes to. TanStack matches prefixes, so invalidating the
   // short key clears every page size without either side naming a limit.
@@ -85,3 +89,28 @@ export function useDecideTeachingRequest() {
     },
   });
 }
+
+export const useAllowedDomains = () =>
+  useQuery({ queryKey: adminKeys.allowedDomains, queryFn: listAllowedDomains });
+
+/**
+ * Changing the allowlist changes who lands in the approval queue from now on,
+ * so both lists go stale — but it never touches accounts that already exist,
+ * which is why the directory does not.
+ */
+function useDomainMutation(mutationFn) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.allowedDomains });
+      queryClient.invalidateQueries({ queryKey: adminKeys.audit });
+    },
+  });
+}
+
+export const useAddAllowedDomain = () =>
+  useDomainMutation(({ domain }) => addAllowedDomain(domain));
+
+export const useRemoveAllowedDomain = () =>
+  useDomainMutation(({ domain }) => removeAllowedDomain(domain));
