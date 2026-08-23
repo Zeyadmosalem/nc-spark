@@ -5,10 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const mocks = vi.hoisted(() => ({
   listUsers: vi.fn(), pendingSignups: vi.fn(), platformStats: vi.fn(), recentAudit: vi.fn(),
   setUserRole: vi.fn(), reviewSignup: vi.fn(), suspendUser: vi.fn(),
+  pendingTeachingRequests: vi.fn(), decideTeachingRequest: vi.fn(),
 }));
 vi.mock('../api/admin', () => ({
   listUsers: mocks.listUsers, pendingSignups: mocks.pendingSignups,
   platformStats: mocks.platformStats, recentAudit: mocks.recentAudit,
+}));
+vi.mock('../api/teaching', () => ({
+  pendingTeachingRequests: mocks.pendingTeachingRequests,
+  decideTeachingRequest: mocks.decideTeachingRequest,
 }));
 vi.mock('../api/profiles', () => ({
   setUserRole: mocks.setUserRole, reviewSignup: mocks.reviewSignup,
@@ -18,6 +23,7 @@ vi.mock('../api/profiles', () => ({
 const {
   useUsers, usePendingSignups, usePlatformStats, useRecentAudit,
   useSetUserRole, useReviewSignup, useSuspendUser, adminKeys,
+  useTeachingRequests, useDecideTeachingRequest,
 } = await import('./useAdmin');
 
 let client;
@@ -117,5 +123,39 @@ describe('mutations', () => {
     expect(keys).toContain(JSON.stringify(adminKeys.users));
     expect(keys).toContain(JSON.stringify(adminKeys.pendingSignups));
     expect(keys).toContain(JSON.stringify(adminKeys.audit));
+  });
+});
+
+describe('teaching requests', () => {
+  it('returns the queue', async () => {
+    mocks.pendingTeachingRequests.mockResolvedValue([{ id: 'r1', courseTitle: 'Fire Safety' }]);
+    const { result } = renderHook(() => useTeachingRequests(), { wrapper });
+    await waitFor(() => expect(result.current.data?.[0]?.courseTitle).toBe('Fire Safety'));
+  });
+
+  it('sends the request id and decision', async () => {
+    mocks.decideTeachingRequest.mockResolvedValue({ ok: true });
+    const { result } = renderHook(() => useDecideTeachingRequest(), { wrapper });
+    result.current.mutate({ requestId: 'r1', decision: 'approve' });
+    await waitFor(() =>
+      expect(mocks.decideTeachingRequest).toHaveBeenCalledWith('r1', 'approve'));
+    expect(mocks.decideTeachingRequest.mock.calls[0]).toHaveLength(2);
+  });
+
+  /**
+   * Approving sets courses.trainer_id. Leaving the course list cached means the
+   * Curriculum page still says "no trainer" for a course that now has one, and
+   * still offers the request that was just approved.
+   */
+  it('refreshes the queue and the course list together', async () => {
+    mocks.decideTeachingRequest.mockResolvedValue({ ok: true });
+    const spy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useDecideTeachingRequest(), { wrapper });
+    result.current.mutate({ requestId: 'r1', decision: 'approve' });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0].queryKey));
+    expect(keys).toContain(JSON.stringify(adminKeys.teachingRequests));
+    expect(keys).toContain(JSON.stringify(['courses']));
   });
 });

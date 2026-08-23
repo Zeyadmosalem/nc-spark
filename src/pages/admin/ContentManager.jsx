@@ -1,275 +1,436 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useApp } from '../../context/AppContext';
+import {
+  useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
+} from '../../hooks/useCourses';
+import { useUsers, useTeachingRequests, useDecideTeachingRequest } from '../../hooks/useAdmin';
+import QueryError from '../../components/shared/QueryError';
+
+/**
+ * The curriculum, on real courses.
+ *
+ * Scope is narrower than the prototype's four tabs on purpose. Activities,
+ * quizzes and learning paths were all in-memory forms with no server-side
+ * counterpart; authoring is backlog B6, and leaving dead tabs beside working
+ * ones is worse than not offering them.
+ *
+ * Two rules the server owns, which this page only surfaces:
+ * - Publishing goes through publish-course, which refuses a course with no
+ *   activities (422). A published empty shell is a course a trainee can enrol
+ *   in and then find nothing to do.
+ * - courses.trainer_id is excluded from the UPDATE grant, so a trainer cannot
+ *   be picked from a dropdown here. A trainer requests a course and an admin
+ *   approves; that queue is the only way a course gets an owner.
+ */
+
+const ICONS = ['📘', '🔥', '🦺', '⚕️', '⚖️', '🔧', '🚚', '🧪', '💡', '🎯'];
+const COLORS = ['#00a3e0', '#6b2c8d', '#e8b34d', '#28a745', '#dc3545', '#0f766e'];
+
+const STATUS_STYLE = {
+  published: { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Published' },
+  draft:     { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Draft' },
+  archived:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Archived' },
+};
+
+const EMPTY = { title: '', subtitle: '', description: '', icon: '📘', color: '#00a3e0' };
+
+// Module scope: a component declared during render is a new type every pass,
+// so React remounts it and any state it holds is lost.
+function Alert({ error }) {
+  if (!error) return null;
+  return (
+    <p role="alert" style={{ color: 'var(--brand-accent)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
+      {error.message}
+    </p>
+  );
+}
+
+function StatusPill({ status }) {
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.archived;
+  return (
+    <span style={{
+      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
+      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
+      letterSpacing: '0.04em', whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  );
+}
 
 export default function ContentManager() {
-  const { 
-    courses, quizzes, activities, learningPaths, trainers,
-    addCourse, updateCourse, deleteCourse, 
-    addQuiz, updateQuiz, deleteQuiz,
-    addActivity, updateActivity, deleteActivity 
-  } = useApp();
-  
-  const [activeTab, setActiveTab] = useState('courses');
-  const [modalType, setModalType] = useState(null); // 'course', 'quiz', 'activity'
-  const [editItem, setEditItem] = useState(null);
-  
-  // Form states
-  const [formData, setFormData] = useState({});
+  const courses = useCourses();
+  const users = useUsers();
+  const requests = useTeachingRequests();
+  const create = useCreateCourse();
 
-  function openModal(type, item = null) {
-    setModalType(type);
-    setEditItem(item);
-    if (item) {
-      setFormData(item);
-    } else {
-      if (type === 'course') setFormData({ title: '', description: '', icon: '📘', color: '#00a3e0', trainerId: '', totalModules: 1, videoTitle: '', quizId: '' });
-      if (type === 'quiz') setFormData({ title: '', courseId: '', timeLimit: 600 });
-      if (type === 'activity') setFormData({ title: '', type: 'reading', description: '', xp: 10, content: '', videoId: '' });
-    }
+  const [editing, setEditing] = useState(null); // a course, or EMPTY for a new one
+  const [form, setForm] = useState(EMPTY);
+
+  if (courses.isLoading) {
+    return <div className="page-body" role="status">Loading the curriculum…</div>;
+  }
+  if (courses.error) {
+    return (
+      <div className="page-body">
+        <QueryError error={courses.error} what="the curriculum" />
+      </div>
+    );
   }
 
-  function closeModal() {
-    setModalType(null);
-    setEditItem(null);
-    setFormData({});
+  const list = courses.data ?? [];
+  const queue = requests.data ?? [];
+  const trainerName = (id) =>
+    (users.data ?? []).find((u) => u.id === id)?.name ?? null;
+
+  function openNew() {
+    setForm(EMPTY);
+    setEditing('new');
   }
 
-  function handleSave(e) {
+  function openEdit(course) {
+    setForm({
+      title: course.title ?? '', subtitle: course.subtitle ?? '',
+      description: course.description ?? '', icon: course.icon ?? '📘',
+      color: course.color ?? '#00a3e0',
+    });
+    setEditing(course);
+  }
+
+  async function submitNew(e) {
     e.preventDefault();
-    if (modalType === 'course') {
-      if (editItem) updateCourse(editItem.id, formData);
-      else addCourse(formData);
-    } else if (modalType === 'quiz') {
-      if (editItem) updateQuiz(editItem.id, formData);
-      else addQuiz(formData);
-    } else if (modalType === 'activity') {
-      if (editItem) updateActivity(editItem.id, formData);
-      else addActivity(formData);
-    }
-    closeModal();
+    await create.mutateAsync(form).then(() => setEditing(null)).catch(() => null);
   }
 
   return (
-    <div className="page-body">
-      <p className="eyebrow">Content Management</p>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 className="section-heading" style={{ marginBottom: 0 }}>Global Curriculum</h1>
-        {activeTab !== 'paths' && (
-          <button className="btn btn-primary" onClick={() => openModal(activeTab.slice(0, -1) === 'activitie' ? 'activity' : activeTab.slice(0, -1).replace('quizze', 'quiz'))}>
-            + Create New
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+        flexWrap: 'wrap', gap: '1rem',
+      }}>
+        <div>
+          <p className="eyebrow">Curriculum</p>
+          <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Courses</h1>
+          <p className="section-sub">
+            {list.length} course{list.length === 1 ? '' : 's'} ·{' '}
+            {list.filter((c) => c.status === 'published').length} published
+          </p>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={openNew}>
+          + New course
+        </button>
+      </div>
+
+      {/* The only route to a course having an owner. A course with no trainer
+          cannot be edited or published by anyone but an admin. */}
+      {queue.length > 0 && (
+        <section>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+            Trainers asking to teach ({queue.length})
+          </h2>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <AnimatePresence initial={false}>
+              {queue.map((r) => <TeachingRequestCard key={r.id} request={r} />)}
+            </AnimatePresence>
+          </div>
+        </section>
+      )}
+
+      {list.length === 0 ? (
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
+            No courses yet. Create one, add modules and activities, then publish it.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={openNew}>
+            Create the first course
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {list.map((course) => (
+            <CourseRow
+              key={course.id}
+              course={course}
+              trainer={trainerName(course.trainerId)}
+              onEdit={() => openEdit(course)}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="tab-navigation" style={{ marginBottom: '2rem' }}>
-        <button className={`tab-item ${activeTab === 'courses' ? 'active' : ''}`} onClick={() => setActiveTab('courses')}>Courses</button>
-        <button className={`tab-item ${activeTab === 'activities' ? 'active' : ''}`} onClick={() => setActiveTab('activities')}>Activities</button>
-        <button className={`tab-item ${activeTab === 'quizzes' ? 'active' : ''}`} onClick={() => setActiveTab('quizzes')}>Quizzes</button>
-        <button className={`tab-item ${activeTab === 'paths' ? 'active' : ''}`} onClick={() => setActiveTab('paths')}>Learning Paths</button>
-      </div>
-
-      <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {activeTab === 'courses' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {courses.length === 0 && <p style={{ color: 'var(--text-2)' }}>No courses found.</p>}
-            {courses.map(course => (
-              <div key={course.id} className="course-card">
-                <div className="course-card-header" style={{ background: `linear-gradient(145deg, ${course.color}dd, ${course.color}aa)` }}>
-                  <div className="course-card-icon">{course.icon}</div>
-                  <div className="course-card-title">{course.title}</div>
-                  <div className="course-card-subtitle">{course.subtitle}</div>
-                </div>
-                <div className="course-card-body">
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.5 }}>{course.description}</p>
-                  <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>
-                    Trainer: <strong>{course.trainerId || 'Unassigned'}</strong>
-                  </div>
-                </div>
-                <div className="course-card-footer" style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface)' }}>
-                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => openModal('course', course)}>Edit Course</button>
-                  <button className="btn btn-outline" style={{ flex: 1, borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)' }} onClick={() => deleteCourse(course.id)}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'activities' && (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {Object.values(activities || {}).map(act => (
-              <div key={act.id} className="card no-hover" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{act.type === 'video' ? '🎬' : '📖'} {act.title}</h3>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Type: {act.type} | XP: {act.xp}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => openModal('activity', act)}>Edit</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => deleteActivity(act.id)} style={{ borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)' }}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'quizzes' && (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {Object.values(quizzes).map(quiz => (
-              <div key={quiz.id} className="card no-hover" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>🧠 {quiz.title}</h3>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Course: {quiz.courseId} | {quiz.questions?.length || 0} Questions</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => openModal('quiz', quiz)}>Edit</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => deleteQuiz(quiz.id)} style={{ borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)' }}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'paths' && (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {learningPaths.map(path => (
-              <div key={path.id} className="card no-hover" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{path.icon} {path.title}</h3>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>{path.modules.length} Modules configured</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </motion.div>
-
-      {/* MODALS */}
       <AnimatePresence>
-        {modalType && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModal} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }} />
-            <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }} style={{ position: 'fixed', top: '10vh', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg)', padding: '2rem', borderRadius: 'var(--r-xl)', zIndex: 1000, width: '90%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto', border: '1px solid var(--border)', boxShadow: 'var(--shadow-xl)' }}>
-              
-              <h2 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)' }}>{editItem ? `Edit ${modalType}` : `Create ${modalType}`}</h2>
-              
-              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {/* COURSE FIELDS */}
-                {modalType === 'course' && (
-                  <>
-                    <div><label className="input-label">Title</label><input required className="input-field" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-                    <div><label className="input-label">Description</label><textarea required className="input-field" style={{ minHeight: '80px' }} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div><label className="input-label">Icon (Emoji)</label><input className="input-field" value={formData.icon || ''} onChange={e => setFormData({...formData, icon: e.target.value})} /></div>
-                      <div><label className="input-label">Color (Hex)</label><input className="input-field" value={formData.color || ''} onChange={e => setFormData({...formData, color: e.target.value})} /></div>
-                    </div>
-                    <div>
-                      <label className="input-label">Assign Trainer</label>
-                      <select className="input-field" value={formData.trainerId || ''} onChange={e => setFormData({...formData, trainerId: e.target.value})}>
-                        <option value="">Unassigned</option>
-                        {trainers.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="input-label">Linked Quiz</label>
-                      <select className="input-field" value={formData.quizId || ''} onChange={e => setFormData({...formData, quizId: e.target.value})}>
-                        <option value="">None</option>
-                        {Object.values(quizzes).map(q => (
-                          <option key={q.id} value={q.id}>{q.title} ({q.id})</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* MATERIALS MANAGEMENT SECTION */}
-                    <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                      <label className="input-label">Course Materials (Demo Upload)</label>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        {(!formData.materials || formData.materials.length === 0) ? (
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontStyle: 'italic' }}>No materials added yet.</p>
-                        ) : (
-                          formData.materials.map((mat, index) => (
-                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-sm)' }}>
-                              <span style={{ fontSize: '0.85rem' }}>{mat.name} <strong style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>({mat.type.toUpperCase()})</strong></span>
-                              <button type="button" className="btn btn-sm btn-outline" style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem', color: '#dc3545', borderColor: '#dc3545' }} onClick={() => {
-                                const updated = [...formData.materials];
-                                updated.splice(index, 1);
-                                setFormData({ ...formData, materials: updated });
-                              }}>Remove</button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input className="input-field" style={{ flex: 2, padding: '0.5rem' }} placeholder="Material Name" id="new-mat-name" />
-                        <select className="input-field" style={{ flex: 1, padding: '0.5rem' }} id="new-mat-type">
-                          <option value="pdf">PDF</option>
-                          <option value="pptx">PPTX</option>
-                          <option value="link">Link</option>
-                        </select>
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => {
-                          const nameEl = document.getElementById('new-mat-name');
-                          const typeEl = document.getElementById('new-mat-type');
-                          if (nameEl && nameEl.value.trim()) {
-                            const newMat = {
-                              name: nameEl.value.trim(),
-                              type: typeEl.value,
-                              size: typeEl.value === 'link' ? 'Reference' : '2.5 MB'
-                            };
-                            setFormData({
-                              ...formData,
-                              materials: [...(formData.materials || []), newMat]
-                            });
-                            nameEl.value = '';
-                          }
-                        }}>Add</button>
-                      </div>
-                    </div>
-                  </>
-                )}                {/* QUIZ FIELDS */}
-                {modalType === 'quiz' && (
-                  <>
-                    <div><label className="input-label">Quiz Title</label><input required className="input-field" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-                    <div><label className="input-label">Course ID</label><input required className="input-field" value={formData.courseId || ''} onChange={e => setFormData({...formData, courseId: e.target.value})} /></div>
-                    <div><label className="input-label">Time Limit (Seconds)</label><input type="number" required className="input-field" value={formData.timeLimit || 600} onChange={e => setFormData({...formData, timeLimit: Number(e.target.value)})} /></div>
-                  </>
-                )}
-
-                {/* ACTIVITY FIELDS */}
-                {modalType === 'activity' && (
-                  <>
-                    <div><label className="input-label">Activity Title</label><input required className="input-field" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-                    <div>
-                      <label className="input-label">Type</label>
-                      <select className="input-field" value={formData.type || 'reading'} onChange={e => setFormData({...formData, type: e.target.value})}>
-                        <option value="reading">Reading</option>
-                        <option value="video">Video</option>
-                        <option value="flashcards">Flashcards</option>
-                      </select>
-                    </div>
-                    <div><label className="input-label">Description</label><textarea className="input-field" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
-                    <div><label className="input-label">XP Reward</label><input type="number" required className="input-field" value={formData.xp || 10} onChange={e => setFormData({...formData, xp: Number(e.target.value)})} /></div>
-                    
-                    {formData.type === 'video' && (
-                      <div><label className="input-label">YouTube Video ID</label><input required className="input-field" value={formData.videoId || ''} onChange={e => setFormData({...formData, videoId: e.target.value})} /></div>
-                    )}
-                    {formData.type === 'reading' && (
-                      <div><label className="input-label">Content (Markdown)</label><textarea className="input-field" style={{ minHeight: '120px' }} value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})} /></div>
-                    )}
-                  </>
-                )}
-
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                  <button type="button" className="btn btn-ghost" onClick={closeModal} style={{ flex: 1 }}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{editItem ? 'Save Changes' : 'Create'}</button>
-                </div>
-              </form>
-            </motion.div>
-          </>
+        {editing === 'new' && (
+          <CourseDialog
+            title="New course"
+            form={form}
+            setForm={setForm}
+            submitting={create.isPending}
+            error={create.error}
+            submitLabel="Create"
+            onCancel={() => setEditing(null)}
+            onSubmit={submitNew}
+          />
+        )}
+        {editing && editing !== 'new' && (
+          <EditDialog
+            course={editing}
+            form={form}
+            setForm={setForm}
+            onClose={() => setEditing(null)}
+          />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function TeachingRequestCard({ request }) {
+  const decide = useDecideTeachingRequest();
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0 }}
+      className="card no-hover"
+      style={{ borderLeft: '4px solid var(--brand-secondary)' }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '1rem',
+        justifyContent: 'space-between', flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="avatar" style={{ width: 40, height: 40 }}>{request.trainerAvatar}</div>
+          <div>
+            <div style={{ fontWeight: 600 }}>{request.trainerName}</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>
+              wants to teach <strong>{request.courseTitle || 'a deleted course'}</strong>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={decide.isPending}
+            onClick={() => decide.mutate({ requestId: request.id, decision: 'approve' })}
+          >
+            {decide.isPending ? 'Working…' : 'Approve'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={decide.isPending}
+            onClick={() => decide.mutate({ requestId: request.id, decision: 'deny' })}
+          >
+            Deny
+          </button>
+        </div>
+      </div>
+      <Alert error={decide.error} />
+    </motion.div>
+  );
+}
+
+function CourseRow({ course, trainer, onEdit }) {
+  const publish = usePublishCourse();
+  const remove = useDeleteCourse();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const isPublished = course.status === 'published';
+  const busy = publish.isPending || remove.isPending;
+
+  return (
+    <div className="card no-hover">
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '1rem',
+        justifyContent: 'space-between', flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 'var(--r-lg)', display: 'grid',
+            placeItems: 'center', fontSize: '1.3rem', flexShrink: 0,
+            background: `${course.color ?? '#00a3e0'}22`,
+          }}>
+            {course.icon ?? '📘'}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>{course.title}</h3>
+            {course.subtitle && (
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>{course.subtitle}</div>
+            )}
+            <div style={{ fontSize: '0.78rem', color: trainer ? 'var(--text-3)' : 'var(--brand-accent)' }}>
+              {trainer
+                ? `Trainer: ${trainer}`
+                : 'No trainer assigned — only an admin can edit or publish it'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <StatusPill status={course.status} />
+          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onEdit}>
+            Edit
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}
+            disabled={busy}
+            onClick={() => publish.mutate({ courseId: course.id, publish: !isPublished })}
+          >
+            {publish.isPending ? 'Working…' : isPublished ? 'Unpublish' : 'Publish'}
+          </button>
+
+          {/* Deleting cascades to modules, activities and every enrolment on
+              the course. One click is not enough for that. */}
+          {confirmingDelete ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={busy}
+                onClick={() => remove.mutate({ id: course.id })}
+              >
+                Delete for good
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm"
+                      onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
+                    onClick={() => setConfirmingDelete(true)}>
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+      <Alert error={publish.error ?? remove.error} />
+    </div>
+  );
+}
+
+/** The edit dialog owns its own mutation so its pending state is per-course. */
+function EditDialog({ course, form, setForm, onClose }) {
+  const update = useUpdateCourse();
+
+  async function submit(e) {
+    e.preventDefault();
+    await update.mutateAsync({ id: course.id, ...form }).then(onClose).catch(() => null);
+  }
+
+  return (
+    <CourseDialog
+      title={`Edit ${course.title}`}
+      form={form}
+      setForm={setForm}
+      submitting={update.isPending}
+      error={update.error}
+      submitLabel="Save changes"
+      onCancel={onClose}
+      onSubmit={submit}
+    />
+  );
+}
+
+function CourseDialog({ title, form, setForm, submitting, error, submitLabel, onCancel, onSubmit }) {
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onCancel}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }}
+      />
+      <motion.div
+        role="dialog"
+        aria-label={title}
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.97 }}
+        style={{
+          position: 'fixed', top: '10vh', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg)', padding: '2rem', borderRadius: 'var(--r-xl)',
+          zIndex: 1000, width: '90%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+          border: '1px solid var(--border)', boxShadow: 'var(--shadow-xl)',
+        }}
+      >
+        <h2 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)' }}>{title}</h2>
+
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label className="input-label" htmlFor="course-title">Title</label>
+            <input
+              id="course-title" required className="input-field" value={form.title}
+              onChange={(e) => set({ title: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="input-label" htmlFor="course-subtitle">Subtitle</label>
+            <input
+              id="course-subtitle" className="input-field" value={form.subtitle}
+              onChange={(e) => set({ subtitle: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="input-label" htmlFor="course-description">Description</label>
+            <textarea
+              id="course-description" rows={4} className="input-field" value={form.description}
+              onChange={(e) => set({ description: e.target.value })}
+            />
+          </div>
+
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="input-label">Icon</legend>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {ICONS.map((i) => (
+                <button
+                  key={i} type="button" aria-label={`Icon ${i}`} aria-pressed={form.icon === i}
+                  onClick={() => set({ icon: i })}
+                  style={{
+                    width: 40, height: 40, fontSize: '1.2rem', cursor: 'pointer',
+                    borderRadius: 'var(--r-md)', background: 'var(--surface-alt)',
+                    border: form.icon === i
+                      ? '2px solid var(--brand-primary)' : '1px solid var(--border)',
+                  }}
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="input-label">Colour</legend>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {COLORS.map((c) => (
+                <button
+                  key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={form.color === c}
+                  onClick={() => set({ color: c })}
+                  style={{
+                    width: 32, height: 32, borderRadius: '50%', background: c, cursor: 'pointer',
+                    border: form.color === c ? '3px solid var(--heading)' : '1px solid var(--border)',
+                  }}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <Alert error={error} />
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+            <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}
+                    disabled={submitting || !form.title.trim()}>
+              {submitting ? 'Saving…' : submitLabel}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </>
   );
 }

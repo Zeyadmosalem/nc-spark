@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listUsers, pendingSignups, platformStats, recentAudit } from '../api/admin';
+import { pendingTeachingRequests, decideTeachingRequest } from '../api/teaching';
 import { setUserRole, reviewSignup, suspendUser } from '../api/profiles';
 
 export const adminKeys = {
@@ -9,6 +10,7 @@ export const adminKeys = {
   // `audit` is the prefix the mutations invalidate; `auditPage` is what a
   // component subscribes to. TanStack matches prefixes, so invalidating the
   // short key clears every page size without either side naming a limit.
+  teachingRequests: ['admin', 'teaching', 'pending'],
   audit: ['admin', 'audit'],
   auditPage: (limit) => ['admin', 'audit', limit],
 };
@@ -61,5 +63,25 @@ export function useSuspendUser() {
   return useMutation({
     mutationFn: ({ userId, suspend }) => suspendUser(userId, suspend),
     onSuccess: () => invalidateAll(queryClient),
+  });
+}
+
+export const useTeachingRequests = () =>
+  useQuery({ queryKey: adminKeys.teachingRequests, queryFn: pendingTeachingRequests });
+
+/**
+ * Approving assigns courses.trainer_id, which decides who can edit and publish
+ * that course. The course list has to be refetched or the Curriculum page goes
+ * on showing "no trainer" for a course that now has one.
+ */
+export function useDecideTeachingRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, decision }) => decideTeachingRequest(requestId, decision),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.teachingRequests });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: adminKeys.audit });
+    },
   });
 }
