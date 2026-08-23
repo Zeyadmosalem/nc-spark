@@ -4,6 +4,20 @@ import { useMyAttempt, useStartQuiz, useSubmitQuiz } from '../../hooks/useQuizze
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+// Declared at module scope, not inside QuizRunner. A component defined during
+// render is a new type on every render, so React unmounts and remounts it and
+// any state it holds is lost. Neither of these holds state today, which is
+// exactly why it would be a trap for whoever adds some.
+function Alert({ error }) {
+  if (!error) return null;
+  return (
+    <div role="alert" className="card no-hover"
+         style={{ padding: '1rem', borderLeft: '4px solid var(--brand-accent)', color: 'var(--brand-accent)' }}>
+      {error.message}
+    </div>
+  );
+}
+
 /** The response shape submit-quiz expects, per question type. */
 function responseFor(question, value) {
   if (question.type === 'mcq') return { index: value };
@@ -65,13 +79,6 @@ export default function QuizRunner({ quiz, onPassed }) {
       if (data.passed === true) onPassed?.(data);
     }
   }
-
-  const Alert = ({ error }) => (error ? (
-    <div role="alert" className="card no-hover"
-         style={{ padding: '1rem', borderLeft: '4px solid var(--brand-accent)', color: 'var(--brand-accent)' }}>
-      {error.message}
-    </div>
-  ) : null);
 
   // ---------------------------------------------------------------- result --
   if (result) {

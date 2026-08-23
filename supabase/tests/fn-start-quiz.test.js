@@ -4,8 +4,8 @@ import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL }
 const svc = serviceClient();
 const PREFIX = `sq${Date.now()}`;
 let trainer, trainee, stranger, cTrainee, cStranger;
-let courseId, enrolId;
-let modA, modB, actA1, actB1;
+let courseId;
+let modA, modB, actB1;
 let modQuizId, finalQuizId, timedQuizId, lockedQuizId;
 
 async function call(client, body) {
@@ -55,7 +55,9 @@ beforeAll(async () => {
     }).select().single();
     return data.id;
   };
-  actA1 = await mkAct(modA, 1);
+  // Module A needs a non-quiz activity so that finishing it is a real
+  // prerequisite for module B. Its id is never referenced.
+  await mkAct(modA, 1);
   const quizActA = await mkAct(modA, 2, 'quiz');
   actB1 = await mkAct(modB, 1, 'quiz');
 
@@ -90,9 +92,10 @@ beforeAll(async () => {
   await svc.from('enrollments')
     .insert({ trainee_id: trainee.id, course_id: c2.id, status: 'active' });
 
-  const { data: e } = await svc.from('enrollments')
-    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }).select().single();
-  enrolId = e.id;
+  // The trainee must be enrolled for start-quiz to allow anything; the
+  // enrollment id itself is never referenced.
+  await svc.from('enrollments')
+    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' });
 
   [cTrainee, cStranger] = await Promise.all([signIn(trainee.email), signIn(stranger.email)]);
 });

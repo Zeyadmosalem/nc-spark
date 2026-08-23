@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
 
 const svc = serviceClient();
-let admin, secondAdmin, trainer, trainee, pending;
+let admin, trainer, trainee, pending;
 let cAdmin, cTrainer, cTrainee;
 
 async function call(fn, client, body) {
@@ -28,7 +28,11 @@ const auditFor = async (entityId, action) =>
 beforeAll(async () => {
   await resetDb();
   admin       = await createUser({ email: uniqueEmail(), role: 'admin' });
-  secondAdmin = await createUser({ email: uniqueEmail(), role: 'admin' });
+  // A second admin has to EXIST so the tests that legitimately demote or
+  // suspend an admin are not blocked by the last-admin guard. Its id is no
+  // longer needed — asOnlyActiveAdmin finds every other admin itself — but
+  // removing the creation would break those tests.
+  await createUser({ email: uniqueEmail(), role: 'admin' });
   trainer     = await createUser({ email: uniqueEmail(), role: 'trainer' });
   trainee     = await createUser({ email: uniqueEmail(), role: 'trainee' });
   pending     = await createUser({ email: uniqueEmail(), role: 'trainee', status: 'pending' });
