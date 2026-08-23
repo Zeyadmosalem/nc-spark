@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { useSession } from './hooks/useSession';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
@@ -7,6 +8,8 @@ import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotificationToast from './components/shared/NotificationToast';
 import ErrorBoundary from './components/shared/ErrorBoundary';
+import ToastProvider from './components/ui/ToastProvider';
+import PageSkeleton from './components/ui/Skeleton';
 
 // One shell per role, and a user only ever reaches their own. Loading them
 // eagerly meant every trainee downloaded the admin and supervisor pages
@@ -20,10 +23,22 @@ const AdminShell      = lazy(() => import('./pages/admin/AdminShell'));
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <NotificationToast />
-      <AppRoutes />
-    </BrowserRouter>
+    /*
+     * reducedMotion="user" makes every `motion` element honour the OS setting.
+     * The CSS media query in ui.css cannot do this on its own: framer-motion
+     * writes transforms to the inline style attribute from JavaScript and
+     * never consults a stylesheet. With 179 motion elements, most of them
+     * sliding or scaling, this is the difference between the app being usable
+     * and being nauseating for someone with a vestibular disorder.
+     */
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <ToastProvider>
+          <NotificationToast />
+          <AppRoutes />
+        </ToastProvider>
+      </BrowserRouter>
+    </MotionConfig>
   );
 }
 
@@ -32,11 +47,7 @@ function AppRoutes() {
   const location = useLocation();
 
   if (status === 'loading') {
-    return (
-      <div role="status" className="page-body" style={{ textAlign: 'center', padding: '4rem' }}>
-        Loading…
-      </div>
-    );
+    return <PageSkeleton label="Loading NC Spark" stats={0} rows={3} />;
   }
 
   // An account that exists but is not active gets no route into the app at
@@ -50,7 +61,7 @@ function AppRoutes() {
 
   return (
     <ErrorBoundary key={location.pathname}>
-      <Suspense fallback={<div className="page-body" role="status">Loading…</div>}>
+      <Suspense fallback={<PageSkeleton label="Loading" />}>
         <Routes>
           <Route path="/login" element={signedIn ? <Navigate to={home} replace /> : <LoginPage />} />
           <Route path="/signup" element={signedIn ? <Navigate to={home} replace /> : <SignupPage />} />

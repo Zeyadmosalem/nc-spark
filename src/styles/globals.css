@@ -1615,8 +1615,22 @@ textarea.input-field {
     flex: 1 1 auto;
     justify-content: center;
   }
+  /*
+   * Hidden from view, NOT from assistive technology. display:none removes the
+   * label from the accessibility tree, which left the mobile nav as six links
+   * announcing nothing but an emoji — and an emoji is announced by its Unicode
+   * name, so "Dashboard" became "house with garden".
+   */
   .sidebar-link span:not(.chip) {
-    display: none; /* Hide text, show only icon on small screens to save space */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   .sidebar-section-label {
     display: none;

@@ -45,14 +45,18 @@ export default function Sidebar({ navItems, footerExtra }) {
               end={item.end}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
             >
-              <span style={{ fontSize: '1rem' }}>{item.icon}</span>
+              <span style={{ fontSize: '1rem' }} aria-hidden="true">{item.icon}</span>
               <span>{item.label}</span>
               {/* A nav item can carry its own count. The Pending Requests
                   fallback is the prototype's hardcoded behaviour, kept so the
                   admin nav keeps working until it supplies a badge itself. */}
               {(item.badge ?? (item.label === 'Pending Requests' ? pendingRequests.length : 0)) > 0 && (
                 <span className="badge-dot">
-                  {item.badge ?? pendingRequests.length}
+                  <span aria-hidden="true">{item.badge ?? pendingRequests.length}</span>
+                  {/* On its own the badge announces a bare number. */}
+                  <span className="sr-only">
+                    {item.badge ?? pendingRequests.length} waiting
+                  </span>
                 </span>
               )}
             </NavLink>
@@ -67,17 +71,30 @@ export default function Sidebar({ navItems, footerExtra }) {
           className="btn btn-ghost btn-sm" 
           style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--sidebar-text)', marginBottom: '0.5rem', padding: '0.5rem' }}
         >
-          <span style={{ fontSize: '1.25rem' }}>{theme === 'light' ? '🌙' : '☀️'}</span>
-          <span style={{ marginLeft: '0.75rem' }}>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+          <span style={{ fontSize: '1.25rem' }} aria-hidden="true">
+            {theme === 'light' ? '🌙' : '☀️'}
+          </span>
+          <span style={{ marginLeft: '0.75rem' }}>
+            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+          </span>
         </button>
         {footerExtra}
-        <div className="sidebar-user" onClick={handleLogout} title="Click to log out">
-          <div className="avatar">{currentUser?.avatar || '?'}</div>
+        {/*
+          A button, not a div with onClick. As a div this was unreachable by
+          keyboard and announced as nothing, which meant a keyboard-only user
+          had no way to log out at all — the only exit from the app.
+        */}
+        <button
+          type="button"
+          className="sidebar-user"
+          onClick={handleLogout}
+        >
+          <div className="avatar" aria-hidden="true">{currentUser?.avatar || '?'}</div>
           <div className="sidebar-user-info">
             <strong>{currentUser?.name || 'User'}</strong>
             <span>{currentUser?.role} · Log out</span>
           </div>
-        </div>
+        </button>
       </div>
     </motion.aside>
   );
