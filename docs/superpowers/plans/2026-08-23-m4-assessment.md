@@ -17,6 +17,36 @@ Two pieces of SQL in the spec do not work as written. Fixed here, not carried fo
 1. `exclude (course_id with =) where (activity_id is null)` needs the `btree_gist` extension for uuid equality. A partial unique index does the same job with no extension: `create unique index ... on quizzes (course_id) where activity_id is null`.
 2. The spec's unique index references `quiz_attempts.attempt_no`, but the table definition never declares that column. Added, defaulting to 1.
 
+## Progress
+
+| Task | Status | Correction found during execution |
+|---|---|---|
+| 1. Quiz content schema | Done | Spec's EXCLUDE constraint needed btree_gist; a partial unique index does the job with nothing installed. |
+| 2. Attempts and grants | Done | Spec's unique index referenced `attempt_no`, which the table never declared. |
+| 3. Helpers | Done | A vacuous `not exists` would have let a nonexistent enrollment unlock a final; guarded with a trailing `exists`. |
+| 4. RLS and answer-key lockdown | Done | `app.supervises()` takes a TRAINER id; the policies passed a trainee id, so a supervisor saw nothing. Fixed with `app.quiz_trainer()`. Mutation-verified: leaking the key fails 7 red-team tests. |
+| 5. `start-quiz` | Done | Mutation-verified: embedding `quiz_answer_keys` in the question select fails exactly the payload-walking test. |
+| 6. `submit-quiz` | Done | Mutation-verified: making grading always-true fails 4 tests, including "records NOTHING on a fail". |
+| 7. Review, retakes, superseded rule | Done | New test confirmed failing against the old deployment before deploying the fix. The M3 test for a course with no final stands unchanged. |
+| 8. API and hooks | Done | Fixed a flake the code splitting introduced: `asyncUtilTimeout` was 1000ms, tuned for eager imports. |
+| 9. `QuizPage` | Done | The negative is asserted from `document.body.textContent`, not from props. |
+| 10. Trainer review queue | Done | Three bugs, two of them only visible after raising `testTimeout` above `asyncUtilTimeout` — they had been reported as a bare timeout. |
+| 11. Migrate `q1`, strip the bundle | Done | Seeder matches courses by slug; matching the dummy id would have reported success while seeding nothing. |
+| 12. Verification | Done | Mutation-verified: re-introducing one explanation into dummyData makes the bundle grep fail and the script exit non-zero. |
+| 13. Notifications | **Not done** | The approved "full review queue" option said "plus notifications". The queues and actions shipped; notifications did not. Tracked, not hidden. |
+
+**Result:** 233 frontend tests, 338 database tests, 30 live checks in
+`npm run verify:m4`, all passing.
+
+### Known and accepted
+
+Scenario activities send `isCorrect` to the browser and grade client-side.
+Same vulnerability class as the quiz leak, materially lower severity: a
+scenario completes via "Mark as Complete", so correctness gates nothing — it
+is formative practice, not assessment, and instant feedback requires the
+answer client-side. Reviewed and deliberately left.
+
+
 ## Global Constraints
 
 Everything from M1–M3 still applies. The ones that bite hardest here:

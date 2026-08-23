@@ -74,6 +74,7 @@ logs a warning instead.
 | `npm test` | Frontend unit and component tests |
 | `npm run test:db` | RLS policies and Edge Functions |
 | `npm run verify:m3` | Live end-to-end check of the learning loop |
+| `npm run verify:m4` | Live check of assessment integrity, including a grep of the built bundle |
 | `npm run lint` | oxlint |
 | `npm run build` | Production build |
 
