@@ -1,148 +1,204 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Sidebar from '../../components/shared/Sidebar';
-import ContentReview from './ContentReview';
+import QueryError from '../../components/shared/QueryError';
+import {
+  useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
+} from '../../hooks/useSupervisor';
 import SupervisorCourses from './SupervisorCourses';
-import SupervisorCoursePage from './SupervisorCoursePage';
+
+/**
+ * Supervisor oversight, on real data.
+ *
+ * Two routes, down from four. The prototype had a per-course page built around
+ * course chat (M5, not built) and a "Review Content" screen approving content
+ * through a workflow that has no server-side model at all — no table, no
+ * status, no Edge Function. Neither could be wired to anything, and a nav
+ * entry that leads to invented data is worse than one that is absent.
+ *
+ * Everything here is a cohort figure. A supervisor manages trainers, not
+ * trainees: profiles_select_supervised matches only the linked trainers, so a
+ * trainee's name is not readable and none of these screens ask for one. See
+ * src/api/supervisor.js.
+ */
 
 const NAV = [
   { to: '/supervisor', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/supervisor/courses', icon: '📚', label: 'Team Courses' },
-  { to: '/supervisor/content', icon: '✅', label: 'Review Content' },
-  { to: '/trainee/support', icon: '🎧', label: 'Support' },
 ];
 
-function Dashboard() {
-  const { currentUser, getTeamReport, pendingRequests, approveSecondAttempt, denySecondAttempt } = useApp();
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+  }),
+};
 
-  const report = getTeamReport(currentUser.id);
-  
-  // Flatten trainees array to get requests for managed trainees
-  const managedTraineeIds = report?.trainerReports.flatMap(tr => tr.trainees.map(t => t.id)) || [];
-  const myPendingRequests = pendingRequests.filter(req => managedTraineeIds.includes(req.traineeId));
-
+function Stat({ label, value, sub, color }) {
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Supervisor Dashboard</h1>
-          <p>Team Overview & Approvals</p>
-        </div>
-      </div>
-      
-        {/* Key Metrics */}
-        <div className="stat-grid stat-grid-4">
-          <div className="stat-card">
-            <div className="stat-card-label">Managed Trainers</div>
-            <div className="stat-card-value">{report?.trainerReports.length || 0}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-card-label">Total Trainees</div>
-            <div className="stat-card-value">
-              {report?.trainerReports.reduce((sum, tr) => sum + tr.totalTrainees, 0) || 0}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-card-label">Avg Trainee XP</div>
-            <div className="stat-card-value">
-              {report?.trainerReports.length > 0 
-                ? Math.round(report.trainerReports.reduce((sum, tr) => sum + tr.avgXP, 0) / report.trainerReports.length)
-                : 0}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-card-label">Pending Requests</div>
-            <div className="stat-card-value" style={{ color: myPendingRequests.length > 0 ? 'var(--brand-accent)' : 'inherit' }}>
-              {myPendingRequests.length}
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-grid dashboard-grid-main">
-          {/* Left Column: Team Reports */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <h2 className="section-heading" style={{ fontSize: '1.25rem' }}>Trainer Cohorts</h2>
-            
-            {report?.trainerReports.map(tr => (
-              <div key={tr.trainer.id} className="supervisor-team-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                  <div className="avatar">{tr.trainer.avatar}</div>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{tr.trainer.name}</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>{tr.courses.map(c => c.title).join(', ')}</p>
-                  </div>
-                  <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>Avg XP</div>
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--brand-primary)' }}>{tr.avgXP}</div>
-                  </div>
-                </div>
-                
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>
-                  Trainees ({tr.totalTrainees})
-                </div>
-                
-                {tr.trainees.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {tr.trainees.map(t => (
-                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', background: 'var(--surface-alt)', borderRadius: 'var(--r-sm)' }}>
-                        <div className="avatar" style={{ width: '1.5rem', height: '1.5rem', fontSize: '0.6rem' }}>{t.avatar}</div>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 500, flex: 1 }}>{t.name}</span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--brand-secondary)' }}>{t.xp} XP</span>
-                        <span style={{ fontSize: '0.8rem', color: '#ff6b35', fontWeight: 600 }}>🔥 {t.streak}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontStyle: 'italic' }}>No trainees assigned</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Right Column: Pending Approvals */}
-          <div>
-            <h2 className="section-heading" style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Approvals</h2>
-            
-            {myPendingRequests.length === 0 ? (
-              <div className="card no-hover" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '1rem', opacity: 0.5 }}>👍</div>
-                <h3 style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>All Caught Up</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>No pending requests from your team.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {myPendingRequests.map((req) => (
-                  <div key={req.id} className="request-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div className="avatar">{req.avatar}</div>
-                      <div className="request-info">
-                        <strong>{req.traineeName}</strong>
-                        <div className="request-quiz">{req.quizTitle}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '4px' }}>Requested {req.requestedAt}</div>
-                      </div>
-                      <div className="request-score" style={{ color: req.score < 50 ? '#dc3545' : '#b8860b' }}>
-                        {req.score}%
-                      </div>
-                    </div>
-                    <div className="request-actions" style={{ marginTop: '1rem' }}>
-                      <button className="btn btn-success" style={{ flex: 1, padding: '0.4rem' }} onClick={() => approveSecondAttempt(req.id)}>Approve</button>
-                      <button className="btn btn-danger" style={{ flex: 1, padding: '0.4rem' }} onClick={() => denySecondAttempt(req.id)}>Deny</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="stat-card">
+      <div className="stat-card-value" style={{ color }}>{value}</div>
+      <div className="stat-card-label">{label}</div>
+      {sub && <div className="stat-card-sub">{sub}</div>}
     </div>
   );
 }
 
-export default function SupervisorShell() {
-  const { currentUser } = useApp();
-  
-  if (currentUser?.role !== 'supervisor') return <Navigate to="/login" replace />;
+const mean = (nums) =>
+  (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
 
+export function Dashboard() {
+  const trainers = useMyTrainers();
+  const courses = useTeamCourses(trainers.data?.map((t) => t.id));
+  const enrollments = useTeamEnrollments();
+  const attempts = useTeamQuizAttempts();
+
+  if (trainers.isLoading) {
+    return <div className="page-body" role="status">Loading your team…</div>;
+  }
+  if (trainers.error) {
+    return (
+      <div className="page-body">
+        <QueryError error={trainers.error} what="your team" />
+      </div>
+    );
+  }
+
+  const team = trainers.data ?? [];
+
+  if (team.length === 0) {
+    return (
+      <div className="page-body">
+        <p className="eyebrow">Oversight</p>
+        <h1 className="section-heading">Your Team</h1>
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-2)', margin: 0 }}>
+            No trainers are assigned to you yet. An administrator links trainers
+            to a supervisor; until then there is nothing to oversee.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const courseList = courses.data ?? [];
+  const enrolled = enrollments.data ?? [];
+  const active = enrolled.filter((e) => e.status === 'active' || e.status === 'completed');
+  const averageProgress = mean(active.map((e) => e.percent));
+
+  const finished = attempts.data ?? [];
+  const decided = finished.filter((a) => a.passed !== null);
+  const passRate = decided.length
+    ? Math.round((decided.filter((a) => a.passed).length / decided.length) * 100)
+    : null;
+  const awaitingMarking = finished.filter((a) => a.status === 'pending_review').length;
+
+  const coursesByTrainer = new Map();
+  for (const c of courseList) {
+    coursesByTrainer.set(c.trainerId, (coursesByTrainer.get(c.trainerId) ?? 0) + 1);
+  }
+
+  return (
+    <motion.div
+      className="page-body"
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div variants={fadeUp} custom={0}>
+        <p className="eyebrow">Oversight</p>
+        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Your Team</h1>
+        <p className="section-sub">
+          {team.length} trainer{team.length === 1 ? '' : 's'}, {courseList.length} course
+          {courseList.length === 1 ? '' : 's'}.
+        </p>
+      </motion.div>
+
+      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
+        <Stat label="Trainers" value={team.length} color="var(--brand-secondary)" />
+        <Stat
+          label="Courses"
+          value={courseList.length}
+          sub={`${courseList.filter((c) => c.status === 'published').length} published`}
+          color="var(--brand-primary)"
+        />
+        <Stat
+          label="Learners enrolled"
+          value={active.length}
+          sub={averageProgress === null ? 'no progress yet' : `${averageProgress}% average progress`}
+          color="#28a745"
+        />
+        <Stat
+          label="Quiz pass rate"
+          value={passRate === null ? '—' : `${passRate}%`}
+          sub={`${decided.length} graded attempt${decided.length === 1 ? '' : 's'}`}
+          color="var(--brand-accent)"
+        />
+      </motion.div>
+
+      {awaitingMarking > 0 && (
+        <motion.div variants={fadeUp} custom={2} className="card no-hover"
+                    style={{ borderLeft: '4px solid #b8860b' }}>
+          <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.9rem' }}>
+            <strong>{awaitingMarking}</strong> attempt{awaitingMarking === 1 ? ' is' : 's are'}{' '}
+            waiting on a trainer to mark a written answer. Trainees cannot progress past a
+            quiz until it is marked.
+          </p>
+        </motion.div>
+      )}
+
+      <motion.div variants={fadeUp} custom={3} className="card no-hover">
+        <div className="card-title">Trainers you supervise</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          {team.map((t) => (
+            <div key={t.id} className="student-row" style={{ cursor: 'default' }}>
+              <div className="avatar" style={{ width: '2rem', height: '2rem', fontSize: '0.7rem', flexShrink: 0 }}>
+                {t.avatar || (t.name ?? '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="student-row-info">
+                <div className="student-row-name">{t.name || 'Unnamed'}</div>
+                <div className="student-row-meta">{t.email}</div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                {t.status !== 'active' && (
+                  <span style={{
+                    background: 'rgba(220,53,69,0.15)', color: '#dc3545', fontSize: '0.7rem',
+                    fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 999,
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                  }}>
+                    {t.status}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
+                  {coursesByTrainer.get(t.id) ?? 0} course
+                  {(coursesByTrainer.get(t.id) ?? 0) === 1 ? '' : 's'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: '1rem' }}>
+          <Link to="/supervisor/courses" className="btn btn-ghost btn-sm"
+                style={{ textDecoration: 'none' }}>
+            See course-by-course progress →
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* Individual trainees are absent by design, not by omission. */}
+      <motion.div variants={fadeUp} custom={4} className="card no-hover">
+        <p style={{ color: 'var(--text-3)', margin: 0, fontSize: '0.85rem' }}>
+          These figures are cohort totals. Supervisors oversee trainers, so individual
+          trainee names and results are not shown here — a trainer sees those for their
+          own courses.
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export default function SupervisorShell() {
   return (
     <div className="app-shell">
       <Sidebar navItems={NAV} />
@@ -150,8 +206,6 @@ export default function SupervisorShell() {
         <Routes>
           <Route index element={<Dashboard />} />
           <Route path="courses" element={<SupervisorCourses />} />
-          <Route path="courses/:courseId" element={<SupervisorCoursePage />} />
-          <Route path="content" element={<ContentReview />} />
           <Route path="*" element={<Navigate to="/supervisor" replace />} />
         </Routes>
       </div>

@@ -14,13 +14,32 @@ export function enrollmentToCamel(row) {
   };
 }
 
-/** The caller's own enrollments, with derived progress joined in. */
+/** Exactly the columns enrollmentToCamel reads. */
+const ENROLLMENT_COLUMNS = 'id, trainee_id, course_id, status, decided_at, completed_at';
+
+/**
+ * The caller's own enrollments, with derived progress attached.
+ *
+ * Two queries rather than `enrollments?select=*,enrollment_progress(percent)`.
+ * That embed looks natural and never worked: enrollment_progress is a view
+ * built on `left join lateral`, and PostgREST cannot trace its columns back to
+ * a base-table relationship, so every call failed with "Could not find a
+ * relationship between 'enrollments' and 'enrollment_progress' in the schema
+ * cache". Because unwrap throws, My Courses rendered "Could not load your
+ * courses" for everyone, and the mocked unit tests could not see it.
+ *
+ * Both reads are RLS-scoped on their own — the view is security_invoker — so
+ * splitting them widens nothing.
+ */
 export async function myEnrollments() {
-  const rows = unwrap(await requireClient()
-    .from('enrollments')
-    .select('*, enrollment_progress(percent)'));
+  const client = requireClient();
+  const [rows, progress] = await Promise.all([
+    client.from('enrollments').select(ENROLLMENT_COLUMNS).then(unwrap),
+    client.from('enrollment_progress').select('enrollment_id, percent').then(unwrap),
+  ]);
+  const percentOf = new Map((progress ?? []).map((p) => [p.enrollment_id, p.percent]));
   return (rows ?? []).map((r) =>
-    enrollmentToCamel({ ...r, percent: r.enrollment_progress?.[0]?.percent ?? 0 }));
+    enrollmentToCamel({ ...r, percent: percentOf.get(r.id) ?? 0 }));
 }
 
 /**

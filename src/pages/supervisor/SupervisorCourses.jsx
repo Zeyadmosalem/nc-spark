@@ -1,73 +1,174 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
+import { motion } from 'framer-motion';
+import QueryError from '../../components/shared/QueryError';
+import {
+  useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
+} from '../../hooks/useSupervisor';
+
+/**
+ * Course-by-course progress across the supervised trainers.
+ *
+ * Cohort figures only, for the reason set out in src/api/supervisor.js: a
+ * supervisor cannot resolve a trainee id to a name, and these screens do not
+ * ask for one.
+ *
+ * Reading the quiz title here is what backlog B5 was about — quiz_attempts_select
+ * matched supervisors from M4 and quizzes_select did not, so this page would
+ * have rendered every attempt as "Unknown quiz". Migration 20260825000100
+ * fixed it.
+ */
+
+const STATUS_STYLE = {
+  published: { bg: 'rgba(40,167,69,0.15)',  fg: '#28a745',       label: 'Published' },
+  draft:     { bg: 'rgba(232,179,77,0.18)', fg: '#b8860b',       label: 'Draft' },
+  archived:  { bg: 'var(--surface-alt)',    fg: 'var(--text-3)', label: 'Archived' },
+};
+
+function StatusPill({ status }) {
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.archived;
+  return (
+    <span style={{
+      background: s.bg, color: s.fg, fontSize: '0.7rem', fontWeight: 700,
+      padding: '0.2rem 0.55rem', borderRadius: 999, textTransform: 'uppercase',
+      letterSpacing: '0.04em', whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
+const mean = (nums) =>
+  (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
+
+function Figure({ label, value }) {
+  return (
+    <div style={{ textAlign: 'center', minWidth: 84 }}>
+      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.15rem' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{label}</div>
+    </div>
+  );
+}
 
 export default function SupervisorCourses() {
-  const { currentUser, getTeamReport, trainees } = useApp();
-  const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate();
+  const trainers = useMyTrainers();
+  const courses = useTeamCourses(trainers.data?.map((t) => t.id));
+  const enrollments = useTeamEnrollments();
+  const attempts = useTeamQuizAttempts();
 
-  const report = getTeamReport(currentUser.id);
-  
-  // Aggregate all courses taught by trainers under this supervisor
-  const managedCourses = [];
-  if (report) {
-    report.trainerReports.forEach(tr => {
-      tr.courses.forEach(c => {
-        if (!managedCourses.some(mc => mc.id === c.id)) {
-          managedCourses.push({ ...c, trainerName: tr.trainer.name });
-        }
-      });
-    });
+  if (trainers.isLoading || courses.isLoading) {
+    return <div className="page-body" role="status">Loading team courses…</div>;
   }
 
-  const filtered = managedCourses.filter(c => 
-    c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.trainerName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const failure = trainers.error ?? courses.error;
+  if (failure) {
+    return (
+      <div className="page-body">
+        <QueryError error={failure} what="your team courses" />
+      </div>
+    );
+  }
+
+  const team = trainers.data ?? [];
+  const list = courses.data ?? [];
+  const nameOf = new Map(team.map((t) => [t.id, t.name]));
+
+  const enrolledBy = new Map();
+  for (const e of enrollments.data ?? []) {
+    if (e.status !== 'active' && e.status !== 'completed') continue;
+    if (!enrolledBy.has(e.courseId)) enrolledBy.set(e.courseId, []);
+    enrolledBy.get(e.courseId).push(e);
+  }
+
+  const attemptsBy = new Map();
+  for (const a of attempts.data ?? []) {
+    if (!a.courseId) continue;
+    if (!attemptsBy.has(a.courseId)) attemptsBy.set(a.courseId, []);
+    attemptsBy.get(a.courseId).push(a);
+  }
 
   return (
-    <div className="page-body">
-      <p className="eyebrow">Team Overview</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 className="section-heading" style={{ margin: 0 }}>Courses Taught by Team</h1>
-        <input 
-          className="input-field" 
-          placeholder="Search by course or trainer..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: '1 1 300px', maxWidth: '400px' }}
-        />
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div>
+        <p className="eyebrow">Oversight</p>
+        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Team Courses</h1>
+        <p className="section-sub">How each cohort is doing.</p>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.5 }}>📚</div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>No Courses Found</h3>
-          <p style={{ color: 'var(--text-2)' }}>No courses are currently being taught by trainers in your team.</p>
+      {list.length === 0 ? (
+        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-2)', margin: 0 }}>
+            {team.length === 0
+              ? 'No trainers are assigned to you yet.'
+              : 'Your trainers have no courses yet.'}
+          </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {filtered.map(course => {
-            const enrolledCount = trainees.filter((t) => t.enrolledCourses?.includes(course.id)).length;
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {list.map((course) => {
+            const cohort = enrolledBy.get(course.id) ?? [];
+            const progress = mean(cohort.map((e) => e.percent));
+            const done = cohort.filter((e) => e.status === 'completed').length;
+
+            const tries = attemptsBy.get(course.id) ?? [];
+            const decided = tries.filter((a) => a.passed !== null);
+            const passRate = decided.length
+              ? Math.round((decided.filter((a) => a.passed).length / decided.length) * 100)
+              : null;
+            const waiting = tries.filter((a) => a.status === 'pending_review').length;
+
             return (
-              <div key={course.id} className="course-card" style={{ cursor: 'pointer' }} onClick={() => navigate(`/supervisor/courses/${course.id}`)}>
-                <div className="course-card-header" style={{ background: `linear-gradient(145deg, ${course.color}dd, ${course.color}aa)` }}>
-                  <div className="course-card-icon">{course.icon}</div>
-                  <div className="course-card-title">{course.title}</div>
-                  <div className="course-card-subtitle">{course.subtitle}</div>
-                </div>
-                <div className="course-card-body">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Trainer: <strong>{course.trainerName}</strong></div>
-                    <div className="chip">{enrolledCount} Trainees</div>
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card no-hover"
+              >
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  justifyContent: 'space-between', flexWrap: 'wrap',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 'var(--r-lg)', flexShrink: 0,
+                      display: 'grid', placeItems: 'center', fontSize: '1.3rem',
+                      background: `${course.color ?? '#00a3e0'}22`,
+                    }}>
+                      {course.icon ?? '📘'}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>
+                        {course.title}
+                      </h2>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
+                        {nameOf.get(course.trainerId) ?? 'Unassigned'}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="course-progress-label"><span>Avg Progress</span><span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>{course.progress}%</span></div>
-                    <div className="progress-track"><div className="progress-fill" style={{ width: `${course.progress}%` }} /></div>
+
+                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Figure label="enrolled" value={cohort.length} />
+                    <Figure label="completed" value={done} />
+                    <Figure label="avg progress" value={progress === null ? '—' : `${progress}%`} />
+                    <Figure label="pass rate" value={passRate === null ? '—' : `${passRate}%`} />
+                    <StatusPill status={course.status} />
                   </div>
                 </div>
-              </div>
+
+                {cohort.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${progress ?? 0}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {waiting > 0 && (
+                  <p style={{ margin: '0.75rem 0 0', fontSize: '0.82rem', color: 'var(--brand-accent)' }}>
+                    {waiting} attempt{waiting === 1 ? '' : 's'} waiting on marking
+                  </p>
+                )}
+              </motion.div>
             );
           })}
         </div>
