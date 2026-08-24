@@ -6,6 +6,7 @@ import {
   useMyTrainers, useTeamCourses, useTeamEnrollments, useTeamQuizAttempts,
 } from '../../hooks/useSupervisor';
 import SupervisorCourses from './SupervisorCourses';
+import AccountPage from '../shared/AccountPage';
 import PageSkeleton from '../../components/ui/Skeleton';
 import StatCard from '../../components/ui/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
@@ -28,6 +29,8 @@ import EmptyState from '../../components/ui/EmptyState';
 const NAV = [
   { to: '/supervisor', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/supervisor/courses', icon: '📚', label: 'Team Courses' },
+  { section: 'Account' },
+  { to: '/supervisor/account', icon: '⚙️', label: 'My Account' },
 ];
 
 const fadeUp = {
@@ -195,6 +198,7 @@ export default function SupervisorShell() {
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="courses" element={<SupervisorCourses />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/supervisor" replace />} />
       </Routes>
     </RoleShell>

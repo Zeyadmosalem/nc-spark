@@ -9,6 +9,7 @@ import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
 import PageSkeleton from '../../components/ui/Skeleton';
+import AccountPage from '../shared/AccountPage';
 
 const NAV = [
   { to: '/trainee', end: true, icon: '🏠', label: 'Dashboard' },
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/trainee/catalog', icon: '🔍', label: 'Course Catalog' },
   { to: '/trainee/achievements', icon: '🏆', label: 'Achievements' },
   { section: 'Account' },
+  { to: '/trainee/account', icon: '⚙️', label: 'My Account' },
   { to: '/trainee/support', icon: '🎧', label: 'Support' },
 ];
 
@@ -146,6 +148,7 @@ export default function TraineeShell() {
         <Route path="catalog" element={<CourseCatalog />} />
         <Route path="courses/:courseId" element={<CoursePage />} />
         <Route path="activity/:activityId" element={<ActivityPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="support" element={<SupportPage />} />
         {/* Legacy routes, now accessible via course page */}
         <Route path="quizzes" element={<Navigate to="/trainee/courses" replace />} />

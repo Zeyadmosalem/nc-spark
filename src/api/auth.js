@@ -26,6 +26,18 @@ export async function signOut() {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Changes the password of whoever is signed in.
+ *
+ * Distinct from resetPassword, which mails a link to someone locked out. This
+ * is the signed-in version and needs no email round trip — Supabase applies it
+ * against the current session.
+ */
+export async function changePassword(password) {
+  const { error } = await requireClient().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
 export async function resetPassword(email) {
   const { error } = await requireClient().auth.resetPasswordForEmail(normalise(email), {
     redirectTo: `${window.location.origin}/reset-password`,

@@ -4,12 +4,15 @@ import TrainerDashboard from './TrainerDashboard';
 import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
+import AccountPage from '../shared/AccountPage';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
 const NAV = [
   { to: '/trainer', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/trainer/courses', icon: '📚', label: 'My Courses' },
   { to: '/trainer/review', icon: '✅', label: 'Review Work' },
+  { section: 'Account' },
+  { to: '/trainer/account', icon: '⚙️', label: 'My Account' },
 ];
 
 export default function TrainerShell() {
@@ -38,6 +41,7 @@ export default function TrainerShell() {
         can: an activity needs a module to live in. */}
         <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
         <Route path="review" element={<TrainerReview />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/trainer" replace />} />
       </Routes>
     </RoleShell>

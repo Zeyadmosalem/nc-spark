@@ -3,6 +3,22 @@ import { getSession, onAuthChange } from '../api/auth';
 import { fetchMyProfile } from '../api/profiles';
 
 /**
+ * Every mounted useSession, so one profile edit reaches all of them.
+ *
+ * The hook holds the profile in local state, and the sidebar, the router and
+ * the account page each call it separately — so they each have their own copy.
+ * Without this, renaming yourself updated the form you typed in and left the
+ * old name in the sidebar until a full reload. Supabase's onAuthStateChange
+ * does not fire for a profile row change, so nothing else would notice.
+ */
+const listeners = new Set();
+
+/** Call after writing to your own profile row. */
+export function profileChanged() {
+  for (const notify of listeners) notify();
+}
+
+/**
  * Single source of truth for "who is signed in and may they use the app".
  * Status is derived from the profile row rather than the JWT, so a
  * suspension takes effect on the next load without waiting for token refresh.
@@ -36,7 +52,19 @@ export function useSession() {
       .catch(() => null)
       .then((s) => { if (active) load(s); });
     const unsubscribe = onAuthChange((s) => { if (active) load(s); });
-    return () => { active = false; unsubscribe?.(); };
+
+    const refresh = () => {
+      fetchMyProfile()
+        .then((p) => { if (active) setProfile(p); })
+        .catch(() => null);
+    };
+    listeners.add(refresh);
+
+    return () => {
+      active = false;
+      listeners.delete(refresh);
+      unsubscribe?.();
+    };
   }, [load]);
 
   let status = 'loading';

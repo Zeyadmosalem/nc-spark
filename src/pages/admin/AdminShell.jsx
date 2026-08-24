@@ -8,6 +8,7 @@ import StatCard from '../../components/ui/StatCard';
 import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import UserManager from './UserManager';
+import AccountPage from '../shared/AccountPage';
 
 /**
  * The admin dashboard, on real numbers.
@@ -23,6 +24,8 @@ const NAV = [
   { to: '/admin', end: true, icon: '🏠', label: 'Dashboard' },
   { to: '/admin/users', icon: '👥', label: 'User Management' },
   { to: '/admin/content', icon: '📚', label: 'Curriculum' },
+  { section: 'Account' },
+  { to: '/admin/account', icon: '⚙️', label: 'My Account' },
 ];
 
 const fadeUp = {
@@ -236,6 +239,7 @@ export default function AdminShell() {
         <Route path="users" element={<UserManager />} />
         <Route path="content" element={<ContentManager />} />
         <Route path="content/:courseId" element={<CourseBuilder backTo="/admin/content" />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
     </RoleShell>
