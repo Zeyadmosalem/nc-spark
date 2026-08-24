@@ -10,6 +10,7 @@ import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
 import LibraryPage from './LibraryPage';
+import SupportThreads from '../../components/support/SupportThreads';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
@@ -141,28 +142,28 @@ export function MyCoursesPage() {
   );
 }
 
+/**
+ * The screen this replaced was the last thing in the product that lied.
+ *
+ * It rendered a name field, an email field and a message box, and its submit
+ * handler was `alert('Support request submitted! (prototype only)')`. Nothing
+ * was stored and nobody was told, so a trainee blocked on a course could fill
+ * it in, read a confirmation, and wait for an answer that was never coming.
+ *
+ * The name and email fields are gone with it: the request is filed as whoever
+ * is signed in, so asking them to type their own name was both redundant and
+ * a way to file one under somebody else's.
+ */
 function SupportPage() {
   return (
-    <div className="page-body">
-      <p className="eyebrow">Trainee Support</p>
-      <h1 className="section-heading" style={{ marginBottom: '0.75rem' }}>Contact Academic Coaching</h1>
-      <p className="section-sub" style={{ marginBottom: '2rem' }}>Submit a blocker or coaching request.</p>
-      <div className="card no-hover" style={{ maxWidth: 520 }}>
-        <form onSubmit={(e) => { e.preventDefault(); alert('Support request submitted! (prototype only)'); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {[{ label: 'Full Name', type: 'text', placeholder: 'Your name' }, { label: 'Email', type: 'email', placeholder: 'your@email.com' }].map((f) => (
-            <div key={f.label} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-2)' }}>{f.label}</label>
-              <input type={f.type} placeholder={f.placeholder} style={{ padding: '0.7rem 0.9rem', borderRadius: 'var(--r-md)', border: '1.5px solid var(--border)', background: 'var(--surface-alt)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
-            </div>
-          ))}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-2)' }}>How can we help?</label>
-            <textarea style={{ minHeight: 100, padding: '0.7rem 0.9rem', borderRadius: 'var(--r-md)', border: '1.5px solid var(--border)', background: 'var(--surface-alt)', color: 'var(--text)', fontFamily: 'var(--font-body)', resize: 'vertical' }} placeholder="Describe your issue..." />
-          </div>
-          <button type="submit" className="btn btn-primary">Send Request</button>
-        </form>
-      </div>
-    </div>
+    <SupportThreads
+      canCreate
+      eyebrow="Support"
+      title="Get help"
+      subtitle="Ask your trainer about a course, or an administrator about anything else."
+      emptyTitle="No requests yet"
+      emptyBody="Stuck on something? Ask, and the reply arrives here rather than in your inbox."
+    />
   );
 }
 

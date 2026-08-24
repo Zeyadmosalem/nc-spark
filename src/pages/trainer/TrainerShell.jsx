@@ -5,6 +5,8 @@ import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
+import SupportThreads from '../../components/support/SupportThreads';
+import { useSupportThreads } from '../../hooks/useSupport';
 import AccountPage from '../shared/AccountPage';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
@@ -12,6 +14,7 @@ const NAV = [
   { to: '/trainer', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/trainer/courses', icon: 'courses', label: 'My Courses' },
   { to: '/trainer/review', icon: 'review', label: 'Review Work' },
+  { to: '/trainer/support', icon: 'support', label: 'Support' },
   { section: 'Account' },
   { to: '/trainer/account', icon: 'account', label: 'My Account' },
 ];
@@ -22,10 +25,19 @@ export default function TrainerShell() {
   // page, and a trainee waits until they happen to.
   const pending = usePendingReviews();
   const blocked = useBlockedAttempts();
+  const support = useSupportThreads();
   const waiting = (pending.data?.length ?? 0) + (blocked.data?.length ?? 0);
 
-  const nav = NAV.map((item) =>
-    (item.to === '/trainer/review' ? { ...item, badge: waiting } : item));
+  // Both queues carry a count, because a trainer who does not visit the page
+  // has no other way to learn that somebody is waiting on them.
+  const asking = (support.data ?? [])
+    .filter((t) => t.status === 'open' && t.awaitingStaff).length;
+
+  const nav = NAV.map((item) => {
+    if (item.to === '/trainer/review') return { ...item, badge: waiting };
+    if (item.to === '/trainer/support') return { ...item, badge: asking };
+    return item;
+  });
 
   return (
     <RoleShell navItems={nav} title="NC Spark Teaching">
@@ -44,6 +56,17 @@ export default function TrainerShell() {
         can: an activity needs a module to live in. */}
         <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
         <Route path="review" element={<TrainerReview />} />
+        {/* RLS decides what lands here: a request tagged with a course
+            reaches whoever teaches it, and nothing else does. */}
+        <Route path="support" element={(
+          <SupportThreads
+            eyebrow="Support"
+            title="Questions from your trainees"
+            subtitle="Requests naming one of your courses. Anything else goes to an administrator."
+            emptyTitle="Nothing to answer"
+            emptyBody="Nobody on your courses has asked for help. Requests that name one of them appear here."
+          />
+        )} />
         <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/trainer" replace />} />
       </Routes>

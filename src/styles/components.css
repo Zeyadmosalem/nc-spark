@@ -1984,3 +1984,129 @@ input[type='radio'] {
 .password-toggle[aria-pressed='true'] {
   color: var(--brand-accent);
 }
+
+/* ==================================================== support == */
+
+.support-thread {
+  padding: 0;
+  overflow: hidden;
+}
+
+.support-thread-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.support-thread-head:hover {
+  background: var(--surface-alt);
+}
+
+/* .data-row-main only stacks inside .row-link and .row-static, so here the
+   subject and its metadata were running together on one line:
+   "Module 2 will not openYou · Fire Safety · just now". */
+.support-thread-head .data-row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.support-caret {
+  color: var(--text-3);
+  transition: transform var(--dur-med) var(--ease);
+}
+
+.support-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.support-thread-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.support-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  padding-top: var(--gap-md);
+  /* A long thread scrolls inside itself rather than pushing every other
+     request off the page. */
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.support-message {
+  max-width: 46rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+/* Your own messages sit to the right and carry the brand tint — the only
+   cue in a thread that tells you at a glance which half is yours. */
+.support-message.is-own {
+  margin-inline-start: auto;
+  background: color-mix(in srgb, var(--brand-accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--brand-accent) 22%, var(--border));
+}
+
+.support-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--text-2xs);
+  margin-bottom: 0.25rem;
+}
+
+.support-message-meta strong {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--heading);
+}
+
+.support-message-meta .chip {
+  height: 1.15rem;
+  padding-inline: 0.4rem;
+}
+
+.support-message-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  /* Author-entered text. Preserves the line breaks somebody typed without
+     letting a 400-character word break the layout. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.support-reply,
+.support-closed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--border);
+}
+
+.support-closed {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+}

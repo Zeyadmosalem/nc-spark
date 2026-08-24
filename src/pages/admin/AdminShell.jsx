@@ -8,6 +8,8 @@ import StatCard from '../../components/ui/StatCard';
 import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
+import SupportThreads from '../../components/support/SupportThreads';
+import { useSupportThreads } from '../../hooks/useSupport';
 import UserManager from './UserManager';
 import Button from '../../components/ui/Button';
 import Icon from '../../components/ui/Icon';
@@ -28,6 +30,7 @@ const NAV = [
   { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/admin/users', icon: 'users', label: 'User Management' },
   { to: '/admin/content', icon: 'curriculum', label: 'Curriculum' },
+  { to: '/admin/support', icon: 'support', label: 'Support' },
   { section: 'Account' },
   { to: '/admin/account', icon: 'account', label: 'My Account' },
 ];
@@ -229,14 +232,33 @@ export function Dashboard() {
 // dashboard and the directory are one fetch and can never disagree.
 
 export default function AdminShell() {
+  // Same reasoning as the trainer's rail: a queue nobody is told about is a
+  // queue nobody empties.
+  const support = useSupportThreads();
+  const asking = (support.data ?? [])
+    .filter((t) => t.status === 'open' && t.awaitingStaff).length;
+
+  const nav = NAV.map((item) =>
+    (item.to === '/admin/support' ? { ...item, badge: asking } : item));
+
   return (
-    <RoleShell navItems={NAV} title="NC Spark Admin">
+    <RoleShell navItems={nav} title="NC Spark Admin">
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="users" element={<UserManager />} />
         <Route path="content" element={<ContentManager />} />
         <Route path="content/:courseId" element={<CourseBuilder backTo="/admin/content" />} />
         <Route path="content/:courseId/people" element={<CourseRoster backTo="/admin/content" />} />
+        {/* An admin sees every thread, including the ones naming a course. */}
+        <Route path="support" element={(
+          <SupportThreads
+            eyebrow="Support"
+            title="Support requests"
+            subtitle="Everything asked across the platform, including requests sent to a trainer."
+            emptyTitle="Nothing to answer"
+            emptyBody="No support requests have been filed yet."
+          />
+        )} />
         <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
