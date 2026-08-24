@@ -119,7 +119,7 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
               value={toMark}
               sub={toMark ? 'blocking those trainees' : 'nothing waiting'}
               icon="review"
-              color={toMark ? 'var(--brand-accent)' : 'var(--text-3)'}
+              color={toMark ? 'var(--warn)' : 'var(--text-3)'}
             />
           </div>
 
@@ -134,12 +134,12 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label className="input-label" style={{ margin: 0 }} htmlFor="roster-order">
+          <div className="cluster">
+            <label className="input-label m-0" htmlFor="roster-order">
               Order
             </label>
             <select
-              id="roster-order" className="input-field" style={{ width: 'auto' }}
+              id="roster-order" className="input-field field-auto"
               value={order} onChange={(e) => setOrder(e.target.value)}
             >
               {Object.entries(ORDER).map(([value, { label }]) => (
@@ -148,7 +148,7 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="stack">
             {sorted.map((person) => (
               <PersonRow key={person.id} person={person} activities={activities} />
             ))}
@@ -173,9 +173,9 @@ function PersonRow({ person, activities }) {
         <div className="avatar" aria-hidden="true" style={{ flexShrink: 0 }}>
           {person.avatar || person.name.charAt(0).toUpperCase()}
         </div>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontWeight: 600 }}>{person.name}</div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
+        <div className="grow-field">
+          <div className="semibold">{person.name}</div>
+          <div className="text-xs muted">
             {doneCount} of {activities.length} activit
             {activities.length === 1 ? 'y' : 'ies'}
             {person.completedAt && ` · finished ${onDate(person.completedAt)}`}
@@ -192,7 +192,7 @@ function PersonRow({ person, activities }) {
         </div>
 
         {stuck > 0 && (
-          <span className="chip" style={{ color: 'var(--brand-accent)' }}>
+          <span className="chip accent">
             <Icon name="review" size={12} />
             {stuck} to mark
           </span>
@@ -217,7 +217,7 @@ function PersonRow({ person, activities }) {
                 This course has no activities yet.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div className="stack-xs">
                 {activities.map((a) => {
                   const at = done.get(a.id);
                   return (
@@ -229,9 +229,9 @@ function PersonRow({ person, activities }) {
                       <Icon name={at ? 'complete' : 'empty'} size={14}
                             style={{ color: at ? '#1a7f37' : 'var(--text-3)' }} />
                       <Icon name={a.type} size={14} />
-                      <span style={{ flex: 1 }}>
+                      <span className="grow">
                         {a.title}
-                        <span style={{ color: 'var(--text-3)' }}> · {a.moduleTitle}</span>
+                        <span className="muted"> · {a.moduleTitle}</span>
                       </span>
                       <span style={{ whiteSpace: 'nowrap' }}>
                         {at ? onDate(at) : 'not done'}
@@ -254,7 +254,7 @@ function PersonRow({ person, activities }) {
               <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem' }}>
                 Quiz attempts
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <div className="stack-xs">
                 {person.attempts.map((a) => (
                   <div key={a.id} className="data-row" style={{ padding: '0.35rem 0.5rem' }}>
                     <div className="data-row-main">
@@ -269,7 +269,7 @@ function PersonRow({ person, activities }) {
                     <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
                       {/* A dash, not a zero. An unmarked paragraph has no
                           score yet, and 0% reads as a fail. */}
-                      <span style={{ fontWeight: 700 }}>
+                      <span className="bold">
                         {typeof a.score === 'number' ? `${a.score}%` : '—'}
                       </span>
                       <StatusPill status={a.status} />

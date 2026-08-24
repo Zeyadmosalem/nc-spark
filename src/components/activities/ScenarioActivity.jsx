@@ -36,7 +36,7 @@ export default function ScenarioActivity({ activity }) {
     .replace(/\n\n/g, '<br/><br/>');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="stack-lg">
       <div style={{ color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Situation {currentStepIndex + 1} of {activity.steps.length}
       </div>
@@ -46,7 +46,7 @@ export default function ScenarioActivity({ activity }) {
         {...safeHtml(formattedText)}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="stack">
         {step.choices.map((choice) => {
           const isSelected = selectedChoice?.id === choice.id;
           let bgColor = 'var(--surface-alt)';

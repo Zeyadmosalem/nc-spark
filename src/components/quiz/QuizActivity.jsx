@@ -18,10 +18,10 @@ export default function QuizActivity({ activity }) {
 
   if (!quiz) {
     return (
-      <div className="page-body" style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div className="page-body measure">
         <div className="card no-hover" style={{ padding: '2rem', textAlign: 'center' }}>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem' }}>{activity.title}</h1>
-          <p style={{ color: 'var(--text-2)' }}>
+          <p className="muted-2">
             This quiz has no questions yet. Your trainer is still preparing it.
           </p>
         </div>

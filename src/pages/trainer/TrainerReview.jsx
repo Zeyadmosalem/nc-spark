@@ -34,7 +34,7 @@ export default function TrainerReview() {
   const granted = new Set((grants.data ?? []).map((g) => `${g.quiz_id}:${g.trainee_id}`));
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="page-body stack-lg">
       <div>
         <p className="eyebrow">Review</p>
         <h1 className="section-heading">Waiting on You</h1>
@@ -49,7 +49,7 @@ export default function TrainerReview() {
         </EmptyState>
       ) : (
         <>
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <section className="stack-md">
             <h2 style={{ fontSize: '1.1rem' }}>
               ✍️ Paragraphs awaiting a grade ({paragraphs.length})
             </h2>
@@ -58,7 +58,7 @@ export default function TrainerReview() {
               : paragraphs.map((a) => <ParagraphCard key={a.attemptId} attempt={a} />)}
           </section>
 
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <section className="stack-md">
             <h2 style={{ fontSize: '1.1rem' }}>🔁 Blocked on a retake ({stuck.length})</h2>
             {stuck.length === 0
               ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
@@ -90,13 +90,13 @@ function ParagraphCard({ attempt }) {
     || marks < 0 || marks > first.points;
 
   return (
-    <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div className="card no-hover stack">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
           {attempt.traineeAvatar}
         </span>
         <strong>{attempt.traineeName}</strong>
-        <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
+        <span className="text-sm muted">
           {attempt.courseTitle} · {attempt.quizTitle} · auto-marked {attempt.autoScore}%
         </span>
       </div>
@@ -112,7 +112,7 @@ function ParagraphCard({ attempt }) {
         <Alert error={grade.error} />
       )}
 
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div className="cluster">
         <label style={{ fontSize: '0.8rem', color: 'var(--text-2)' }}>
           Marks awarded (out of {first.points})
           <input
@@ -144,7 +144,7 @@ function ParagraphCard({ attempt }) {
       </div>
 
       {attempt.paragraphs.length > 1 && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
+        <p className="text-xs muted">
           {attempt.paragraphs.length - 1} more paragraph
           {attempt.paragraphs.length > 2 ? 's' : ''} on this attempt; it stays pending until all are marked.
         </p>
@@ -158,13 +158,13 @@ function RetakeCard({ attempt, alreadyGranted }) {
   const [reason, setReason] = useState('');
 
   return (
-    <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div className="card no-hover stack">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
           {attempt.traineeAvatar}
         </span>
         <strong>{attempt.traineeName}</strong>
-        <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
+        <span className="text-sm muted">
           {attempt.courseTitle} · {attempt.quizTitle} ·{' '}
           {attempt.status === 'expired' ? 'ran out of time' : 'did not pass'} at {attempt.score}%
         </span>
@@ -176,11 +176,11 @@ function RetakeCard({ attempt, alreadyGranted }) {
 
       {alreadyGranted ? (
         // Without this a trainer keeps clicking and keeps getting a 409.
-        <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+        <p className="text-sm muted-2">
           ✓ Retake already granted — waiting for the trainee to use it.
         </p>
       ) : (
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="cluster">
           <label style={{ flex: 1, minWidth: 220, fontSize: '0.8rem', color: 'var(--text-2)' }}>
             Reason (kept in the audit log)
             <input

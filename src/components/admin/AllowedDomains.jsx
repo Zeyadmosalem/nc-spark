@@ -51,14 +51,14 @@ export default function AllowedDomains() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack-md">
       {list.length === 0 ? (
         <EmptyState icon="🔒" title="Every signup needs approval">
           No domains are allowlisted, so everyone who signs up waits for you.
           Add a domain to let colleagues in without review.
         </EmptyState>
       ) : (
-        <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div className="card no-hover stack-xs">
           <AnimatePresence initial={false}>
             {list.map((d) => (
               <motion.div
@@ -121,8 +121,8 @@ export default function AllowedDomains() {
         </Alert>
       )}
 
-      <form onSubmit={submit} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
+      <form className="cluster" onSubmit={submit}>
+        <div className="grow-field">
           <label className="input-label" htmlFor="new-domain">Allow a domain</label>
           <input
             id="new-domain"
@@ -132,8 +132,7 @@ export default function AllowedDomains() {
             onChange={(e) => setValue(e.target.value)}
             aria-describedby="new-domain-hint"
           />
-          <p id="new-domain-hint"
-             style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: '0.35rem 0 0' }}>
+          <p className="input-hint mt-xs" id="new-domain-hint">
             The part after the @. Everyone with an address there gets an active
             account immediately, without review.
           </p>

@@ -41,7 +41,7 @@ export default function ActivityPage() {
     return (
       <div className="page-body">
         <h2>Activity not found</h2>
-        {error && <p style={{ color: 'var(--text-2)' }}>{error.message}</p>}
+        {error && <p className="muted-2">{error.message}</p>}
         <button className="btn btn-ghost" onClick={() => navigate(-1)}>Go Back</button>
       </div>
     );
@@ -75,7 +75,7 @@ export default function ActivityPage() {
           is why it bypasses ActivityWrapper and its "Mark as Complete"
           button. submit-quiz writes the completion row; nothing else can. */}
       {activity.type === 'quiz' ? (
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div className="measure">
           <div className="page-body" style={{ paddingBottom: 0 }}>
             <button className="btn btn-ghost btn-sm" onClick={back}>← Back to Path</button>
           </div>
@@ -96,11 +96,11 @@ export default function ActivityPage() {
           />
         </ActivityWrapper>
       ) : (
-        <div className="page-body" style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div className="page-body measure">
           <button className="btn btn-ghost btn-sm" onClick={back}>← Back to Path</button>
           <div className="card no-hover" style={{ padding: '2rem', marginTop: '1rem' }}>
             <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem' }}>{activity.title}</h1>
-            <p style={{ color: 'var(--text-2)' }}>
+            <p className="muted-2">
               This activity type ({activity.type}) is not available yet.
             </p>
           </div>

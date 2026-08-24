@@ -123,7 +123,7 @@ export default function CoursePage() {
         <div className="hero-inner">
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', minWidth: 0 }}>
             <span className="hero-badge" aria-hidden="true">{course.icon || '\u{1F4D8}'}</span>
-            <div style={{ minWidth: 0 }}>
+            <div className="grow">
               <p className="hero-eyebrow">Course</p>
               <h1 className="hero-title">{course.title}</h1>
               {course.description && <p className="hero-sub">{course.description}</p>}
@@ -179,16 +179,15 @@ export default function CoursePage() {
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div
+        <motion.div className="stack-lg"
           key={activeTab}
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
         >
           {activeTab === 'path' && (
             modules.length === 0 ? (
               <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-                <p style={{ color: 'var(--text-2)' }}>This course has no content yet.</p>
+                <p className="muted-2">This course has no content yet.</p>
               </div>
             ) : (
               modules.map((mod) => {
@@ -208,7 +207,7 @@ export default function CoursePage() {
                         {mod.position}. {mod.title}
                       </div>
                       {activities.length > 0 && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
+                        <span className="text-xs muted">
                           {finished === activities.length
                             ? 'Complete'
                             : `${finished} of ${activities.length} done`}
@@ -232,7 +231,7 @@ export default function CoursePage() {
                     )}
 
                     {activities.length === 0 ? (
-                      <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No activities yet.</p>
+                      <p className="text-sm muted">No activities yet.</p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
                         {activities.map((a) => {
@@ -247,7 +246,7 @@ export default function CoursePage() {
                               <span className="row-icon">
                                 <Icon name={a.type} size={16} />
                               </span>
-                              <span style={{ flex: 1 }}>{a.title}</span>
+                              <span className="grow">{a.title}</span>
                               {/* Said in words as well as with a tick: a
                                   coloured pill is not a status to somebody
                                   using a screen reader. */}

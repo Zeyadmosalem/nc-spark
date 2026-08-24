@@ -27,7 +27,7 @@ export function LoadingLabel({ children }) {
 /** A list of rows: avatar, two lines of text, an action on the right. */
 export function SkeletonList({ rows = 4, label = 'Loading' }) {
   return (
-    <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="card no-hover stack-md">
       <LoadingLabel>{label}</LoadingLabel>
       {Array.from({ length: rows }, (_, i) => (
         <div className="skeleton-row" key={i}>
@@ -66,7 +66,7 @@ export function SkeletonStats({ count = 4 }) {
  */
 export default function PageSkeleton({ label = 'Loading', stats = 4, rows = 4 }) {
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="page-body stack-lg">
       <LoadingLabel>{label}</LoadingLabel>
       <div aria-hidden="true">
         <Skeleton width={110} height="0.7rem" style={{ marginBottom: '0.75rem' }} />
@@ -74,7 +74,7 @@ export default function PageSkeleton({ label = 'Loading', stats = 4, rows = 4 })
       </div>
       {stats > 0 && <SkeletonStats count={stats} />}
       {rows > 0 && (
-        <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="card no-hover stack-md">
           {Array.from({ length: rows }, (_, i) => (
             <div className="skeleton-row" key={i} aria-hidden="true">
               <Skeleton circle width={40} height={40} />

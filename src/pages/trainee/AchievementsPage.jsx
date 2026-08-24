@@ -96,14 +96,14 @@ export default function AchievementsPage() {
       <motion.div variants={fadeUp} custom={2} className="card no-hover">
         <h2 className="card-title"><Icon name="complete" size={16} />Courses you have finished</h2>
         {finished.length === 0 ? (
-          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
+          <p className="text-sm muted-2 m-0">
             Nothing finished yet.{' '}
-            <Link to="/trainee/courses" style={{ color: 'var(--brand-primary)' }}>
+            <Link className="brand" to="/trainee/courses">
               Pick up where you left off
             </Link>.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className="stack-xs">
             {finished.map((e) => {
               const course = byId.get(e.courseId);
               return (
@@ -132,11 +132,11 @@ export default function AchievementsPage() {
       <motion.div variants={fadeUp} custom={3} className="card no-hover">
         <h2 className="card-title"><Icon name="quiz" size={16} />Quiz history</h2>
         {attempts.length === 0 ? (
-          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
+          <p className="text-sm muted-2 m-0">
             You have not finished a quiz yet.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className="stack-xs">
             {attempts.map((a) => (
               <div key={a.id} className="student-row" style={{ cursor: 'default' }}>
                 <div className="student-row-info">

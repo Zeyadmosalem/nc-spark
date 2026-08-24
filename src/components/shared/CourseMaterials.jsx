@@ -51,7 +51,7 @@ export default function CourseMaterials({ courseId, canManage = false }) {
   const list = materials.data ?? [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack-md">
       {list.length === 0 ? (
         <EmptyState icon="attachment" title="No materials yet">
           {canManage
@@ -59,7 +59,7 @@ export default function CourseMaterials({ courseId, canManage = false }) {
             : 'Your trainer has not added any handouts to this course.'}
         </EmptyState>
       ) : (
-        <div className="card no-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div className="card no-hover stack-xs">
           {list.map((m) => (
             <MaterialRow key={m.id} material={m} canManage={canManage} />
           ))}
@@ -224,7 +224,7 @@ function AddMaterial({ courseId, onDone }) {
           />
           {/* The kind column has a CHECK constraint allowing five values, so
               anything else is refused before it is uploaded. */}
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: '0.35rem 0 0' }}>
+          <p className="input-hint mt-xs">
             PDF, Word, PowerPoint or Excel.
           </p>
         </div>
@@ -241,7 +241,7 @@ function AddMaterial({ courseId, onDone }) {
 
       <Alert error={addFile.error ?? addLink.error} />
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="cluster">
         <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !ready}>
           {busy ? 'Adding…' : 'Add'}
         </button>

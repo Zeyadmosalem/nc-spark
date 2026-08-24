@@ -135,7 +135,7 @@ export function Dashboard() {
 
       <motion.div variants={fadeUp} custom={3} className="card no-hover">
         <div className="card-title">Trainers you supervise</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div className="stack-xs">
           {team.map((t) => (
             <div key={t.id} className="student-row" style={{ cursor: 'default' }}>
               <div className="avatar" style={{ width: '2rem', height: '2rem', fontSize: '0.7rem', flexShrink: 0 }}>
@@ -164,8 +164,7 @@ export function Dashboard() {
           ))}
         </div>
         <div style={{ marginTop: '1rem' }}>
-          <Link to="/supervisor/courses" className="btn btn-ghost btn-sm"
-                style={{ textDecoration: 'none' }}>
+          <Link to="/supervisor/courses" className="btn btn-ghost btn-sm plain-link">
             See course-by-course progress →
           </Link>
         </div>

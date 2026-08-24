@@ -44,8 +44,8 @@ function Row({ label, value, note }) {
       <div style={{ width: 120, flexShrink: 0, fontSize: '0.82rem', color: 'var(--text-3)' }}>
         {label}
       </div>
-      <div style={{ flex: 1, minWidth: 180 }}>
-        <div style={{ fontWeight: 600 }}>{value}</div>
+      <div className="grow-field">
+        <div className="semibold">{value}</div>
         {note && (
           <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>
             {note}
@@ -121,25 +121,23 @@ function IdentityCard({ profile }) {
   }
 
   return (
-    <form onSubmit={submit} className="card no-hover"
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <form onSubmit={submit} className="card no-hover stack-md">
       <div className="card-title">Name and badge</div>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
+      <div className="cluster">
+        <div className="grow-field">
           <label className="input-label" htmlFor="account-name">Display name</label>
           <input
             id="account-name" className="input-field" value={name}
             onChange={(e) => setName(e.target.value)}
             aria-describedby="account-name-hint"
           />
-          <p id="account-name-hint"
-             style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: '0.35rem 0 0' }}>
+          <p className="input-hint mt-xs" id="account-name-hint">
             Trainers and administrators see this next to your work.
           </p>
         </div>
 
-        <div style={{ width: 120 }}>
+        <div className="field-sm">
           <label className="input-label" htmlFor="account-avatar">Badge</label>
           <input
             id="account-avatar" className="input-field" maxLength={AVATAR_MAX}
@@ -151,7 +149,7 @@ function IdentityCard({ profile }) {
 
         {/* The same circle the sidebar draws, so the effect of the field above
             is visible before it is saved rather than after. */}
-        <div style={{ textAlign: 'center' }}>
+        <div className="text-center">
           <div className="avatar" aria-hidden="true">
             {trimmedAvatar || (trimmedName || '?').charAt(0).toUpperCase()}
           </div>
@@ -162,7 +160,7 @@ function IdentityCard({ profile }) {
       </div>
 
       {problem && dirty && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>{problem}</p>
+        <p className="text-xs warn m-0">{problem}</p>
       )}
       <Alert error={save.error} />
 
@@ -245,17 +243,16 @@ function PasswordCard({ email, lastSignIn }) {
   }
 
   return (
-    <form onSubmit={submit} className="card no-hover"
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <form onSubmit={submit} className="card no-hover stack-md">
       <div className="card-title">Password</div>
 
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
+      <p className="text-sm muted-2 m-0">
         You are signed in as {email}
         {lastSignIn && `, since ${new Date(lastSignIn).toLocaleString()}`}.
       </p>
 
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
+      <div className="cluster">
+        <div className="grow-field">
           <PasswordField
             label="New password"
             autoComplete="new-password"
@@ -263,7 +260,7 @@ function PasswordCard({ email, lastSignIn }) {
             onChange={setPassword}
           />
         </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div className="grow-field">
           <PasswordField
             label="Confirm it"
             autoComplete="new-password"
@@ -274,7 +271,7 @@ function PasswordCard({ email, lastSignIn }) {
       </div>
 
       {problem && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>{problem}</p>
+        <p className="text-xs warn m-0">{problem}</p>
       )}
 
       {/*

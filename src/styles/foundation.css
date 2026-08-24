@@ -87,6 +87,23 @@
   --shadow-lg: 0 12px 20px -4px rgb(16 24 40 / 0.10), 0 4px 8px -4px rgb(16 24 40 / 0.05);
   --shadow-xl: 0 24px 40px -8px rgb(16 24 40 / 0.14), 0 8px 16px -8px rgb(16 24 40 / 0.06);
 
+  /* ------------------------------------------------- semantics --
+     What a colour MEANS, separated from what the brand IS.
+
+     The product had been using --brand-accent, its interactive cyan,
+     to mean "attention" — "needs at least one activity", "no trainer
+     assigned", "waiting on marking". So a warning and a link were the
+     same colour, and neither read as itself: the warnings looked
+     clickable and the links looked urgent. These are the states, and
+     nothing here is a brand colour. */
+  --warn: #b8860b;
+  --warn-soft: color-mix(in srgb, #b8860b 14%, transparent);
+  --danger: #dc3545;
+  --danger-soft: color-mix(in srgb, #dc3545 12%, transparent);
+  --success: #1a7f37;
+  --success-soft: color-mix(in srgb, #1a7f37 12%, transparent);
+  --info: var(--brand-accent);
+
   /* A ring rather than a shadow: focus has to be visible against
      any surface, including a dark one. */
   --ring: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 35%, transparent);
@@ -108,6 +125,12 @@
 }
 
 [data-theme='dark'] {
+  /* Lifted for contrast against a near-black surface: #b8860b and
+     #1a7f37 are chosen for white backgrounds and go muddy on black. */
+  --warn: #e0a92a;
+  --danger: #f16674;
+  --success: #4ade80;
+
   /* Shadows do almost nothing on a near-black surface, so depth in
      dark mode comes mostly from the surface ramp in globals.css.
      What is left here is a deeper ambient blur to keep overlays

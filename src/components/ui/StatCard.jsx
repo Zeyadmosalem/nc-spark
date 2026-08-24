@@ -83,7 +83,7 @@ export default function StatCard({ label, value, sub, icon, color, tone, animate
       {sub && (
         <div
           className="stat-card-sub"
-          style={tone === 'attention' ? { color: 'var(--brand-accent)' } : undefined}
+          style={tone === 'attention' ? { color: 'var(--warn)' } : undefined}
         >
           {sub}
         </div>

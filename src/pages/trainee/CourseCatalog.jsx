@@ -34,7 +34,7 @@ export default function CourseCatalog() {
   });
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="page-body stack-lg">
       <div>
         <p className="eyebrow">Course Catalog</p>
         <h1 className="section-heading">Browse Available Courses</h1>

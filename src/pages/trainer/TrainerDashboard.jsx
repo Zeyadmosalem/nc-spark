@@ -93,7 +93,7 @@ export default function TrainerDashboard() {
             Nothing is blocked on you. Every trainee on your courses can keep going.
           </EmptyState>
         ) : (
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="grid-sm">
             {toApprove.length > 0 && (
               <ApplicationQueue applications={toApprove} />
             )}
@@ -102,13 +102,13 @@ export default function TrainerDashboard() {
                 <h3 className="card-title"><Icon name="review" size={16} />Assessment</h3>
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   {toMark.length > 0 && (
-                    <span style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+                    <span className="text-sm muted-2">
                       <strong>{toMark.length}</strong> written answer
                       {toMark.length === 1 ? '' : 's'} to mark
                     </span>
                   )}
                   {stuck.length > 0 && (
-                    <span style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+                    <span className="text-sm muted-2">
                       <strong>{stuck.length}</strong> trainee{stuck.length === 1 ? '' : 's'} blocked
                       without a retake
                     </span>
@@ -154,7 +154,7 @@ export default function TrainerDashboard() {
             An administrator assigns courses, or you can ask to take one on.
           </EmptyState>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className="stack-xs">
             {mine.map((course) => {
               const onCourse = started.filter((e) => e.courseId === course.id);
               const progress = mean(onCourse.map((e) => e.percent));
@@ -203,7 +203,7 @@ function ApplicationQueue({ applications }) {
       <div className="card-title">
         Course applications ({applications.length})
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <div className="stack-xs">
         {applications.map((a) => (
           <div key={a.id} className="data-row">
             <div className="avatar" style={{ width: '2rem', height: '2rem', fontSize: '0.7rem' }}

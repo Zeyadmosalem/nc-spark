@@ -6,7 +6,7 @@ export default function ActivityWrapper({ activity, onComplete, onBack, isComple
   const navigate = useNavigate();
 
   return (
-    <div className="page-body" style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div className="page-body measure">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <button 
           className="btn btn-ghost btn-sm" 
@@ -33,7 +33,7 @@ export default function ActivityWrapper({ activity, onComplete, onBack, isComple
             <Icon name={activity?.type} size={22} />
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '0.5rem' }}>{activity?.title}</h1>
-          <p style={{ color: 'var(--text-2)' }}>{activity?.description}</p>
+          <p className="muted-2">{activity?.description}</p>
         </div>
 
         <div className="activity-content-area" style={{ marginBottom: '2rem' }}>

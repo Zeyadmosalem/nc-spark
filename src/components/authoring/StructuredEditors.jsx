@@ -54,7 +54,7 @@ function RowFrame({ label, index, onRemove, canRemove, children }) {
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       style={rowStyle}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="cluster">
         <Ordinal>{index + 1}</Ordinal>
         <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{label} {index + 1}</span>
         <div style={{ marginLeft: 'auto' }}>
@@ -119,7 +119,7 @@ export function FlashcardsEditor({ content, onChange, idPrefix = 'fc' }) {
             onRemove={() => set(cards.filter((_, j) => j !== i))}
           >
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
+              <div className="grow-field">
                 <label className="input-label" htmlFor={`${idPrefix}-front-${i}`}>Front</label>
                 <input
                   id={`${idPrefix}-front-${i}`}
@@ -129,7 +129,7 @@ export function FlashcardsEditor({ content, onChange, idPrefix = 'fc' }) {
                   onChange={(e) => set(replaceAt(cards, i, { ...card, front: e.target.value }))}
                 />
               </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
+              <div className="grow-field">
                 <label className="input-label" htmlFor={`${idPrefix}-back-${i}`}>Back</label>
                 <input
                   id={`${idPrefix}-back-${i}`}
@@ -244,11 +244,11 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                 />
               </div>
 
-              <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+              <fieldset className="bare-fieldset">
                 <legend className="input-label" style={{ padding: 0 }}>
                   Options — select the correct one
                 </legend>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="stack">
                   {choices.map((choice, c) => (
                     <div
                       key={c}

@@ -385,7 +385,7 @@ function Thread({ thread, onBack }) {
                 onClick={onBack} aria-label="Back to the list">
           <Icon name="back" size={16} />
         </button>
-        <div style={{ minWidth: 0 }}>
+        <div className="grow">
           <h2 className="thread-subject">{thread.subject}</h2>
           <p className="thread-meta">
             {thread.courseTitle ?? 'General'}
@@ -429,7 +429,7 @@ function Thread({ thread, onBack }) {
 
       {closed ? (
         <div className="support-closed">
-          <p className="text-sm muted" style={{ margin: 0 }}>
+          <p className="text-sm muted m-0">
             Closed. Reopen it to add anything else — a reply on a closed thread
             is refused, so it would not reach anyone.
           </p>

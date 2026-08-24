@@ -347,9 +347,9 @@
   border-inline-start: 3px solid var(--brand-accent);
 }
 
-.card-warn { border-inline-start-color: #b8860b; }
-.card-danger { border-inline-start-color: #dc3545; }
-.card-good { border-inline-start-color: #1a7f37; }
+.card-warn { border-inline-start-color: var(--warn); }
+.card-danger { border-inline-start-color: var(--danger); }
+.card-good { border-inline-start-color: var(--success); }
 
 /* ------------------------------------------------- stat cards -- */
 
@@ -603,7 +603,7 @@ select.input-field {
 }
 
 .input-hint-warn {
-  color: var(--brand-accent);
+  color: var(--warn);
   font-weight: 500;
 }
 
@@ -2295,4 +2295,163 @@ input[type='radio'] {
   .thread-back {
     display: grid;
   }
+}
+
+/* ================================================== utilities == */
+
+/* These exist because 483 inline style objects across 43 files were, in
+   the main, the same dozen layouts written out longhand with slightly
+   different numbers each time — 0.4rem here, 0.5rem there, 0.75rem on
+   the next line. Snapping them to the scale is the fix; the values
+   below are the scale.
+
+   Deliberately few. A utility layer that can express anything is a
+   second styling language, and then there are two places to look. */
+
+.stack-xs { display: flex; flex-direction: column; gap: var(--gap-xs); }
+
+/* Horizontal groups. .cluster already wraps and centres; these are the
+   two alignments that kept being written beside it. */
+.cluster-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+}
+
+.cluster-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap-sm);
+  flex-wrap: wrap;
+}
+
+.cluster-baseline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-sm);
+  flex-wrap: wrap;
+}
+
+/* `flex: 1; min-width: 0` — the pair that makes a flex child shrink
+   instead of forcing its parent wider. Written out 39 times, and
+   forgotten in the places where text overflowed its row. */
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.grow-field {
+  flex: 1;
+  min-width: 12rem;
+}
+
+/* Fixed-width inputs: a points box, an XP box, a percentage. */
+.field-xs { width: 5.5rem; flex-shrink: 0; }
+.field-sm { width: 8rem; flex-shrink: 0; }
+.field-auto { width: auto; }
+
+.text-2xs { font-size: var(--text-2xs); }
+.text-base { font-size: var(--text-base); }
+.text-md { font-size: var(--text-md); }
+
+.muted-2 { color: var(--text-2); }
+.warn { color: var(--warn); }
+.danger { color: var(--danger); }
+.success { color: var(--success); }
+
+.m-0 { margin: 0; }
+.mt-xs { margin-top: var(--gap-xs); }
+.mt-sm { margin-top: var(--gap-sm); }
+.mt-md { margin-top: var(--gap-md); }
+.mb-sm { margin-bottom: var(--gap-sm); }
+
+.w-full { width: 100%; }
+.nowrap { white-space: nowrap; }
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A fieldset that is only there for the legend's sake. */
+.bare-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+/* A panel nested inside a card — the add-activity form, an open editor.
+   Every one of these had its own inline background, border and radius. */
+.subpanel {
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+/* A bordered row that opens to reveal an editor. */
+.edit-row {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.6rem 0.8rem;
+}
+
+/* Wide content that must scroll inside itself rather than widening the
+   page — the single most common cause of horizontal overflow on a
+   phone. */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Grids that were written inline as `display: grid; gap: N` — almost
+   always a single column of cards, occasionally auto-fitting. */
+.grid { display: grid; gap: var(--gap-md); }
+.grid-sm { display: grid; gap: var(--gap-sm); }
+.grid-lg { display: grid; gap: var(--gap-lg); }
+
+/* A bounded column for reading — a form, a policy note, a result. The
+   inline version of this was `maxWidth: 700, margin: '0 auto'`, with 700
+   and 800 and 720 all appearing. */
+.measure {
+  width: 100%;
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.measure-narrow {
+  width: 100%;
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+.semibold { font-weight: 600; }
+.bold { font-weight: 700; }
+.brand { color: var(--brand-primary); }
+.accent { color: var(--brand-accent); }
+.text-center { text-align: center; }
+.text-end { text-align: end; }
+
+/* A Link that should not look like a link because it is inside
+   something else that already reads as clickable. */
+.plain-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The title line of a list row that is a heading rather than a link. */
+.row-title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: var(--tracking-tight);
+  color: var(--heading);
+  margin: 0;
 }

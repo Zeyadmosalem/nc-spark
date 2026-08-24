@@ -88,7 +88,7 @@ export default function SupervisorCourses() {
             : 'Your trainers have no courses yet.'}
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="grid">
           {list.map((course) => {
             const cohort = enrolledBy.get(course.id) ?? [];
             const progress = mean(cohort.map((e) => e.percent));
@@ -108,11 +108,8 @@ export default function SupervisorCourses() {
                 animate={{ opacity: 1, y: 0 }}
                 className="card no-hover"
               >
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  justifyContent: 'space-between', flexWrap: 'wrap',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+                <div className="cluster-between">
+                  <div className="cluster grow">
                     <div style={{
                       width: 44, height: 44, borderRadius: 'var(--r-lg)', flexShrink: 0,
                       display: 'grid', placeItems: 'center', fontSize: '1.3rem',
@@ -120,11 +117,11 @@ export default function SupervisorCourses() {
                     }}>
                       {course.icon ?? '📘'}
                     </div>
-                    <div style={{ minWidth: 0 }}>
+                    <div className="grow">
                       <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>
                         {course.title}
                       </h2>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
+                      <div className="text-xs muted">
                         {nameOf.get(course.trainerId) ?? 'Unassigned'}
                       </div>
                     </div>

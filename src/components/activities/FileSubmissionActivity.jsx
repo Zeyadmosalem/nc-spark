@@ -53,7 +53,7 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="stack-lg">
       <div
         style={{ fontSize: '1.05rem', lineHeight: 1.6, color: 'var(--text)' }}
         {...safeHtml(activity.description || 'Please upload your assignment below.')}
@@ -93,7 +93,7 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
               <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
                 {file ? file.name : 'Drag & drop your file here'}
               </h3>
-              <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
+              <p className="text-sm muted-2">
                 {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'or click to browse from your computer'}
               </p>
             </div>
@@ -143,7 +143,7 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
           >
             <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}>✅</div>
             <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem', color: '#28a745' }}>Assignment Submitted!</h3>
-            <p style={{ color: 'var(--text-2)' }}>Your file <strong>{file?.name}</strong> was successfully uploaded.</p>
+            <p className="muted-2">Your file <strong>{file?.name}</strong> was successfully uploaded.</p>
           </motion.div>
         )}
       </AnimatePresence>

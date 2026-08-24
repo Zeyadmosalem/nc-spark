@@ -80,7 +80,7 @@ function ContentFields({ type, content, onChange, idPrefix }) {
           value={content.videoId ?? ''}
           onChange={(e) => onChange({ videoId: e.target.value })}
         />
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: '0.35rem 0 0' }}>
+        <p className="input-hint mt-xs">
           The id only, not the whole URL — the part after <code className="inline-code">v=</code>.
         </p>
       </div>
@@ -88,7 +88,7 @@ function ContentFields({ type, content, onChange, idPrefix }) {
   }
   if (type === 'submission') {
     return (
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
+      <p className="text-sm muted-2 m-0">
         Trainees upload a file here and a trainer reviews it. Nothing else to set up.
       </p>
     );
@@ -106,7 +106,7 @@ function ContentFields({ type, content, onChange, idPrefix }) {
   // a quiz hangs off an activity_id, so there is nothing to attach one to
   // until the activity exists.
   return (
-    <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
+    <p className="text-sm muted-2 m-0">
       Add the activity first, then open it to write the questions.
     </p>
   );
@@ -138,7 +138,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
   if (!course.data) {
     return (
       <div className="page-body">
-        <p style={{ color: 'var(--text-2)' }}>
+        <p className="muted-2">
           That course does not exist, or you cannot edit it.
         </p>
         <Link to={backTo} className="btn btn-ghost btn-sm">← Back</Link>
@@ -167,7 +167,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
   }
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="page-body stack-lg">
       <div>
         <Link to={backTo} style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
           ← Back
@@ -194,7 +194,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
           Add the first module below.
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="grid">
           <AnimatePresence initial={false}>
             {modules.map((m, i) => (
               <ModuleCard
@@ -217,9 +217,8 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
         <CourseMaterials courseId={courseId} canManage />
       </section>
 
-      <form onSubmit={submitModule} className="card no-hover"
-            style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
+      <form onSubmit={submitModule} className="card no-hover cluster">
+        <div className="grow-field">
           <label className="input-label" htmlFor="new-module">New module</label>
           <input
             id="new-module" className="input-field" placeholder="e.g. Fire extinguisher types"
@@ -293,7 +292,7 @@ function ModuleCard({ courseId, module: mod, earlier }) {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {/* Only earlier modules are offered. A module gated on a later one,
               or on itself, can never open. */}
-          <label className="input-label" style={{ margin: 0 }} htmlFor={`gate-${mod.id}`}>
+          <label className="input-label m-0" htmlFor={`gate-${mod.id}`}>
             Opens after
           </label>
           <select
@@ -414,22 +413,22 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onD
       background: 'var(--surface-alt)', border: '1px solid var(--border)',
       display: 'flex', flexDirection: 'column', gap: '0.75rem',
     }}>
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div className="cluster">
         <div>
           <label className="input-label" htmlFor="act-type">Type</label>
-          <select id="act-type" className="input-field" style={{ width: 'auto' }}
+          <select id="act-type" className="input-field field-auto"
                   value={type} onChange={(e) => pickType(e.target.value)}>
             {AUTHORABLE_TYPES.map((t) => (
               <option key={t} value={t}>{TYPE_LABEL[t]}</option>
             ))}
           </select>
         </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div className="grow-field">
           <label className="input-label" htmlFor="act-title">Title</label>
           <input id="act-title" className="input-field" value={title}
                  onChange={(e) => setTitle(e.target.value)} />
         </div>
-        <div style={{ width: 90 }}>
+        <div className="field-xs">
           <label className="input-label" htmlFor="act-xp">XP</label>
           <input id="act-xp" className="input-field" inputMode="numeric" value={xp}
                  onChange={(e) => setXp(e.target.value)} />
@@ -442,14 +441,14 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onD
       {/* Said, not just enforced. A Save button that is disabled for a reason
           nobody states is its own dead end. */}
       {problem && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>
+        <p className="text-xs warn m-0">
           {problem}
         </p>
       )}
 
       <Alert error={mutation.error} />
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="cluster">
         <button type="submit" className="btn btn-primary btn-sm"
                 disabled={mutation.isPending || !title.trim() || badXp || Boolean(problem)}>
           {mutation.isPending ? 'Adding…' : 'Add activity'}
@@ -479,12 +478,12 @@ function ActivityRow({ courseId, activity }) {
       border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '0.6rem 0.8rem',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+        <div className="cluster grow">
           <span className="row-icon" style={{ width: '1.6rem', height: '1.6rem' }}>
             <Icon name={activity.type} size={14} />
           </span>
           <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{activity.title}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+          <span className="text-xs muted">
             {TYPE_LABEL[activity.type] ?? activity.type} · {activity.xp} XP
           </span>
         </div>
@@ -506,13 +505,13 @@ function ActivityRow({ courseId, activity }) {
 
       {open && (
         <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="cluster">
+            <div className="grow-field">
               <label className="input-label" htmlFor={`t-${activity.id}`}>Title</label>
               <input id={`t-${activity.id}`} className="input-field" value={title}
                      onChange={(e) => setTitle(e.target.value)} />
             </div>
-            <div style={{ width: 90 }}>
+            <div className="field-xs">
               <label className="input-label" htmlFor={`x-${activity.id}`}>XP</label>
               <input id={`x-${activity.id}`} className="input-field" inputMode="numeric" value={xp}
                      onChange={(e) => setXp(e.target.value)} />
@@ -533,7 +532,7 @@ function ActivityRow({ courseId, activity }) {
           )}
 
           {problem && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>
+            <p className="text-xs warn m-0">
               {problem}
             </p>
           )}

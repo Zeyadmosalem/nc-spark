@@ -80,7 +80,7 @@ export default function TraineeDashboard() {
 
       <motion.section className="hero" variants={fadeUp} custom={0}>
         <div className="hero-inner">
-          <div style={{ minWidth: 0 }}>
+          <div className="grow">
             <p className="hero-eyebrow">
               <Icon name="spark" size={12} />
               Your training

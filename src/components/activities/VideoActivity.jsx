@@ -2,7 +2,7 @@ export default function VideoActivity({ activity }) {
   if (!activity?.videoId) return <div>No video source provided.</div>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack-md">
       <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: 'var(--r-lg)' }}>
         <iframe
           src={`https://www.youtube.com/embed/${activity.videoId}?rel=0`}

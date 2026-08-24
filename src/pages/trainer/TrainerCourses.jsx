@@ -64,7 +64,7 @@ export default function TrainerCourses() {
           administrator can assign you one.
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="grid">
           {mine.map((course) => (
             <MyCourseRow
               key={course.id}
@@ -80,7 +80,7 @@ export default function TrainerCourses() {
           <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
             Courses looking for a trainer ({unclaimed.length})
           </h2>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="grid-sm">
             {unclaimed.map((course) => (
               <ClaimRow key={course.id} course={course} alreadyAsked={pendingOn.has(course.id)} />
             ))}
@@ -101,11 +101,8 @@ function MyCourseRow({ course, content }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card no-hover">
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+      <div className="cluster-between">
+        <div className="cluster grow">
           <div style={{
             width: 44, height: 44, borderRadius: 'var(--r-lg)', flexShrink: 0,
             display: 'grid', placeItems: 'center', fontSize: '1.3rem',
@@ -113,15 +110,15 @@ function MyCourseRow({ course, content }) {
           }}>
             {course.icon ?? '📘'}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div className="grow">
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>{course.title}</h3>
             {course.subtitle && (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>{course.subtitle}</div>
+              <div className="text-sm muted-2">{course.subtitle}</div>
             )}
             {content && (
               <div style={{
                 fontSize: '0.78rem',
-                color: cannotPublish ? 'var(--brand-accent)' : 'var(--text-3)',
+                color: cannotPublish ? 'var(--warn)' : 'var(--text-3)',
               }}>
                 {content.modules} module{content.modules === 1 ? '' : 's'} ·{' '}
                 {activities} activit{activities === 1 ? 'y' : 'ies'}
@@ -131,12 +128,11 @@ function MyCourseRow({ course, content }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="cluster">
           <StatusPill status={course.status} />
           <Link
             to={`/trainer/courses/${course.id}`}
-            className="btn btn-ghost btn-sm"
-            style={{ textDecoration: 'none' }}
+            className="btn btn-ghost btn-sm plain-link"
           >
             {activities === 0 ? 'Add content' : 'Content'}
           </Link>
@@ -144,8 +140,7 @@ function MyCourseRow({ course, content }) {
               they have got. There was no screen for that at all. */}
           <Link
             to={`/trainer/courses/${course.id}/people`}
-            className="btn btn-ghost btn-sm"
-            style={{ textDecoration: 'none' }}
+            className="btn btn-ghost btn-sm plain-link"
           >
             People
           </Link>
@@ -180,16 +175,13 @@ function ClaimRow({ course, alreadyAsked }) {
 
   return (
     <div className="card no-hover">
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+      <div className="cluster-between">
+        <div className="cluster grow">
           <span style={{ fontSize: '1.2rem' }}>{course.icon ?? '📘'}</span>
           <div>
-            <div style={{ fontWeight: 600 }}>{course.title}</div>
+            <div className="semibold">{course.title}</div>
             {course.subtitle && (
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-2)' }}>{course.subtitle}</div>
+              <div className="text-sm muted-2">{course.subtitle}</div>
             )}
           </div>
         </div>

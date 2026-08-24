@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, usePublishCourse,
@@ -9,6 +8,7 @@ import { useUsers, useTeachingRequests, useDecideTeachingRequest } from '../../h
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import StatusPill from '../../components/ui/StatusPill';
+import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../components/ui/toast-context';
@@ -87,7 +87,7 @@ export default function ContentManager() {
   }
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="page-body stack-lg">
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
         flexWrap: 'wrap', gap: '1rem',
@@ -112,7 +112,7 @@ export default function ContentManager() {
           <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
             Trainers asking to teach ({queue.length})
           </h2>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="grid-sm">
             <AnimatePresence initial={false}>
               {queue.map((r) => <TeachingRequestCard key={r.id} request={r} />)}
             </AnimatePresence>
@@ -134,7 +134,7 @@ export default function ContentManager() {
           content to it, then publish it.
         </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="grid">
           {list.map((course) => (
             <CourseRow
               key={course.id}
@@ -195,39 +195,33 @@ function TeachingRequestCard({ request }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      className="card no-hover"
-      style={{ borderLeft: '4px solid var(--brand-secondary)' }}
+      className="card no-hover card-accent"
     >
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="avatar" style={{ width: 40, height: 40 }}>{request.trainerAvatar}</div>
+      <div className="cluster-between">
+        <div className="cluster">
+          <div className="avatar" aria-hidden="true">{request.trainerAvatar}</div>
           <div>
-            <div style={{ fontWeight: 600 }}>{request.trainerName}</div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>
+            <div className="semibold">{request.trainerName}</div>
+            <div className="text-sm muted-2">
               wants to teach <strong>{request.courseTitle || 'a deleted course'}</strong>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            disabled={decide.isPending}
-            onClick={() => decideWith('approve')}
-          >
-            {decide.isPending ? 'Working…' : 'Approve'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={decide.isPending}
-            onClick={() => decideWith('deny')}
-          >
+        <div className="cluster">
+          {/*
+            Both are buttons, and the destructive one is outlined rather than
+            plain text — a bare word beside a filled button does not read as a
+            control at all, which is a poor way to present the only way to
+            refuse a request.
+          */}
+          <Button variant="primary" size="sm" icon="done"
+                  pending={decide.isPending} onClick={() => decideWith('approve')}>
+            Approve
+          </Button>
+          <Button variant="danger" size="sm" icon="close"
+                  disabled={decide.isPending} onClick={() => decideWith('deny')}>
             Deny
-          </button>
+          </Button>
         </div>
       </div>
       <Alert error={decide.error} />
@@ -251,33 +245,24 @@ function CourseRow({ course, trainer, content, onEdit }) {
 
   return (
     <div className="card no-hover">
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 'var(--r-lg)', display: 'grid',
-            placeItems: 'center', fontSize: '1.3rem', flexShrink: 0,
-            background: `${course.color ?? '#00a3e0'}22`,
-          }}>
-            {course.icon ?? '📘'}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>{course.title}</h3>
+      <div className="cluster-between">
+        <div className="cluster grow">
+          <span className="course-chip" aria-hidden="true"
+                style={{ '--chip': course.color ?? 'var(--brand-accent)' }}>
+            {course.icon ?? '\u{1F4D8}'}
+          </span>
+          <div className="grow">
+            <h3 className="row-title">{course.title}</h3>
             {course.subtitle && (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>{course.subtitle}</div>
+              <div className="text-sm muted-2">{course.subtitle}</div>
             )}
-            <div style={{ fontSize: '0.78rem', color: trainer ? 'var(--text-3)' : 'var(--brand-accent)' }}>
+            <div className={`text-xs ${trainer ? 'muted' : 'warn'}`}>
               {trainer
                 ? `Trainer: ${trainer}`
                 : 'No trainer assigned — only an admin can edit or publish it'}
             </div>
             {content && (
-              <div style={{
-                fontSize: '0.78rem',
-                color: cannotPublish ? 'var(--brand-accent)' : 'var(--text-3)',
-              }}>
+              <div className={`text-xs ${cannotPublish ? 'warn' : 'muted'}`}>
                 {content.modules} module{content.modules === 1 ? '' : 's'} ·{' '}
                 {activities} activit{activities === 1 ? 'y' : 'ies'}
                 {cannotPublish && ' — needs at least one activity before it can be published'}
@@ -286,18 +271,15 @@ function CourseRow({ course, trainer, content, onEdit }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="cluster">
           <StatusPill status={course.status} />
-          <Link
-            to={`/admin/content/${course.id}`}
-            className="btn btn-ghost btn-sm"
-            style={{ textDecoration: 'none' }}
-          >
+          <Button to={`/admin/content/${course.id}`} variant="secondary" size="sm"
+                  icon={activities === 0 ? 'add' : 'curriculum'}>
             {activities === 0 ? 'Add content' : 'Content'}
-          </Link>
-          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onEdit}>
+          </Button>
+          <Button variant="ghost" size="sm" icon="edit" disabled={busy} onClick={onEdit}>
             Details
-          </button>
+          </Button>
           <button
             type="button"
             className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}
@@ -404,7 +386,7 @@ function CourseDialog({ title, form, setForm, submitting, error, submitLabel, on
       >
         <h2 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)' }}>{title}</h2>
 
-        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form className="stack-md" onSubmit={onSubmit}>
           <div>
             <label className="input-label" htmlFor="course-title">Title</label>
             <input
@@ -427,7 +409,7 @@ function CourseDialog({ title, form, setForm, submitting, error, submitLabel, on
             />
           </div>
 
-          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset className="bare-fieldset">
             <legend className="input-label">Icon</legend>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               {ICONS.map((i) => (
@@ -447,7 +429,7 @@ function CourseDialog({ title, form, setForm, submitting, error, submitLabel, on
             </div>
           </fieldset>
 
-          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+          <fieldset className="bare-fieldset">
             <legend className="input-label">Colour</legend>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               {COLORS.map((c) => (
@@ -466,10 +448,10 @@ function CourseDialog({ title, form, setForm, submitting, error, submitLabel, on
           <Alert error={error} />
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-            <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>
+            <button type="button" className="btn btn-ghost grow" onClick={onCancel}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}
+            <button type="submit" className="btn btn-primary grow"
                     disabled={submitting || !form.title.trim()}>
               {submitting ? 'Saving…' : submitLabel}
             </button>

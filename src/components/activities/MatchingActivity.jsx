@@ -46,16 +46,16 @@ export default function MatchingActivity({ activity }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="stack-lg">
       <div style={{ textAlign: 'center', color: 'var(--text-2)' }}>
         Match the term on the left with its definition on the right.
         <br />
-        <strong style={{ color: 'var(--brand-primary)' }}>{matches.length} of {totalPairs} matched</strong>
+        <strong className="brand">{matches.length} of {totalPairs} matched</strong>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
         {/* Terms */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="stack">
           {activity.pairs.map(p => {
             const isMatched = matches.includes(p.term);
             const isSelected = selectedTerm === p.term;
@@ -82,7 +82,7 @@ export default function MatchingActivity({ activity }) {
         </div>
 
         {/* Definitions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="stack">
           {/* We'll reverse the array just to mix them up a little bit for the demo without full random shuffle */}
           {[...activity.pairs].reverse().map(p => {
             const isMatched = matches.includes(p.term);

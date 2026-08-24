@@ -19,7 +19,7 @@ export default function TraineeNotices() {
   const { awaitingReview, retakesReady, recentlyGraded } = data;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div className="stack">
       {retakesReady.map((n) => (
         <Notice key={n.grantId} tone="#0d6efd" icon="retry">
           <strong>Your trainer granted a retake</strong> for {n.quizTitle}

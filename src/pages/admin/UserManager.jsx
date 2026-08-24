@@ -85,7 +85,7 @@ export default function UserManager() {
       || (u.email ?? '').toLowerCase().includes(term));
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="page-body stack-lg">
       <div>
         <p className="eyebrow">User Management</p>
         <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>People</h1>
@@ -112,7 +112,7 @@ export default function UserManager() {
             here for you to review.
           </EmptyState>
         ) : (
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="grid-sm">
             <AnimatePresence initial={false}>
               {queue.map((u) => <SignupCard key={u.id} user={u} />)}
             </AnimatePresence>
@@ -156,11 +156,10 @@ export default function UserManager() {
           />
         </div>
 
-        <motion.div
+        <motion.div className="grid-sm"
           key={tab}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'grid', gap: '0.75rem' }}
         >
           {shown.length === 0 ? (
             <EmptyState icon="🔍" title={term ? 'No matches' : 'Nobody here'}>
@@ -213,11 +212,11 @@ function SignupCard({ user }) {
         display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
         justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+        <div className="cluster grow">
           <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
             {initial(user)}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div className="grow">
             <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>
               {displayName(user)}
             </h3>
@@ -227,7 +226,7 @@ function SignupCard({ user }) {
         </div>
 
         <div className="data-row-actions">
-          <label className="input-label" style={{ margin: 0 }} htmlFor={`role-${user.id}`}>
+          <label className="input-label m-0" htmlFor={`role-${user.id}`}>
             Join as
           </label>
           <select
@@ -305,15 +304,12 @@ function UserRow({ user, isSelf }) {
 
   return (
     <div className="card no-hover">
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+      <div className="cluster-between">
+        <div className="cluster grow">
           <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
             {initial(user)}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div className="grow">
             <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>
               {displayName(user)}
               {isSelf && (

@@ -77,7 +77,7 @@ export default function QuizRunner({ quiz, onPassed }) {
         : result.passed ? 'Passed' : 'Not passed';
 
     return (
-      <div className="page-body" style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div className="page-body measure">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                     className="card no-hover" style={{ padding: '2rem', textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: 700 }}>
@@ -122,10 +122,10 @@ export default function QuizRunner({ quiz, onPassed }) {
     const setAnswer = (v) => setAnswers((a) => ({ ...a, [q.id]: v }));
 
     return (
-      <div className="page-body" style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div className="page-body measure">
         <Alert error={submit.error} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>
+          <span className="text-sm muted">
             Question {index + 1} of {session.questions.length}
           </span>
           {secondsLeft !== null && (
@@ -139,7 +139,7 @@ export default function QuizRunner({ quiz, onPassed }) {
             <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>{q.prompt}</h2>
 
             {q.type === 'mcq' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div className="stack">
                 {q.options.map((opt, i) => (
                   <button key={opt} type="button"
                           className={`mcq-option ${given === i ? 'selected' : ''}`}
@@ -151,11 +151,10 @@ export default function QuizRunner({ quiz, onPassed }) {
             )}
 
             {q.type === 'truefalse' && (
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div className="cluster">
                 {[true, false].map((v) => (
                   <button key={String(v)} type="button"
-                          className={`tf-option ${given === v ? 'selected' : ''}`}
-                          style={{ flex: 1 }} onClick={() => setAnswer(v)}>
+                          className={`tf-option ${given === v ? 'selected' : ''} grow`} onClick={() => setAnswer(v)}>
                     {v ? 'True' : 'False'}
                   </button>
                 ))}
@@ -196,7 +195,7 @@ export default function QuizRunner({ quiz, onPassed }) {
   const pending = previous?.status === 'pending_review';
 
   return (
-    <div className="page-body" style={{ maxWidth: 700, margin: '0 auto' }}>
+    <div className="page-body measure">
       <Alert error={start.error} />
       <div className="card no-hover" style={{ padding: '2rem', textAlign: 'center' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', marginBottom: '0.5rem' }}>
@@ -208,7 +207,7 @@ export default function QuizRunner({ quiz, onPassed }) {
         </p>
 
         {pending ? (
-          <p style={{ color: 'var(--text-2)' }}>
+          <p className="muted-2">
             Submitted — awaiting your trainer’s review.
           </p>
         ) : spent ? (
@@ -216,7 +215,7 @@ export default function QuizRunner({ quiz, onPassed }) {
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 700 }}>
               {previous.finalScore ?? previous.autoScore ?? 0}%
             </div>
-            <p style={{ color: 'var(--text-2)' }}>
+            <p className="muted-2">
               {previous.passed ? 'Passed' : 'Not passed'} — you have used your attempt.
               {!previous.passed && ' Ask your trainer if you need another.'}
             </p>

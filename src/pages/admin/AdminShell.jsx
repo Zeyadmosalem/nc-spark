@@ -122,7 +122,7 @@ export function Dashboard() {
     <motion.div className="page-body" variants={stagger()} initial="hidden" animate="visible">
       <motion.section className="hero" variants={fadeUp} custom={0}>
         <div className="hero-inner">
-          <div style={{ minWidth: 0 }}>
+          <div className="grow">
             <p className="hero-eyebrow">
               <Icon name="settings" size={12} />
               Admin console
@@ -183,7 +183,7 @@ export function Dashboard() {
           <h2 className="card-title"><Icon name="blocked" size={16} />Account health</h2>
           <p className="text-sm" style={{ color: 'var(--text-2)', margin: 0 }}>
             {suspended} account{suspended === 1 ? ' is' : 's are'} suspended.{' '}
-            <Link to="/admin/users" style={{ color: 'var(--brand-primary)' }}>Review them</Link>.
+            <Link className="brand" to="/admin/users">Review them</Link>.
           </p>
         </motion.div>
       )}
@@ -196,7 +196,7 @@ export function Dashboard() {
         {audit.error ? (
           <QueryError error={audit.error} what="the audit trail" />
         ) : (audit.data ?? []).length === 0 ? (
-          <p className="text-sm muted" style={{ margin: 0 }}>Nothing recorded yet.</p>
+          <p className="text-sm muted m-0">Nothing recorded yet.</p>
         ) : (
           <div className="stack">
             {audit.data.map((e) => (

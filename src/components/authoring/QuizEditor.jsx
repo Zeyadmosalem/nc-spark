@@ -64,7 +64,7 @@ export default function QuizEditor({ activityId, activityTitle, courseId }) {
 
   if (!quiz) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="stack">
         <EmptyState icon="📝" title="No quiz here yet">
           This activity is a quiz with nothing behind it. A trainee opening it
           finds nothing to answer, and the course cannot be published until it
@@ -92,7 +92,7 @@ export default function QuizEditor({ activityId, activityTitle, courseId }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="stack-md">
       <QuizSettings quiz={quiz} activityId={activityId} courseId={courseId} />
       <QuestionList
         quiz={quiz}
@@ -124,13 +124,13 @@ function QuizSettings({ quiz, activityId, courseId }) {
       : minsNum * 60 !== quiz.time_limit_seconds);
 
   return (
-    <div className="card no-hover" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-      <div style={{ flex: 1, minWidth: 200 }}>
+    <div className="card no-hover cluster">
+      <div className="grow-field">
         <label className="input-label" htmlFor="quiz-title">Quiz title</label>
         <input id="quiz-title" className="input-field" value={title}
                onChange={(e) => setTitle(e.target.value)} />
       </div>
-      <div style={{ width: 110 }}>
+      <div className="field-sm">
         <label className="input-label" htmlFor="quiz-pass">Pass mark %</label>
         <input id="quiz-pass" className="input-field" inputMode="numeric" value={pass}
                onChange={(e) => setPass(e.target.value)} />
@@ -157,7 +157,7 @@ function QuizSettings({ quiz, activityId, courseId }) {
         {save.isPending ? 'Saving…' : 'Save settings'}
       </button>
       <div style={{ flexBasis: '100%' }}>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: 0 }}>
+        <p className="text-xs muted m-0">
           Leave the time limit empty for no limit. The pass mark is measured
           against the total points below, not the number of questions.
         </p>
@@ -184,7 +184,7 @@ function QuestionList({ quiz, questions, activityId, courseId }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+    <div className="stack">
       {questions.length === 0 ? (
         <EmptyState icon="❓" title="No questions yet">
           A quiz with no questions cannot be passed — every pass mark is above
@@ -253,7 +253,7 @@ function QuestionRow({ question, index, last, quiz, activityId, courseId, onMove
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+        <div className="cluster grow">
           <span style={{
             width: 24, height: 24, borderRadius: '50%', flexShrink: 0, fontSize: '0.72rem',
             display: 'grid', placeItems: 'center', fontWeight: 700,
@@ -370,17 +370,17 @@ function QuestionForm({ quiz, activityId, courseId, initial, questionId, onSaved
       background: 'var(--surface-alt)', border: '1px solid var(--border)',
       display: 'flex', flexDirection: 'column', gap: '0.75rem',
     }}>
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div className="cluster">
         <div>
           <label className="input-label" htmlFor={`${idBase}-type`}>Type</label>
-          <select id={`${idBase}-type`} className="input-field" style={{ width: 'auto' }}
+          <select id={`${idBase}-type`} className="input-field field-auto"
                   value={q.type} onChange={(e) => pickType(e.target.value)}>
             {Object.entries(TYPE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </div>
-        <div style={{ width: 90 }}>
+        <div className="field-xs">
           <label className="input-label" htmlFor={`${idBase}-points`}>Points</label>
           <input id={`${idBase}-points`} className="input-field" inputMode="numeric"
                  value={q.points} onChange={(e) => set({ points: e.target.value })} />
@@ -399,7 +399,7 @@ function QuestionForm({ quiz, activityId, courseId, initial, questionId, onSaved
       )}
 
       {q.type === 'truefalse' && (
-        <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <fieldset className="bare-fieldset">
           <legend className="input-label" style={{ padding: 0 }}>The statement is</legend>
           <div style={{ display: 'flex', gap: '1rem' }}>
             {[true, false].map((value) => (
@@ -430,7 +430,7 @@ function QuestionForm({ quiz, activityId, courseId, initial, questionId, onSaved
           />
           {/* Worth stating: this is the only question type that stops an
               attempt being scored automatically. */}
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: '0.35rem 0 0' }}>
+          <p className="input-hint mt-xs">
             Only you see this, while marking. A written answer is not graded
             automatically — every attempt waits in Review Work until you mark it,
             and the trainee cannot move on until then.
@@ -451,11 +451,11 @@ function QuestionForm({ quiz, activityId, courseId, initial, questionId, onSaved
       </div>
 
       {problem && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>{problem}</p>
+        <p className="text-xs warn m-0">{problem}</p>
       )}
       <Alert error={save.error} />
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="cluster">
         <button type="submit" className="btn btn-primary btn-sm"
                 disabled={save.isPending || Boolean(problem)}>
           {save.isPending ? 'Saving…' : questionId ? 'Save question' : 'Add question'}
@@ -471,11 +471,11 @@ function McqOptions({ q, set, idBase }) {
   const correct = q.answer?.index ?? 0;
 
   return (
-    <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+    <fieldset className="bare-fieldset">
       <legend className="input-label" style={{ padding: 0 }}>
         Options — select the correct one
       </legend>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <div className="stack-xs">
         {options.map((option, i) => (
           <div key={i} style={{
             display: 'flex', gap: '0.5rem', alignItems: 'center',
