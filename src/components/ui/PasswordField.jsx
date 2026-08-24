@@ -1,4 +1,7 @@
 import { useId, useState } from 'react';
+import { motion } from 'framer-motion';
+import Icon from './Icon';
+import { EASE_OUT } from '../../lib/motion';
 
 /**
  * A password input you can look at.
@@ -26,48 +29,56 @@ export default function PasswordField({
   const hintId = `${id}-hint`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-      <label className="input-label" style={{ margin: 0 }} htmlFor={id}>{label}</label>
-      <div style={{ position: 'relative', display: 'flex' }}>
+    <div className="field">
+      <label className="input-label" htmlFor={id}>{label}</label>
+      <div className="password-wrap">
         <input
           id={id}
           type={visible ? 'text' : 'password'}
-          className="input-field"
+          className="input-field password-input"
           value={value}
           autoComplete={autoComplete}
           minLength={minLength}
           required={required}
           aria-describedby={hint ? hintId : undefined}
           onChange={(e) => onChange(e.target.value)}
-          style={{ flex: 1, paddingRight: '4.25rem' }}
         />
         <button
           type="button"
+          className="password-toggle"
           onClick={() => setVisible((v) => !v)}
+          /*
+           * The icon and the label deliberately say different things. The eye
+           * reports STATE — shut while the password is hidden, open once it is
+           * on screen — because that is what the glyph is for. The accessible
+           * name reports the ACTION, because that is what a button's name is
+           * for: a screen reader user needs to know what pressing it does, not
+           * what it currently looks like.
+           */
           aria-label={visible ? 'Hide password' : 'Show password'}
           aria-pressed={visible}
-          style={{
-            position: 'absolute',
-            right: '0.5rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'none',
-            border: 0,
-            color: 'var(--text-3)',
-            cursor: 'pointer',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            padding: '0.25rem 0.4rem',
-          }}
+          title={visible ? 'Hide password' : 'Show password'}
         >
-          {visible ? 'Hide' : 'Show'}
+          {/*
+            Keyed so the glyph re-runs its entrance on each toggle, but
+            deliberately NOT wrapped in AnimatePresence. `mode="wait"` keeps the
+            outgoing eye mounted for the length of its exit, which left the icon
+            reporting the old state for about 150ms after the password had
+            already changed — on the one control whose entire job is to confirm,
+            immediately, what is on screen.
+          */}
+          <motion.span
+            key={visible ? 'open' : 'shut'}
+            initial={{ opacity: 0.4, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.14, ease: EASE_OUT }}
+            style={{ display: 'grid', placeItems: 'center' }}
+          >
+            <Icon name={visible ? 'show' : 'hide'} size={16} />
+          </motion.span>
         </button>
       </div>
-      {hint && (
-        <p id={hintId} style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: 0 }}>
-          {hint}
-        </p>
-      )}
+      {hint && <p id={hintId} className="input-hint">{hint}</p>}
     </div>
   );
 }

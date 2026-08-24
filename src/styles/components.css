@@ -1809,18 +1809,27 @@ input[type='radio'] {
   color: #fff;
 }
 
-.auth-point > span {
+/* Its own class rather than `.auth-point > span`.
+ *
+ * The icon box is also a direct span child, so the element selector caught
+ * it too — at (0,1,1) it outranked .auth-point-icon's (0,1,0) and replaced
+ * `display: grid; place-items: center` with a column flex, which pushed
+ * every icon off-centre inside its tile. `.auth-point span` then dimmed it
+ * to 72% white on top of that. Two selectors that were only ever meant for
+ * the text column. */
+.auth-point-text {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
-.auth-point strong {
+.auth-point-text strong {
   font-size: var(--text-base);
   font-weight: 650;
 }
 
-.auth-point span {
+.auth-point-text span {
   font-size: var(--text-sm);
   color: rgb(255 255 255 / 0.72);
   line-height: var(--leading-snug);
@@ -1931,4 +1940,47 @@ input[type='radio'] {
 [data-theme='dark'] .card {
   /* Depth in dark mode comes from the surface ramp, not from shadow. */
   background-image: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 40%);
+}
+
+/* ============================================== password field == */
+
+.password-wrap {
+  position: relative;
+  display: flex;
+}
+
+/* Room for the toggle. It was 4.25rem, sized for the words "Show" and
+   "Hide"; an icon button needs a third of that, and the extra was
+   swallowing the end of any password long enough to be worth having. */
+.password-input {
+  padding-inline-end: 2.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  inset-inline-end: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.password-toggle:hover {
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+/* Pressed means the password is on screen. Worth marking, because that
+   is a state somebody may want to notice before walking away. */
+.password-toggle[aria-pressed='true'] {
+  color: var(--brand-accent);
 }

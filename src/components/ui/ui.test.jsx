@@ -274,6 +274,23 @@ describe('PasswordField', () => {
     expect(input).toHaveAttribute('type', 'password');
   });
 
+  /**
+   * The eye reports state, not the action: shut while the password is hidden,
+   * open once it is on screen. The accessible name says the opposite thing on
+   * purpose — a button's name has to describe what pressing it does — so this
+   * asserts the glyph rather than the label, which the tests above cover.
+   */
+  it('shows a shut eye by default and an open one once revealed', async () => {
+    render(<Harness />);
+    const eye = () => screen.getByRole('button', { name: /password/i })
+      .querySelector('svg')?.getAttribute('class') ?? '';
+
+    expect(eye()).toMatch(/eye-off/);
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(eye()).toMatch(/eye/);
+    expect(eye()).not.toMatch(/eye-off/);
+  });
+
   it('reports its state to assistive technology', async () => {
     render(<Harness />);
     const toggle = screen.getByRole('button', { name: 'Show password' });

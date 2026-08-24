@@ -90,7 +90,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
                 <span className="auth-point-icon">
                   <Icon name={point.icon} size={17} />
                 </span>
-                <span>
+                <span className="auth-point-text">
                   <strong>{point.title}</strong>
                   <span>{point.body}</span>
                 </span>
