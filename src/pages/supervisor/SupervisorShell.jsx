@@ -8,6 +8,8 @@ import {
 import SupervisorCourses from './SupervisorCourses';
 import AccountPage from '../shared/AccountPage';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
+import { fadeUp } from '../../lib/motion';
 import StatCard from '../../components/ui/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
 
@@ -32,14 +34,6 @@ const NAV = [
   { section: 'Account' },
   { to: '/supervisor/account', icon: 'account', label: 'My Account' },
 ];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
 
 const mean = (nums) =>
   (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
@@ -66,9 +60,8 @@ export function Dashboard() {
   if (team.length === 0) {
     return (
       <div className="page-body">
-        <p className="eyebrow">Oversight</p>
-        <h1 className="section-heading">Your Team</h1>
-        <EmptyState icon="👥" title="No team yet">
+        <PageHeader eyebrow="Oversight" icon="team" title="Your team" />
+        <EmptyState icon="team" title="No team yet">
           No trainers are assigned to you yet. An administrator links trainers to
           a supervisor; until then there is nothing to oversee.
         </EmptyState>
@@ -96,18 +89,16 @@ export function Dashboard() {
   return (
     <motion.div
       className="page-body"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
       initial="hidden"
       animate="visible"
     >
-      <motion.div variants={fadeUp} custom={0}>
-        <p className="eyebrow">Oversight</p>
-        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Your Team</h1>
-        <p className="section-sub">
-          {team.length} trainer{team.length === 1 ? '' : 's'}, {courseList.length} course
-          {courseList.length === 1 ? '' : 's'}.
-        </p>
-      </motion.div>
+      <PageHeader
+        eyebrow="Oversight"
+        icon="team"
+        title="Your team"
+        subtitle={`${team.length} trainer${team.length === 1 ? '' : 's'}, `
+          + `${courseList.length} course${courseList.length === 1 ? '' : 's'}.`}
+      />
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
         <StatCard label="Trainers" value={team.length} color="var(--brand-secondary)" />

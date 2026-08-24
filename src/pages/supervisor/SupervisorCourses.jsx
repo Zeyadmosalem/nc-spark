@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
 import StatusPill from '../../components/ui/StatusPill';
 import EmptyState from '../../components/ui/EmptyState';
 import {
@@ -72,12 +73,13 @@ export default function SupervisorCourses() {
   }
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div>
-        <p className="eyebrow">Oversight</p>
-        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Team Courses</h1>
-        <p className="section-sub">How each cohort is doing.</p>
-      </div>
+    <div className="page-body">
+      <PageHeader
+        eyebrow="Oversight"
+        icon="team"
+        title="Team courses"
+        subtitle="How each cohort your trainers run is doing."
+      />
 
       {list.length === 0 ? (
         <EmptyState icon="📚" title="Nothing to show">

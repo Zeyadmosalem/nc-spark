@@ -4,6 +4,8 @@ import { useMyEnrollments, useCourses } from '../../hooks/useCourses';
 import { useMyQuizResults, useCompletedActivityCount } from '../../hooks/useProgress';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
+import { fadeUp } from '../../lib/motion';
 import StatCard from '../../components/ui/StatCard';
 import StatusPill from '../../components/ui/StatusPill';
 import Icon from '../../components/ui/Icon';
@@ -20,14 +22,6 @@ import Icon from '../../components/ui/Icon';
  * so there is nothing honest to render. What IS real, and has been unread
  * since M3 and M4, is completions and quiz results. That is what this shows.
  */
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
 
 const onDate = (iso) => {
   const d = new Date(iso);
@@ -72,15 +66,15 @@ export default function AchievementsPage() {
   return (
     <motion.div
       className="page-body"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
       initial="hidden"
       animate="visible"
     >
-      <motion.div variants={fadeUp} custom={0}>
-        <p className="eyebrow">Your record</p>
-        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>Achievements</h1>
-        <p className="section-sub">Everything you have finished so far.</p>
-      </motion.div>
+      <PageHeader
+        eyebrow="Your record"
+        icon="achievements"
+        title="Achievements"
+        subtitle="Everything you have finished so far."
+      />
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
         <StatCard label="Courses completed" value={finished.length} icon="complete" color="#1a7f37" />

@@ -7,6 +7,7 @@ import PasswordField from '../../components/ui/PasswordField';
 import StatusPill from '../../components/ui/StatusPill';
 import PageSkeleton from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toast-context';
+import { fadeUp } from '../../lib/motion';
 
 /**
  * Your own account. One page, mounted by all four role shells.
@@ -22,14 +23,6 @@ import { useToast } from '../../components/ui/toast-context';
  * that is editable is what makes it obvious which is which, and each says who
  * can change it instead of leaving the reader to guess.
  */
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
 
 const ROLE_MEANS = {
   trainee: 'You take courses and your progress is recorded.',

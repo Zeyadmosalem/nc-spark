@@ -5,6 +5,7 @@ import { useCourses, usePublishCourse, useCourseContentCounts } from '../../hook
 import { useMyTeachingRequests, useRequestToTeach } from '../../hooks/useTeaching';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
 import StatusPill from '../../components/ui/StatusPill';
 import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
@@ -49,14 +50,13 @@ export default function TrainerCourses() {
     (requests.data ?? []).filter((r) => r.status === 'pending').map((r) => r.courseId));
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div>
-        <p className="eyebrow">Teaching</p>
-        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>My Courses</h1>
-        <p className="section-sub">
-          {mine.length} course{mine.length === 1 ? '' : 's'} assigned to you.
-        </p>
-      </div>
+    <div className="page-body">
+      <PageHeader
+        eyebrow="Teaching"
+        icon="teaching"
+        title="My courses"
+        subtitle={`${mine.length} course${mine.length === 1 ? '' : 's'} assigned to you.`}
+      />
 
       {mine.length === 0 ? (
         <EmptyState icon="📋" title="No courses yet">
