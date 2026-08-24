@@ -140,6 +140,15 @@ function MyCourseRow({ course, content }) {
           >
             {activities === 0 ? 'Add content' : 'Content'}
           </Link>
+          {/* The other half of running a course: who is on it and how far
+              they have got. There was no screen for that at all. */}
+          <Link
+            to={`/trainer/courses/${course.id}/people`}
+            className="btn btn-ghost btn-sm"
+            style={{ textDecoration: 'none' }}
+          >
+            People
+          </Link>
           <button
             type="button"
             className={`btn btn-sm ${isPublished ? 'btn-outline' : 'btn-primary'}`}

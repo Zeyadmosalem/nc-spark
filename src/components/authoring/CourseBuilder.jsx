@@ -183,6 +183,13 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
           {status !== 'published' && totalActivities === 0
             && ' — add at least one activity before this can be published'}
         </p>
+        {/* Content and cohort are the two halves of a course, and the roster
+            lives on the same id. Relative so it works from either role's
+            route without the builder knowing which one mounted it. */}
+        <Link to="people" className="btn btn-ghost btn-sm"
+              style={{ textDecoration: 'none', marginTop: '0.5rem' }}>
+          See who is on this course →
+        </Link>
       </div>
 
       {modules.length === 0 ? (

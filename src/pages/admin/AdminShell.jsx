@@ -7,6 +7,7 @@ import PageSkeleton from '../../components/ui/Skeleton';
 import StatCard from '../../components/ui/StatCard';
 import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
+import CourseRoster from '../../components/roster/CourseRoster';
 import UserManager from './UserManager';
 import AccountPage from '../shared/AccountPage';
 
@@ -239,6 +240,7 @@ export default function AdminShell() {
         <Route path="users" element={<UserManager />} />
         <Route path="content" element={<ContentManager />} />
         <Route path="content/:courseId" element={<CourseBuilder backTo="/admin/content" />} />
+        <Route path="content/:courseId/people" element={<CourseRoster backTo="/admin/content" />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

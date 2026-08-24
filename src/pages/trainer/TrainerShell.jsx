@@ -4,6 +4,7 @@ import TrainerDashboard from './TrainerDashboard';
 import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
+import CourseRoster from '../../components/roster/CourseRoster';
 import AccountPage from '../shared/AccountPage';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
@@ -36,6 +37,8 @@ export default function TrainerShell() {
         second implementation would only be a second thing to keep in
         step. */}
         <Route path="courses/:courseId" element={<CourseBuilder backTo="/trainer/courses" />} />
+        {/* Who is on the course, as opposed to what is in it. */}
+        <Route path="courses/:courseId/people" element={<CourseRoster backTo="/trainer/courses" />} />
         {/* The prototype's Create Content forms wrote to in-memory context.
         Authoring now happens inside a course, which is the only place it
         can: an activity needs a module to live in. */}
