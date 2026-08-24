@@ -7,6 +7,7 @@ import QueryError from '../shared/QueryError';
 import PageSkeleton from '../ui/Skeleton';
 import StatCard from '../ui/StatCard';
 import StatusPill from '../ui/StatusPill';
+import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
 /**
@@ -25,11 +26,6 @@ import EmptyState from '../ui/EmptyState';
  * and profiles_select_my_trainees authorise a trainer for their own courses and
  * an admin for all of them, so the same component is correct for both.
  */
-
-const TYPE_ICON = {
-  reading: '📖', video: '🎬', submission: '📎', quiz: '📝',
-  flashcards: '🃏', matching: '🔗', scenario: '🧭',
-};
 
 const ORDER = {
   behind: { label: 'Least progress first', sort: (a, b) => a.percent - b.percent },
@@ -194,7 +190,8 @@ function PersonRow({ person, activities }) {
 
         {stuck > 0 && (
           <span className="chip" style={{ color: 'var(--brand-accent)' }}>
-            ✍️ {stuck} to mark
+            <Icon name="review" size={12} />
+            {stuck} to mark
           </span>
         )}
         <StatusPill status={person.status} />
@@ -226,8 +223,9 @@ function PersonRow({ person, activities }) {
                       fontSize: '0.82rem',
                       color: at ? 'var(--text-2)' : 'var(--text-3)',
                     }}>
-                      <span aria-hidden="true">{at ? '✅' : '⬜'}</span>
-                      <span aria-hidden="true">{TYPE_ICON[a.type] ?? '•'}</span>
+                      <Icon name={at ? 'complete' : 'empty'} size={14}
+                            style={{ color: at ? '#1a7f37' : 'var(--text-3)' }} />
+                      <Icon name={a.type} size={14} />
                       <span style={{ flex: 1 }}>
                         {a.title}
                         <span style={{ color: 'var(--text-3)' }}> · {a.moduleTitle}</span>

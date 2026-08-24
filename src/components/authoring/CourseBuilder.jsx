@@ -10,6 +10,7 @@ import { useToast } from '../ui/toast-context';
 import { AUTHORABLE_TYPES, EMPTY_CONTENT, structuredProblem } from '../../api/authoring';
 import { FlashcardsEditor, MatchingEditor, ScenarioEditor } from './StructuredEditors';
 import QuizEditor from './QuizEditor';
+import Icon from '../ui/Icon';
 import {
   useCourseForEditing,
   useCreateModule, useUpdateModule, useDeleteModule,
@@ -42,11 +43,6 @@ const TYPE_LABEL = {
   flashcards: 'Flashcards',
   matching: 'Matching',
   scenario: 'Scenario',
-};
-
-const TYPE_ICON = {
-  reading: '📖', video: '🎬', submission: '📎', quiz: '📝',
-  flashcards: '🃏', matching: '🔗', scenario: '🧭',
 };
 
 /**
@@ -424,7 +420,7 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onD
           <select id="act-type" className="input-field" style={{ width: 'auto' }}
                   value={type} onChange={(e) => pickType(e.target.value)}>
             {AUTHORABLE_TYPES.map((t) => (
-              <option key={t} value={t}>{TYPE_ICON[t]} {TYPE_LABEL[t]}</option>
+              <option key={t} value={t}>{TYPE_LABEL[t]}</option>
             ))}
           </select>
         </div>
@@ -484,7 +480,9 @@ function ActivityRow({ courseId, activity }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-          <span>{TYPE_ICON[activity.type] ?? '•'}</span>
+          <span className="row-icon" style={{ width: '1.6rem', height: '1.6rem' }}>
+            <Icon name={activity.type} size={14} />
+          </span>
           <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{activity.title}</span>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
             {TYPE_LABEL[activity.type] ?? activity.type} · {activity.xp} XP

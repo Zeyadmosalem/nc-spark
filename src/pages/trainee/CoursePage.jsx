@@ -1,21 +1,20 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import { useMyCompletions } from '../../hooks/useProgress';
 import { moduleLockState } from '../../api/progress';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
 import CourseMaterials from '../../components/shared/CourseMaterials';
-
-const TYPE_ICONS = {
-  video: '🎬', reading: '📖', flashcards: '🃏',
-  matching: '🔗', scenario: '🧭', submission: '📤', quiz: '📝',
-};
+import EmptyState from '../../components/ui/EmptyState';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import { SPRING_SOFT, EASE_OUT } from '../../lib/motion';
 
 export default function CoursePage() {
   const { courseId } = useParams();
-  const navigate = useNavigate();
 
   const { data: course, isLoading, error } = useCourseOutline(courseId);
   const {
@@ -44,7 +43,23 @@ export default function CoursePage() {
     return <div className="page-body"><QueryError error={failure} what="this course" /></div>;
   }
 
-  if (!course) return <div className="page-body"><p>Course not found.</p></div>;
+  // Was a bare sentence in a div: no heading, no explanation, and nothing to
+  // click. A trainee who followed a stale link had to use the browser's back
+  // button to escape.
+  if (!course) {
+    return (
+      <div className="page-body">
+        <EmptyState
+          icon="empty"
+          title="That course is not here"
+          action={<Button to="/trainee/courses" variant="primary" icon="back">Back to my courses</Button>}
+        >
+          It may have been withdrawn from the catalog, or the link may be out of
+          date.
+        </EmptyState>
+      </div>
+    );
+  }
 
   const enrollment = (enrollments ?? []).find((e) => e.courseId === courseId);
   const isEnrolled = enrollment?.status === 'active' || enrollment?.status === 'completed';
@@ -53,27 +68,27 @@ export default function CoursePage() {
   if (!isEnrolled) {
     return (
       <div className="page-body">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/trainee/courses')}>
-            ← Back to Courses
-          </button>
-        </div>
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
-            {isPending ? 'Enrollment Pending' : 'Course Locked'}
-          </h2>
-          <p style={{ color: 'var(--text-2)', maxWidth: '40ch', margin: '0 auto 1.5rem' }}>
-            {isPending
-              ? 'Your request to join this course has been sent to the trainer. You will gain access once they approve it.'
-              : 'You are not enrolled in this course. Please visit the Course Catalog to apply.'}
-          </p>
-          {!isPending && (
-            <button className="btn btn-primary" onClick={() => navigate('/trainee/catalog')}>
-              Go to Course Catalog
-            </button>
-          )}
-        </div>
+        <PageHeader
+          eyebrow={course.title}
+          icon="courses"
+          title={isPending ? 'Waiting on a trainer' : 'You are not on this course'}
+          subtitle={isPending
+            ? 'Your application has been sent. A trainer decides who joins, and you will get in as soon as they do.'
+            : 'Courses are applied for from the catalog. A trainer approves each application.'}
+          backTo="/trainee/courses"
+          backLabel="My courses"
+        />
+        <EmptyState
+          icon={isPending ? 'waiting' : 'locked'}
+          title={isPending ? 'Application pending' : 'Not enrolled'}
+          action={isPending
+            ? <Button to="/trainee/courses" variant="secondary" icon="back">Back to my courses</Button>
+            : <Button to="/trainee/catalog" variant="primary" icon="catalog">Go to the catalog</Button>}
+        >
+          {isPending
+            ? 'Nothing more is needed from you. There is no need to apply again — a second application is refused.'
+            : 'Nothing in this course opens until you are enrolled.'}
+        </EmptyState>
       </div>
     );
   }
@@ -90,54 +105,77 @@ export default function CoursePage() {
 
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/trainee/courses')}>
-          ← Back to Courses
-        </button>
-      </div>
+      <Link to="/trainee/courses" className="crumb">
+        <Icon name="back" size={14} />
+        My courses
+      </Link>
 
-      <motion.div
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+      <motion.section
+        className="hero"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: EASE_OUT }}
         style={{
-          borderRadius: 'var(--r-xl)', padding: '2rem', color: '#fff',
-          position: 'relative', overflow: 'hidden',
-          background: `linear-gradient(145deg, rgba(0,0,0,0.82), rgba(15,15,25,0.88)), linear-gradient(135deg, ${accent}88, ${accent}44)`,
+          background: `radial-gradient(70rem 34rem at 88% -30%, ${accent}, transparent 62%),`
+            + ` linear-gradient(125deg, color-mix(in srgb, ${accent} 78%, #000), color-mix(in srgb, ${accent} 35%, #000))`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '3rem', background: `${accent}33`, padding: '1rem', borderRadius: 'var(--r-xl)', border: `1px solid ${accent}44` }}>
-            {course.icon || '📘'}
-          </div>
-          <div style={{ flex: 1, minWidth: 300 }}>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-              Course Hub
-            </p>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: '#fff', marginBottom: '0.5rem' }}>
-              {course.title}
-            </h1>
-            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', maxWidth: '60ch' }}>
-              {course.description}
-            </p>
-          </div>
-          <div style={{ textAlign: 'right', minWidth: 150 }}>
-            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: 700, color: '#fff', lineHeight: 1 }}>
-              {percent}%
+        <div className="hero-inner">
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', minWidth: 0 }}>
+            <span className="hero-badge" aria-hidden="true">{course.icon || '\u{1F4D8}'}</span>
+            <div style={{ minWidth: 0 }}>
+              <p className="hero-eyebrow">Course</p>
+              <h1 className="hero-title">{course.title}</h1>
+              {course.description && <p className="hero-sub">{course.description}</p>}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>Your Progress</div>
-            <div className="progress-track" style={{ marginTop: '0.5rem', background: 'rgba(255,255,255,0.15)', width: '100%', maxWidth: 120, marginLeft: 'auto' }}>
-              <div className="progress-fill" style={{ width: `${percent}%` }} />
+          </div>
+
+          <div className="hero-progress">
+            <div className="hero-figure-value">{percent}%</div>
+            <div className="hero-figure-label">
+              {done.size} of {modules.reduce((n, m) => n + (m.activities?.length ?? 0), 0)} activities done
+            </div>
+            <div
+              className="progress-track hero-progress-track"
+              role="progressbar"
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Your progress on this course"
+            >
+              <motion.div
+                className="progress-fill"
+                data-complete={percent >= 100 || undefined}
+                initial={{ width: 0 }}
+                animate={{ width: `${percent}%` }}
+                transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.2 }}
+              />
             </div>
           </div>
         </div>
-      </motion.div>
+      </motion.section>
 
-      <div className="tab-navigation">
-        <button className={`tab-item ${activeTab === 'path' ? 'active' : ''}`} onClick={() => setActiveTab('path')}>
-          📚 Learning Path
-        </button>
-        <button className={`tab-item ${activeTab === 'materials' ? 'active' : ''}`} onClick={() => setActiveTab('materials')}>
-          📎 Materials
-        </button>
+      <div className="tab-navigation" role="tablist">
+        {[
+          { id: 'path', label: 'Learning path', icon: 'curriculum' },
+          { id: 'materials', label: 'Materials', icon: 'attachment' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`tab-item ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <Icon name={tab.icon} size={15} />
+            {tab.label}
+            {/* One shared element, so the underline slides between tabs. */}
+            {activeTab === tab.id && (
+              <motion.span layoutId="course-tab" className="tab-underline" transition={SPRING_SOFT} />
+            )}
+          </button>
+        ))}
       </div>
 
       <AnimatePresence mode="wait">
@@ -206,8 +244,8 @@ export default function CoursePage() {
                           };
                           const body = (
                             <>
-                              <span style={{ fontSize: '1.25rem' }} aria-hidden="true">
-                                {TYPE_ICONS[a.type] ?? '📘'}
+                              <span className="row-icon">
+                                <Icon name={a.type} size={16} />
                               </span>
                               <span style={{ flex: 1 }}>{a.title}</span>
                               {/* Said in words as well as with a tick: a

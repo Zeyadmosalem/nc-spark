@@ -111,21 +111,21 @@ describe('CoursePage outline', () => {
     mocks.getCourseOutline.mockResolvedValue(outline);
     mocks.myEnrollments.mockResolvedValue([]);
     renderAt();
-    expect(await screen.findByText(/Course Locked/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Not enrolled/i)).toBeInTheDocument();
   });
 
   it('shows the pending panel for a pending application', async () => {
     mocks.getCourseOutline.mockResolvedValue(outline);
     mocks.myEnrollments.mockResolvedValue([{ id: 'e1', courseId: 'c1', status: 'pending', percent: 0 }]);
     renderAt();
-    expect(await screen.findByText(/Enrollment Pending/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Application pending/i)).toBeInTheDocument();
   });
 
   it('shows not-found for a missing course', async () => {
     mocks.getCourseOutline.mockResolvedValue(null);
     mocks.myEnrollments.mockResolvedValue([]);
     renderAt();
-    expect(await screen.findByText(/Course not found/i)).toBeInTheDocument();
+    expect(await screen.findByText(/That course is not here/i)).toBeInTheDocument();
   });
 
   it('reports a failed load instead of claiming the course does not exist', async () => {
@@ -145,8 +145,8 @@ describe('CoursePage outline', () => {
     mocks.getCourseOutline.mockResolvedValue(outline);
     mocks.myEnrollments.mockResolvedValue(enrolled);
     renderAt();
-    await screen.findByRole('button', { name: /learning path/i });
-    expect(screen.queryByRole('button', { name: /course chat/i })).not.toBeInTheDocument();
+    await screen.findByRole('tab', { name: /learning path/i });
+    expect(screen.queryByRole('tab', { name: /course chat/i })).not.toBeInTheDocument();
   });
 
   /**

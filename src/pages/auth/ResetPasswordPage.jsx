@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '../../api/auth';
 import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import AuthLayout from './AuthLayout';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
@@ -23,38 +26,55 @@ export default function ResetPasswordPage() {
     }
   }
 
+  if (sent) {
+    return (
+      <AuthLayout
+        title="Check your inbox"
+        // Deliberately does not reveal whether the address exists: "no
+        // account with that email" is a way to enumerate who has one.
+        subtitle="If that address has an account, a reset link is on its way."
+      >
+        <div className="auth-confirm">
+          <span className="auth-confirm-icon">
+            <Icon name="email" size={24} />
+          </span>
+          <p className="input-hint">
+            The link expires after an hour. Nothing changes about your current
+            password until you use it.
+          </p>
+        </div>
+        <Button to="/login" variant="secondary" block icon="back">Back to sign in</Button>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <div className="login-page">
-      <div className="login-container" style={{ maxWidth: 420 }}>
-        <div className="login-header"><h1>Reset your password</h1></div>
-        <form onSubmit={handleSubmit} className="card no-hover"
-              style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
-          <Alert tone="error">{error}</Alert>
-          {sent
-            ? (
-              // Deliberately does not reveal whether the address exists.
-              <p style={{ color: 'var(--text-2)' }}>If that address has an account, a reset link is on its way.</p>
-            )
-            : (
-              <>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email</span>
-                  <input type="email" value={email} required autoComplete="email"
-                         onChange={(e) => setEmail(e.target.value)}
-                         style={{
-                           padding: '0.7rem 0.9rem', borderRadius: 'var(--r-md)',
-                           border: '1.5px solid var(--border)', background: 'var(--surface-alt)',
-                           color: 'var(--text)', fontFamily: 'var(--font-body)',
-                         }} />
-                </label>
-                <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-                  {busy ? 'Sending…' : 'Send reset link'}
-                </button>
-              </>
-            )}
-          <div style={{ fontSize: '0.8rem', textAlign: 'center' }}><Link to="/login">Back to sign in</Link></div>
-        </form>
-      </div>
-    </div>
+    <AuthLayout
+      title="Reset your password"
+      subtitle="We will email you a link to set a new one."
+      footer={<Link to="/login">Back to sign in</Link>}
+    >
+      <form onSubmit={handleSubmit} className="auth-form">
+        <Alert tone="error">{error}</Alert>
+
+        <div className="field">
+          <label className="input-label" htmlFor="reset-email">Email</label>
+          <input
+            id="reset-email"
+            type="email"
+            className="input-field"
+            value={email}
+            required
+            autoFocus
+            autoComplete="email"
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <Button type="submit" variant="primary" size="lg" block pending={busy}>
+          Send reset link
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

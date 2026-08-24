@@ -47,7 +47,13 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/email/i), 'a@b.com');
     await user.type(screen.getByLabelText(/^password$/i), 'pw');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
+
+    // The label deliberately does not change to "Signing in…" — swapping it
+    // resizes the button under the cursor mid-click. The button reports the
+    // wait through aria-busy and refuses a second submit.
+    const button = screen.getByRole('button', { name: /sign in/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
     resolve({ user: {} });
   });
 

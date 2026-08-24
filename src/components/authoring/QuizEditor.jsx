@@ -10,6 +10,7 @@ import {
   useDeleteQuizQuestion, useReorderQuizQuestions,
 } from '../../hooks/useAuthoring';
 import { questionProblem } from '../../api/quizzes';
+import Icon from '../ui/Icon';
 
 /**
  * Writing the questions in a quiz.
@@ -31,7 +32,8 @@ const TYPE_LABEL = {
   paragraph: 'Written answer',
 };
 
-const TYPE_ICON = { mcq: '🔘', truefalse: '⚖️', paragraph: '✍️' };
+/* question_type, which is a different vocabulary from activity_type. */
+const TYPE_ICON = { mcq: 'quiz', truefalse: 'verified', paragraph: 'edit' };
 
 const BLANK = {
   type: 'mcq',
@@ -259,7 +261,9 @@ function QuestionRow({ question, index, last, quiz, activityId, courseId, onMove
           }}>
             {index + 1}
           </span>
-          <span aria-hidden="true">{TYPE_ICON[question.type]}</span>
+          <span className="row-icon" style={{ width: '1.6rem', height: '1.6rem' }}>
+            <Icon name={TYPE_ICON[question.type]} size={14} />
+          </span>
           <span style={{
             fontWeight: 600, fontSize: '0.92rem', overflow: 'hidden',
             textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -372,7 +376,7 @@ function QuestionForm({ quiz, activityId, courseId, initial, questionId, onSaved
           <select id={`${idBase}-type`} className="input-field" style={{ width: 'auto' }}
                   value={q.type} onChange={(e) => pickType(e.target.value)}>
             {Object.entries(TYPE_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>{TYPE_ICON[value]} {label}</option>
+              <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </div>

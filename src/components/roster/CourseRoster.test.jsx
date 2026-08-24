@@ -68,7 +68,7 @@ describe('the summary', () => {
     ]));
     show();
     expect(screen.getByText('blocking those trainees')).toBeInTheDocument();
-    expect(screen.getByText('✍️ 1 to mark')).toBeInTheDocument();
+    expect(screen.getByText('1 to mark')).toBeInTheDocument();
   });
 
   /** An application nobody decided means somebody cannot start at all. */

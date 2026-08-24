@@ -79,49 +79,49 @@ const hookOrderError = () =>
 describe('CoursePage guard transitions', () => {
   it('renders an enrolled course', async () => {
     renderAt('/course/c1');
-    expect(await screen.findByText(/Course Hub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Learning path/i)).toBeInTheDocument();
   });
 
   it('shows the locked panel for a course the trainee is not enrolled in', async () => {
     renderAt('/course/c2');
-    expect(await screen.findByText(/Course Locked|Enrollment Pending/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Not enrolled|Application pending/i)).toBeInTheDocument();
   });
 
   it('shows not-found for an unknown course', async () => {
     renderAt('/course/nope');
-    expect(await screen.findByText(/Course not found/i)).toBeInTheDocument();
+    expect(await screen.findByText(/That course is not here/i)).toBeInTheDocument();
   });
 
   it('navigates enrolled -> unenrolled without a hook-order error', async () => {
     const user = userEvent.setup();
     renderAt('/course/c1');
-    await screen.findByText(/Course Hub/i);
+    await screen.findByText(/Learning path/i);
 
     await user.click(screen.getByRole('button', { name: 'go-c2' }));
 
-    expect(await screen.findByText(/Course Locked|Enrollment Pending/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Not enrolled|Application pending/i)).toBeInTheDocument();
     expect(hookOrderError()).toBe(false);
   });
 
   it('navigates unenrolled -> enrolled without a hook-order error', async () => {
     const user = userEvent.setup();
     renderAt('/course/c2');
-    await screen.findByText(/Course Locked|Enrollment Pending/i);
+    await screen.findByText(/Not enrolled|Application pending/i);
 
     await user.click(screen.getByRole('button', { name: 'go-c1' }));
 
-    expect(await screen.findByText(/Course Hub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Learning path/i)).toBeInTheDocument();
     expect(hookOrderError()).toBe(false);
   });
 
   it('navigates enrolled -> missing without a hook-order error', async () => {
     const user = userEvent.setup();
     renderAt('/course/c1');
-    await screen.findByText(/Course Hub/i);
+    await screen.findByText(/Learning path/i);
 
     await user.click(screen.getByRole('button', { name: 'go-missing' }));
 
-    expect(await screen.findByText(/Course not found/i)).toBeInTheDocument();
+    expect(await screen.findByText(/That course is not here/i)).toBeInTheDocument();
     await waitFor(() => expect(hookOrderError()).toBe(false));
   });
 });

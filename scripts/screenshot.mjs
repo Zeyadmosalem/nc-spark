@@ -37,8 +37,21 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => console.log('  [page error]', String(e).slice(0, 200)));
 
-// Sign in once; the session carries across every capture.
+// Sign in once; the session carries across every capture. SKIP_LOGIN
+// captures the signed-out screens, which are the ones a visitor meets first.
 await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+if (process.env.SKIP_LOGIN) {
+  for (const target of targets) {
+    const [path, name] = target.split('::');
+    await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(900);
+    const slug = name || 'root';
+    await page.screenshot({ path: `${OUT}/${slug}-${THEME}.png` });
+    console.log('shot', slug);
+  }
+  await browser.close();
+  process.exit(0);
+}
 await page.getByLabel(/email/i).first().fill(EMAIL);
 await page.getByLabel(/password/i).first().fill(PASSWORD);
 await page.getByRole('button', { name: /sign in|log in/i }).first().click();

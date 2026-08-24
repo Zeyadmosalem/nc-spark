@@ -1,28 +1,51 @@
 import { signOut } from '../../api/auth';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import AuthLayout from './AuthLayout';
 
+/**
+ * The screen an account that exists but cannot be used lands on.
+ *
+ * It is reached by someone who has just done everything right — created an
+ * account, confirmed an email — and been stopped anyway, so it says who is
+ * holding it and what happens next rather than only that it is held.
+ */
 export default function PendingApprovalPage({ status = 'pending' }) {
-  const copy = status === 'suspended'
+  const suspended = status === 'suspended';
+
+  const copy = suspended
     ? {
-        icon: '🚫',
+        icon: 'blocked',
+        tone: 'danger',
         title: 'Account suspended',
-        body: 'Your access has been suspended. Contact your administrator if you believe this is a mistake.',
+        body: 'Your access has been suspended, so nothing in NC Spark will open.',
+        next: 'An administrator can reinstate it. Contact them if you believe this is a mistake — your progress is not deleted while an account is suspended.',
       }
     : {
-        icon: '⏳',
+        icon: 'waiting',
+        tone: 'warning',
         title: 'Awaiting approval',
-        body: 'Your account has been created and is waiting for an administrator to approve it. You will be able to sign in once approved.',
+        body: 'Your account exists and is waiting for an administrator to admit you.',
+        next: 'Nothing more is needed from you. You will be able to sign in as soon as somebody approves it, and everything will be here when you do.',
       };
 
   return (
-    <div className="login-page">
-      <div className="login-container" style={{ maxWidth: 460 }}>
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '3rem' }} aria-hidden="true">{copy.icon}</div>
-          <h2 style={{ fontFamily: 'var(--font-heading)', margin: '1rem 0 0.5rem' }}>{copy.title}</h2>
-          <p style={{ color: 'var(--text-2)', maxWidth: '44ch', margin: '0 auto 1.5rem' }}>{copy.body}</p>
-          <button className="btn btn-ghost" onClick={() => signOut()}>Sign out</button>
-        </div>
+    <AuthLayout title={copy.title} subtitle={copy.body}>
+      <div className={`auth-status auth-status-${copy.tone}`}>
+        <span className="auth-status-icon">
+          <Icon name={copy.icon} size={20} />
+        </span>
+        <p>{copy.next}</p>
       </div>
-    </div>
+
+      {/*
+        Signing out is the only action available, and it has to be here:
+        without it an account in this state cannot reach the login form to
+        try a different one.
+      */}
+      <Button variant="secondary" block icon="logout" onClick={() => signOut()}>
+        Sign out
+      </Button>
+    </AuthLayout>
   );
 }
