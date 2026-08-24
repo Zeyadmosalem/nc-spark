@@ -6,6 +6,7 @@ import {
 import QueryError from './QueryError';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
+import Icon from '../ui/Icon';
 import { SkeletonList } from '../ui/Skeleton';
 import { useToast } from '../ui/toast-context';
 
@@ -24,7 +25,8 @@ import { useToast } from '../ui/toast-context';
  * would be stale by the time they were used.
  */
 
-const ICON = { pdf: '📕', pptx: '📙', docx: '📘', xlsx: '📗', link: '🔗' };
+/* Mirrors course_materials.kind. Icon.jsx already carries these names. */
+const ICON = { pdf: 'pdf', pptx: 'pptx', docx: 'docx', xlsx: 'xlsx', link: 'link' };
 
 const KIND_LABEL = {
   pdf: 'PDF', pptx: 'Slides', docx: 'Document', xlsx: 'Spreadsheet', link: 'Link',
@@ -51,7 +53,7 @@ export default function CourseMaterials({ courseId, canManage = false }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {list.length === 0 ? (
-        <EmptyState icon="📎" title="No materials yet">
+        <EmptyState icon="attachment" title="No materials yet">
           {canManage
             ? 'Upload a handout, or link to something hosted elsewhere.'
             : 'Your trainer has not added any handouts to this course.'}
@@ -103,7 +105,9 @@ function MaterialRow({ material, canManage }) {
 
   return (
     <div className="data-row">
-      <span style={{ fontSize: '1.3rem' }} aria-hidden="true">{ICON[material.kind] ?? '📄'}</span>
+      <span className="row-icon">
+                <Icon name={ICON[material.kind] ?? 'file'} size={16} />
+              </span>
       <div className="data-row-main">
         <div className="data-row-title">{material.name}</div>
         <div className="data-row-meta">

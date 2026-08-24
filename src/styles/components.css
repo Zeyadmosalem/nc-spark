@@ -1918,3 +1918,17 @@ input[type='radio'] {
   background: rgb(255 255 255 / 0.18);
   border-color: rgb(255 255 255 / 0.16);
 }
+
+/* A navy hairline on a near-black card is invisible. In dark mode the
+   metric colour is lifted toward the accent so the four cards in a row
+   stay distinguishable. */
+[data-theme='dark'] .stat-card::before {
+  filter: brightness(1.6) saturate(1.15);
+  opacity: 1;
+}
+
+[data-theme='dark'] .stat-card,
+[data-theme='dark'] .card {
+  /* Depth in dark mode comes from the surface ramp, not from shadow. */
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 40%);
+}

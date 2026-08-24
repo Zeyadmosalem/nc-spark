@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import Icon from '../ui/Icon';
 import { useNavigate } from 'react-router-dom';
 
 export default function ActivityWrapper({ activity, onComplete, onBack, isCompleted, children }) {
@@ -29,11 +30,7 @@ export default function ActivityWrapper({ activity, onComplete, onBack, isComple
       >
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, background: 'rgba(0,47,108,0.08)', borderRadius: '50%', fontSize: '1.5rem', marginBottom: '1rem' }}>
-            {activity?.type === 'video' && '▶️'}
-            {activity?.type === 'reading' && '📖'}
-            {activity?.type === 'flashcards' && '🗂️'}
-            {activity?.type === 'matching' && '🧩'}
-            {activity?.type === 'scenario' && '🕵️'}
+            <Icon name={activity?.type} size={22} />
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', marginBottom: '0.5rem' }}>{activity?.title}</h1>
           <p style={{ color: 'var(--text-2)' }}>{activity?.description}</p>
@@ -49,7 +46,7 @@ export default function ActivityWrapper({ activity, onComplete, onBack, isComple
             onClick={onComplete}
             disabled={isCompleted}
           >
-            {isCompleted ? '✓ Completed' : 'Mark as Complete'}
+            {isCompleted ? 'Completed' : 'Mark as complete'}
           </button>
         </div>
       </motion.div>

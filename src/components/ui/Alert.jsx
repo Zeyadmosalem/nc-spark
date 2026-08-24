@@ -1,3 +1,6 @@
+
+import Icon from './Icon';
+
 /**
  * The visible half of a failure, and now of a success.
  *
@@ -10,11 +13,14 @@
  * for "here is some context".
  */
 
+/* Icon names, not emoji. An alert is the one component guaranteed to
+   appear on a coloured tinted surface, and an emoji cannot take the
+   tone's colour — so the warning glyph was yellow inside a red box. */
 const ICON = {
-  error: '⚠️',
-  warning: '⚠️',
-  success: '✓',
-  info: 'ℹ️',
+  error: 'error',
+  warning: 'warning',
+  success: 'complete',
+  info: 'info',
 };
 
 export default function Alert({ tone = 'error', title, children, error }) {
@@ -35,7 +41,9 @@ export default function Alert({ tone = 'error', title, children, error }) {
       role={assertive ? 'alert' : 'status'}
       aria-live={assertive ? 'assertive' : 'polite'}
     >
-      <span className="alert-icon" aria-hidden="true">{ICON[tone]}</span>
+      <span className="alert-icon">
+        <Icon name={ICON[tone] ?? 'info'} size={17} />
+      </span>
       <div className="alert-body">
         {title && <div className="alert-title">{title}</div>}
         {body}

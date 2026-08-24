@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import Icon from '../ui/Icon';
 
 /**
  * Catches render/lifecycle errors in the subtree below it so a single broken
@@ -36,7 +37,9 @@ export default class ErrorBoundary extends Component {
     return (
       <div className="page-body">
         <div className="card no-hover" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+          <div className="empty-state-icon" style={{ margin: '0 auto 1rem', color: '#dc3545' }}>
+              <Icon name="warning" size={24} />
+            </div>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
             {title}
           </h2>

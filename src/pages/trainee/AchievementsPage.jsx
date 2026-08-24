@@ -6,6 +6,7 @@ import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import StatCard from '../../components/ui/StatCard';
 import StatusPill from '../../components/ui/StatusPill';
+import Icon from '../../components/ui/Icon';
 
 /**
  * What the trainee has actually achieved.
@@ -82,24 +83,24 @@ export default function AchievementsPage() {
       </motion.div>
 
       <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        <StatCard label="Courses completed" value={finished.length} icon="🎓" color="#28a745" />
+        <StatCard label="Courses completed" value={finished.length} icon="complete" color="#1a7f37" />
         <StatCard
           label="Activities completed"
           value={completions.isLoading ? '—' : (completions.data ?? 0)}
-          icon="✅"
+          icon="done"
           color="var(--brand-primary)"
         />
-        <StatCard label="Quizzes passed" value={passed.length} icon="📝" color="var(--brand-secondary)" />
+        <StatCard label="Quizzes passed" value={passed.length} icon="quiz" color="var(--brand-accent)" />
         <StatCard
           label="Average score"
           value={average === null ? '—' : `${average}%`}
-          icon="📊"
+          icon="trend"
           color="var(--brand-accent)"
         />
       </motion.div>
 
       <motion.div variants={fadeUp} custom={2} className="card no-hover">
-        <div className="card-title">🎓 Courses completed</div>
+        <h2 className="card-title"><Icon name="complete" size={16} />Courses you have finished</h2>
         {finished.length === 0 ? (
           <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
             Nothing finished yet.{' '}
@@ -135,7 +136,7 @@ export default function AchievementsPage() {
       </motion.div>
 
       <motion.div variants={fadeUp} custom={3} className="card no-hover">
-        <div className="card-title">📝 Quiz history</div>
+        <h2 className="card-title"><Icon name="quiz" size={16} />Quiz history</h2>
         {attempts.length === 0 ? (
           <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
             You have not finished a quiz yet.

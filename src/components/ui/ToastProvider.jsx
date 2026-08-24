@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToastContext } from './toast-context';
+import Icon from './Icon';
 
 /**
  * Confirmation for actions whose result happens off-screen.
@@ -78,7 +79,7 @@ export default function ToastProvider({ children, lifetime = LIFETIME_MS }) {
               className={`toast toast-${toast.tone}`}
             >
               <span className="toast-icon" aria-hidden="true">
-                {toast.tone === 'error' ? '⚠️' : '✓'}
+                <Icon name={toast.tone === 'error' ? 'error' : 'complete'} size={16} />
               </span>
               <div className="toast-body">{toast.message}</div>
               <button
@@ -87,7 +88,7 @@ export default function ToastProvider({ children, lifetime = LIFETIME_MS }) {
                 aria-label="Dismiss notification"
                 onClick={() => dismiss(toast.id)}
               >
-                ✕
+                <Icon name="close" size={14} />
               </button>
             </motion.div>
           ))}

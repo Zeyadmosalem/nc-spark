@@ -21,7 +21,7 @@ export default function TraineeNotices() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       {retakesReady.map((n) => (
-        <Notice key={n.grantId} tone="#0d6efd" icon="🔁">
+        <Notice key={n.grantId} tone="#0d6efd" icon="retry">
           <strong>Your trainer granted a retake</strong> for {n.quizTitle}
           {n.courseTitle ? ` (${n.courseTitle})` : ''}.
           {n.reason && <em style={{ display: 'block', color: 'var(--text-3)' }}>“{n.reason}”</em>}
@@ -35,7 +35,7 @@ export default function TraineeNotices() {
       ))}
 
       {recentlyGraded.map((n) => (
-        <Notice key={n.attemptId} tone={n.passed ? '#28a745' : '#dc3545'} icon={n.passed ? '✅' : '📋'}>
+        <Notice key={n.attemptId} tone={n.passed ? '#28a745' : '#dc3545'} icon={n.passed ? 'complete' : 'review'}>
           <strong>{n.quizTitle} has been marked</strong> — {n.score}%,{' '}
           {n.passed ? 'passed' : 'not passed'}.
           {!n.passed && ' Ask your trainer if you need another attempt.'}
