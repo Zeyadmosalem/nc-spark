@@ -27,10 +27,10 @@ import EmptyState from '../../components/ui/EmptyState';
  */
 
 const NAV = [
-  { to: '/supervisor', end: true, icon: '🏠', label: 'Dashboard' },
-  { to: '/supervisor/courses', icon: '📚', label: 'Team Courses' },
+  { to: '/supervisor', end: true, icon: 'dashboard', label: 'Dashboard' },
+  { to: '/supervisor/courses', icon: 'courses', label: 'Team Courses' },
   { section: 'Account' },
-  { to: '/supervisor/account', icon: '⚙️', label: 'My Account' },
+  { to: '/supervisor/account', icon: 'account', label: 'My Account' },
 ];
 
 const fadeUp = {

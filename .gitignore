@@ -30,3 +30,4 @@ dist-ssr
 !.env*.example
 supabase/.temp/
 supabase/.branches/
+shots/

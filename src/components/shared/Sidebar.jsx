@@ -1,8 +1,35 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../context/theme-context';
 import { useSession } from '../../hooks/useSession';
 import { signOut } from '../../api/auth';
+import Icon from '../ui/Icon';
+import { SPRING_SOFT, pop } from '../../lib/motion';
+
+/**
+ * The navigation rail.
+ *
+ * It is on screen on every route, so it carries more of the impression than
+ * any single page. Three things changed here:
+ *
+ * - The icons were emoji. A house, a stack of books, a magnifying glass, each
+ *   rendered in whatever the operating system supplies — so the rail looked
+ *   different on Windows, macOS and Android, none of the glyphs matched the
+ *   weight of the label beside them, and none could take the active colour.
+ * - The active state was a background colour that blinked from one item to
+ *   the next. It is now one element that slides, which is what makes the rail
+ *   feel like a single control rather than eight independent ones.
+ * - The footer's "log out" was hidden inside the user card. Somebody looking
+ *   for their account settings clicked their own name and was signed out. The
+ *   name now goes to the account page and log out is its own control.
+ */
+
+const ROLE_LABEL = {
+  trainee: 'Trainee',
+  trainer: 'Trainer',
+  supervisor: 'Supervisor',
+  admin: 'Administrator',
+};
 
 export default function Sidebar({ navItems, footerExtra }) {
   // Identity from the session, not from a context the prototype kept in sync
@@ -10,6 +37,7 @@ export default function Sidebar({ navItems, footerExtra }) {
   const { profile } = useSession();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   async function handleLogout() {
     // useSession picks up the auth change and App routes back to /login,
@@ -21,24 +49,31 @@ export default function Sidebar({ navItems, footerExtra }) {
     }
   }
 
+  // Longest match wins, so /trainer/courses/:id/people highlights My Courses
+  // rather than also matching the dashboard's "/trainer" prefix.
+  const activePath = [...navItems]
+    .filter((i) => i.to)
+    .sort((a, b) => b.to.length - a.to.length)
+    .find((i) => (i.end ? pathname === i.to : pathname.startsWith(i.to)))?.to;
+
+  const accountPath = navItems.find((i) => i.to?.endsWith('/account'))?.to;
+
   return (
     <motion.aside
       className="sidebar"
-      initial={{ x: -240 }}
-      animate={{ x: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      initial={{ x: -16, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={SPRING_SOFT}
     >
-      {/* Logo */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo-mark">NCS</div>
+        <div className="sidebar-logo-mark" aria-hidden="true">NC</div>
         <div className="sidebar-logo-text">
           <strong>NC Spark</strong>
-          <span>{profile?.role || 'Portal'}</span>
+          <span>{ROLE_LABEL[profile?.role] ?? 'Portal'}</span>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Sections">
         {navItems.map((item) => (
           item.section ? (
             <div key={item.section} className="sidebar-section-label">{item.section}</div>
@@ -49,59 +84,121 @@ export default function Sidebar({ navItems, footerExtra }) {
               end={item.end}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
             >
-              <span style={{ fontSize: '1rem' }} aria-hidden="true">{item.icon}</span>
-              <span>{item.label}</span>
-              {/* A nav item can carry its own count. The Pending Requests
-                  fallback is the prototype's hardcoded behaviour, kept so the
-                  admin nav keeps working until it supplies a badge itself. */}
-              {/* A nav item supplies its own count. The prototype had a
-                  hardcoded fallback keyed off the label "Pending Requests",
-                  reading a list of invented requests; nothing renders that
-                  label any more. */}
-              {item.badge > 0 && (
-                <span className="badge-dot">
-                  <span aria-hidden="true">{item.badge}</span>
-                  {/* On its own the badge announces a bare number. */}
-                  <span className="sr-only">{item.badge} waiting</span>
-                </span>
+              {/*
+                One element with a layoutId, rendered only under the active
+                item, so framer animates it between positions instead of
+                cross-fading two backgrounds. It sits behind the label rather
+                than around it — a background that animates its own size
+                would squash the text while it moved.
+              */}
+              {activePath === item.to && (
+                <motion.span
+                  layoutId="sidebar-active"
+                  className="sidebar-active-pill"
+                  transition={SPRING_SOFT}
+                />
               )}
+              <span className="sidebar-link-content">
+                <Icon name={item.icon} size={18} />
+                <span className="sidebar-link-label">{item.label}</span>
+                <AnimatePresence>
+                  {item.badge > 0 && (
+                    <motion.span
+                      className="badge-dot"
+                      variants={pop}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <span aria-hidden="true">{item.badge}</span>
+                      {/* On its own the badge announces a bare number. */}
+                      <span className="sr-only">{item.badge} waiting</span>
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </span>
             </NavLink>
           )
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="sidebar-footer">
-        <button 
-          onClick={toggleTheme} 
-          className="btn btn-ghost btn-sm" 
-          style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--sidebar-text)', marginBottom: '0.5rem', padding: '0.5rem' }}
-        >
-          <span style={{ fontSize: '1.25rem' }} aria-hidden="true">
-            {theme === 'light' ? '🌙' : '☀️'}
-          </span>
-          <span style={{ marginLeft: '0.75rem' }}>
-            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-          </span>
-        </button>
         {footerExtra}
+
         {/*
-          A button, not a div with onClick. As a div this was unreachable by
-          keyboard and announced as nothing, which meant a keyboard-only user
-          had no way to log out at all — the only exit from the app.
+          The account link and the sign-out control are separate. As one
+          element, the only thing a click on your own name could do was end
+          your session — which is what people expected to be a way in to
+          their settings.
         */}
-        <button
-          type="button"
-          className="sidebar-user"
-          onClick={handleLogout}
-        >
-          <div className="avatar" aria-hidden="true">{profile?.avatar || '?'}</div>
-          <div className="sidebar-user-info">
-            <strong>{profile?.name || 'User'}</strong>
-            <span>{profile?.role} · Log out</span>
+        {accountPath ? (
+          <NavLink to={accountPath} className="sidebar-user">
+            <UserBadge profile={profile} />
+          </NavLink>
+        ) : (
+          <div className="sidebar-user">
+            <UserBadge profile={profile} />
           </div>
-        </button>
+        )}
+
+        {/*
+          On its own row. Sharing one with the name left 77px for a name
+          needing 89, so every account whose name was longer than about
+          eleven characters was truncated in the one place it matters most.
+        */}
+        <div className="sidebar-utils">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-icon sidebar-icon-btn"
+            onClick={toggleTheme}
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+          >
+            {/*
+              Keyed so the two glyphs cross-fade rather than swapping. The
+              toggle is the one control in the rail whose effect is entirely
+              visual, so it is worth the 150ms.
+            */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={theme}
+                initial={{ opacity: 0, rotate: -35, scale: 0.7 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 35, scale: 0.7 }}
+                transition={{ duration: 0.16 }}
+                style={{ display: 'grid', placeItems: 'center' }}
+              >
+                <Icon name={theme === 'light' ? 'dark' : 'light'} size={16} />
+              </motion.span>
+            </AnimatePresence>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-icon sidebar-icon-btn"
+            onClick={handleLogout}
+            aria-label="Log out"
+            title="Log out"
+          >
+            <Icon name="logout" size={16} />
+          </button>
+        </div>
       </div>
     </motion.aside>
+  );
+}
+
+function UserBadge({ profile }) {
+  const name = profile?.name || 'User';
+  return (
+    <>
+      <span className="avatar avatar-sm" aria-hidden="true">
+        {profile?.avatar || name.charAt(0)}
+      </span>
+      <span className="sidebar-user-info">
+        <strong>{name}</strong>
+        <span>{ROLE_LABEL[profile?.role] ?? profile?.role}</span>
+      </span>
+    </>
   );
 }

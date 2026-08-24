@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap');
+/* Fonts are self-hosted in foundation.css. The Google Fonts @import
+   that lived here blocked first paint on a third-party origin. */
 
 /* =============================================
    NC SPARK — Global Design System (Blue Theme)
@@ -16,9 +17,8 @@
   --brand-magenta: #00A3E0;
   --brand-teal: #003E7E;
 
-  /* Typography */
-  --font-heading: 'Work Sans', 'Segoe UI', Arial, sans-serif;
-  --font-body: 'Work Sans', 'Segoe UI', Arial, sans-serif;
+  /* Typography lives in foundation.css: one display face for
+     headings, one UI face for everything else. */
 
   /* Spacing */
   --sp-1: 0.25rem;

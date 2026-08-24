@@ -81,13 +81,13 @@ describe('routing by session status', () => {
     session('pending', { id: 'u1', role: 'trainee', status: 'pending' });
     renderApp('/trainee');
     expect(await screen.findByText(/Awaiting approval/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Learning Library/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Your courses/i)).not.toBeInTheDocument();
   });
 
   it('lets an active trainee reach the trainee area', async () => {
     session('active', { ...trainee, status: 'active' });
     renderApp('/trainee/courses');
-    expect(await screen.findByText(/Learning Library/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Your courses/i })).toBeInTheDocument();
   });
 
   it('shows the empty state when a trainee has no enrollments', async () => {

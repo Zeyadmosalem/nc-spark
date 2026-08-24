@@ -1,0 +1,209 @@
+/* =============================================================
+   NC Spark — foundation
+   Typography, motion and elevation, ahead of globals.css.
+   =============================================================
+
+   Loaded first so globals.css can still override anything here,
+   and so a token added here is available to every rule after it.
+
+   The fonts are self-hosted from node_modules rather than fetched
+   from fonts.googleapis.com. The @import that used to sit at the
+   top of globals.css was render-blocking on a third-party origin:
+   every first paint waited on a DNS lookup, a TLS handshake and a
+   stylesheet before any text appeared, and the fallback swap moved
+   the whole page when it landed. Self-hosting makes it one request
+   to our own origin, cached with the app. */
+
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+:root {
+  /* ---------------------------------------------------- type --
+     Two families with distinct jobs.
+
+     Plus Jakarta Sans carries headings: it has enough character to
+     look chosen rather than defaulted, and its heavier weights hold
+     up at display sizes. Inter carries everything else, because at
+     13-15px in a dense table it stays legible where a display face
+     falls apart — and its tabular numerals keep a column of
+     percentages from shifting as the digits change. */
+  --font-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Variable', Inter, 'Segoe UI', system-ui, sans-serif;
+  --font-heading: var(--font-display);
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* A fifth-based scale, clamped so the big end is fluid and the
+     small end never drops below what is comfortable to read. */
+  --text-2xs: 0.6875rem;  /* 11px — badge, meta */
+  --text-xs: 0.75rem;     /* 12px — captions */
+  --text-sm: 0.8125rem;   /* 13px — dense UI */
+  --text-base: 0.9375rem; /* 15px — body */
+  --text-md: 1.0625rem;   /* 17px — lead */
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  --text-3xl: clamp(1.85rem, 1.3rem + 2.4vw, 2.75rem);
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* Optical tightening. Display faces set at large sizes look loose
+     at their default tracking; body text at 15px does not. */
+  --tracking-display: -0.022em;
+  --tracking-tight: -0.012em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+
+  /* -------------------------------------------------- motion --
+     One set of curves for the whole app. Six screens had each
+     invented their own `fadeUp` with slightly different distances
+     and delays, which is what makes an interface feel assembled
+     rather than designed — the same gesture arriving differently
+     depending on which page you are on. */
+  --dur-instant: 90ms;
+  --dur-fast: 150ms;
+  --dur-med: 260ms;
+  --dur-slow: 420ms;
+  --dur-slower: 640ms;
+
+  /* Standard: decelerating, for things entering or settling.
+     Emphasised: a touch of overshoot, for things the user caused.
+     Exit: accelerating, because leaving should not linger. */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ----------------------------------------------- elevation --
+     Layered rather than single-shadow: a tight contact shadow for
+     the edge, a wide ambient one for the lift. One shadow doing
+     both is the thing that reads as a drop shadow rather than as
+     depth. */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(16 24 40 / 0.08), 0 1px 2px -1px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 12px 20px -4px rgb(16 24 40 / 0.10), 0 4px 8px -4px rgb(16 24 40 / 0.05);
+  --shadow-xl: 0 24px 40px -8px rgb(16 24 40 / 0.14), 0 8px 16px -8px rgb(16 24 40 / 0.06);
+
+  /* A ring rather than a shadow: focus has to be visible against
+     any surface, including a dark one. */
+  --ring: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 35%, transparent);
+  --ring-danger: 0 0 0 3px rgb(220 53 69 / 0.3);
+
+  --r-2xs: 0.25rem;
+  --r-xs: 0.375rem;
+
+  /* Layout rhythm. Pages set their gaps from these rather than
+     each picking a number, which is why the old screens had
+     0.4rem, 0.5rem, 0.6rem and 0.75rem gaps side by side. */
+  --gap-xs: 0.375rem;
+  --gap-sm: 0.625rem;
+  --gap-md: 1rem;
+  --gap-lg: 1.5rem;
+  --gap-xl: 2.25rem;
+
+  --page-max: 78rem;
+}
+
+[data-theme='dark'] {
+  /* Shadows do almost nothing on a near-black surface, so depth in
+     dark mode comes mostly from the surface ramp in globals.css.
+     What is left here is a deeper ambient blur to keep overlays
+     legibly separated from what is behind them. */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 28px -6px rgb(0 0 0 / 0.7), 0 6px 12px -6px rgb(0 0 0 / 0.5);
+  --shadow-xl: 0 28px 52px -12px rgb(0 0 0 / 0.8), 0 10px 20px -10px rgb(0 0 0 / 0.6);
+}
+
+/* ------------------------------------------------------ base -- */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  /* Inter's defaults leave a little too much air between words at
+     UI sizes, and its contextual alternates fix the awkward
+     l-l and i-j pairs that show up in names. */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'calt';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+  /* Punctuation and the leading letter hang into the margin, so a
+     heading's left edge lines up optically with the text under it
+     rather than mathematically. */
+  text-wrap: balance;
+}
+
+p, li {
+  text-wrap: pretty;
+}
+
+/* Any figure that changes in place — a score, a percentage, a
+   countdown — needs fixed-width digits, or the number jitters
+   sideways every time it updates. */
+.tabular,
+.stat-card-value,
+.progress-value,
+.timer-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* ------------------------------------------------ focus ring --
+   :focus-visible only, so a mouse click does not leave a ring
+   behind, but every keyboard path shows one. The old rules used
+   :focus, which is why clicking a card left it outlined. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand-accent) 28%, transparent);
+  color: var(--heading);
+}
+
+/* Firefox and WebKit scrollbars, so a scrolling panel does not
+   introduce a chrome-coloured slab into a dark interface. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  background-clip: content-box;
+}

@@ -9,11 +9,11 @@ import AccountPage from '../shared/AccountPage';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
 const NAV = [
-  { to: '/trainer', end: true, icon: '🏠', label: 'Dashboard' },
-  { to: '/trainer/courses', icon: '📚', label: 'My Courses' },
-  { to: '/trainer/review', icon: '✅', label: 'Review Work' },
+  { to: '/trainer', end: true, icon: 'dashboard', label: 'Dashboard' },
+  { to: '/trainer/courses', icon: 'courses', label: 'My Courses' },
+  { to: '/trainer/review', icon: 'review', label: 'Review Work' },
   { section: 'Account' },
-  { to: '/trainer/account', icon: '⚙️', label: 'My Account' },
+  { to: '/trainer/account', icon: 'account', label: 'My Account' },
 ];
 
 export default function TrainerShell() {

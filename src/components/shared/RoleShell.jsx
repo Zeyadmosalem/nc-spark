@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
+import { pageTransition } from '../../lib/motion';
 
 /**
  * The frame every role portal sits in.
@@ -20,7 +22,8 @@ import Sidebar from './Sidebar';
  * next Tab resumes wherever the sidebar left off rather than at the content.
  */
 export default function RoleShell({ navItems, footerExtra, title, children }) {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const main = useRef(null);
   const firstRender = useRef(true);
 
@@ -43,6 +46,9 @@ export default function RoleShell({ navItems, footerExtra, title, children }) {
       return;
     }
     main.current?.focus();
+    // A route change should start at the top. Without this, navigating from
+    // halfway down a long roster lands on the next page mid-scroll.
+    main.current?.scrollTo?.({ top: 0, behavior: 'instant' });
   }, [pathname]);
 
   return (
@@ -62,7 +68,25 @@ export default function RoleShell({ navItems, footerExtra, title, children }) {
         tabIndex={-1}
         style={{ outline: 'none' }}
       >
-        {children}
+        {/*
+          mode="wait" so the outgoing page is gone before the incoming one
+          arrives. Overlapping them would mean two copies of the same headings
+          in the accessibility tree while they cross-fade, and a layout that
+          jumps as one unmounts.
+
+          Keyed on pathname, so a route change animates and a state change
+          within one page does not.
+        */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={pageTransition.initial}
+            animate={pageTransition.animate}
+            exit={pageTransition.exit}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

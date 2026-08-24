@@ -22,11 +22,11 @@ import AccountPage from '../shared/AccountPage';
  */
 
 const NAV = [
-  { to: '/admin', end: true, icon: '🏠', label: 'Dashboard' },
-  { to: '/admin/users', icon: '👥', label: 'User Management' },
-  { to: '/admin/content', icon: '📚', label: 'Curriculum' },
+  { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },
+  { to: '/admin/users', icon: 'users', label: 'User Management' },
+  { to: '/admin/content', icon: 'curriculum', label: 'Curriculum' },
   { section: 'Account' },
-  { to: '/admin/account', icon: '⚙️', label: 'My Account' },
+  { to: '/admin/account', icon: 'account', label: 'My Account' },
 ];
 
 const fadeUp = {

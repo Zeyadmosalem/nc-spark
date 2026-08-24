@@ -72,7 +72,10 @@ describe('continue where you left off', () => {
       enrol({ id: 'e2', courseId: 'c2', percent: 80 }),
     ]));
     show();
-    const link = screen.getByRole('link', { name: /Continue Manual Handling/ });
+    // The course title is deliberately not in the label — a long one made
+    // this button wider than the panel it sits in. The destination is what
+    // the test is actually about.
+    const link = screen.getByRole('link', { name: /Continue where you left off/ });
     expect(link).toHaveAttribute('href', '/trainee/courses/c2');
   });
 
@@ -114,7 +117,7 @@ describe('the course list', () => {
     mocks.useMyEnrollments.mockReturnValue(query([enrol({ courseId: 'gone' })]));
     show();
     expect(screen.queryByText('undefined')).not.toBeInTheDocument();
-    expect(screen.getByText('📚 My courses')).toBeInTheDocument();
+    expect(screen.getByText('My courses')).toBeInTheDocument();
   });
 
   it('sends a trainee with nothing to the catalog', () => {

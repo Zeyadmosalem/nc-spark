@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useCourses, useMyEnrollments } from '../../hooks/useCourses';
 import RoleShell from '../../components/shared/RoleShell';
 import QueryError from '../../components/shared/QueryError';
@@ -8,17 +9,23 @@ import QuizPage from './QuizPage';
 import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
+import LibraryPage from './LibraryPage';
 import PageSkeleton from '../../components/ui/Skeleton';
+import PageHeader from '../../components/ui/PageHeader';
+import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
+import { stagger, item, EASE_OUT } from '../../lib/motion';
 import AccountPage from '../shared/AccountPage';
 
 const NAV = [
-  { to: '/trainee', end: true, icon: '🏠', label: 'Dashboard' },
-  { to: '/trainee/courses', icon: '📚', label: 'My Courses' },
-  { to: '/trainee/catalog', icon: '🔍', label: 'Course Catalog' },
-  { to: '/trainee/achievements', icon: '🏆', label: 'Achievements' },
+  { to: '/trainee', end: true, icon: 'dashboard', label: 'Dashboard' },
+  { to: '/trainee/courses', icon: 'courses', label: 'My Courses' },
+  { to: '/trainee/library', icon: 'library', label: 'Library' },
+  { to: '/trainee/catalog', icon: 'catalog', label: 'Course Catalog' },
+  { to: '/trainee/achievements', icon: 'achievements', label: 'Achievements' },
   { section: 'Account' },
-  { to: '/trainee/account', icon: '⚙️', label: 'My Account' },
-  { to: '/trainee/support', icon: '🎧', label: 'Support' },
+  { to: '/trainee/account', icon: 'account', label: 'My Account' },
+  { to: '/trainee/support', icon: 'support', label: 'Support' },
 ];
 
 export function MyCoursesPage() {
@@ -49,60 +56,86 @@ export function MyCoursesPage() {
   );
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div>
-        <p className="eyebrow">My Courses</p>
-        <h1 className="section-heading">Learning Library</h1>
-        <p className="section-sub">All your enrolled courses in one place.</p>
-      </div>
+    <div className="page-body">
+      <PageHeader
+        eyebrow="My courses"
+        icon="courses"
+        title="Your courses"
+        subtitle="Everything you are enrolled on, and how far through each one you are."
+        actions={<Button to="/trainee/catalog" variant="secondary" icon="catalog">Find another</Button>}
+      />
+
       {active.length === 0 ? (
-        <div className="card no-hover" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>
-            You are not enrolled in any course yet.
-          </p>
-          <Link to="/trainee/catalog" className="btn btn-primary">Browse the catalog</Link>
-        </div>
+        <EmptyState
+          icon="courses"
+          title="No courses yet"
+          action={<Button to="/trainee/catalog" variant="primary" icon="catalog">Browse the catalog</Button>}
+        >
+          You are not enrolled in any course yet. Apply from the catalog and a
+          trainer will approve you.
+        </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <motion.div className="course-grid" variants={stagger(0.06)} initial="hidden" animate="visible">
           {active.map((enrollment) => {
             const course = byId.get(enrollment.courseId);
             if (!course) return null;
-            const accent = course.color || '#002F6C';
+            const accent = course.color || 'var(--brand-primary)';
+            const percent = enrollment.percent ?? 0;
+            const finished = percent >= 100;
+
             return (
-              <div key={enrollment.id} className="course-card">
-                <div className="course-card-header"
-                     style={{ background: `linear-gradient(145deg, ${accent}dd, ${accent}aa)` }}>
-                  <div className="course-card-icon">{course.icon || '📘'}</div>
-                  <div className="course-card-title">{course.title}</div>
-                  <div className="course-card-subtitle">{course.subtitle}</div>
+              <motion.article key={enrollment.id} className="course-card" variants={item}>
+                <div
+                  className="course-card-header"
+                  style={{ background: `linear-gradient(150deg, ${accent}, color-mix(in srgb, ${accent} 55%, #000))` }}
+                >
+                  <span className="course-card-icon" aria-hidden="true">{course.icon || '\u{1F4D8}'}</span>
+                  <h2 className="course-card-title">{course.title}</h2>
+                  {course.subtitle && (
+                    <p className="course-card-subtitle">{course.subtitle}</p>
+                  )}
                 </div>
+
                 <div className="course-card-body">
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                    {course.description}
-                  </p>
+                  <p className="course-card-desc">{course.description}</p>
                   <div>
-                    <div className="course-progress-label">
-                      <span>Progress</span>
-                      <span style={{ fontWeight: 700, color: 'var(--brand-primary)' }}>
-                        {enrollment.percent}%
-                      </span>
+                    <div className="progress-label">
+                      <span>{finished ? 'Complete' : 'Progress'}</span>
+                      <span className="progress-value tabular">{percent}%</span>
                     </div>
-                    <div className="progress-track">
-                      <div className="progress-fill" style={{ width: `${enrollment.percent}%` }} />
+                    <div
+                      className="progress-track"
+                      role="progressbar"
+                      aria-valuenow={percent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${course.title} progress`}
+                    >
+                      {/*
+                        Animated on arrival rather than jumping to width. The
+                        bar is the one figure on this card somebody actually
+                        looks for, so it is worth drawing the eye to.
+                      */}
+                      <motion.div
+                        className="progress-fill"
+                        data-complete={finished || undefined}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percent}%` }}
+                        transition={{ duration: 0.8, ease: EASE_OUT, delay: 0.15 }}
+                      />
                     </div>
                   </div>
                 </div>
+
                 <div className="course-card-footer">
-                  <Link to={`/trainee/courses/${course.id}`}
-                        className="btn btn-primary btn-block btn-sm"
-                        style={{ display: 'flex', textDecoration: 'none', justifyContent: 'center', alignItems: 'center' }}>
-                    Open Course →
-                  </Link>
+                  <Button to={`/trainee/courses/${course.id}`} variant="primary" block iconAfter="forward">
+                    {percent === 0 ? 'Start' : finished ? 'Review' : 'Continue'}
+                  </Button>
                 </div>
-              </div>
+              </motion.article>
             );
           })}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -150,9 +183,15 @@ export default function TraineeShell() {
         <Route path="activity/:activityId" element={<ActivityPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="support" element={<SupportPage />} />
-        {/* Legacy routes, now accessible via course page */}
-        <Route path="quizzes" element={<Navigate to="/trainee/courses" replace />} />
-        <Route path="videos" element={<Navigate to="/trainee/courses" replace />} />
+        <Route path="library" element={<LibraryPage />} />
+        {/*
+          The prototype's two library screens. Both read invented data and both
+          went with the store, but the question each answered was real, so they
+          are one page with the filter preset rather than two redirects to a
+          course list that answers neither.
+        */}
+        <Route path="quizzes" element={<LibraryPage initialKind="quiz" />} />
+        <Route path="videos" element={<LibraryPage initialKind="video" />} />
         <Route path="quiz/:quizId" element={<QuizPage />} />
         <Route path="achievements" element={<AchievementsPage />} />
         <Route path="*" element={<Navigate to="/trainee" replace />} />

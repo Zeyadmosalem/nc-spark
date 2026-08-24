@@ -8,6 +8,9 @@ import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import StatCard from '../../components/ui/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import { fadeUp, stagger, item } from '../../lib/motion';
 
 /**
  * The first screen a trainee sees, on real enrolment progress.
@@ -23,14 +26,6 @@ import EmptyState from '../../components/ui/EmptyState';
  * tells a trainee they are behind; the honest version does not claim to
  * measure what the product does not yet measure. They return with B7.
  */
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
 
 export default function TraineeDashboard() {
   const { profile } = useSession();
@@ -75,7 +70,7 @@ export default function TraineeDashboard() {
   return (
     <motion.div
       className="page-body"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+      variants={stagger()}
       initial="hidden"
       animate="visible"
     >
@@ -83,105 +78,93 @@ export default function TraineeDashboard() {
           when there is nothing to say, so it costs no space on a quiet day. */}
       <TraineeNotices />
 
-      <motion.div
-        variants={fadeUp}
-        custom={0}
-        className="xp-hero"
-        style={{ background: 'linear-gradient(145deg, rgba(0,0,0,0.92), rgba(10,10,18,0.95)), radial-gradient(500px 300px at 10% 10%, rgba(0,163,224,0.2), transparent), radial-gradient(500px 400px at 95% 5%, rgba(107,44,141,0.25), transparent)' }}
-      >
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: '1rem',
-        }}>
-          <div>
-            <p style={{
-              fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase',
-              letterSpacing: '0.08em', marginBottom: '0.5rem',
-            }}>
+      <motion.section className="hero" variants={fadeUp} custom={0}>
+        <div className="hero-inner">
+          <div style={{ minWidth: 0 }}>
+            <p className="hero-eyebrow">
+              <Icon name="spark" size={12} />
               Your training
             </p>
-            <h1 style={{
-              fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 4vw, 2.1rem)',
-              color: '#fff', lineHeight: 1.1, marginBottom: '0.5rem',
-            }}>
+            <h1 className="hero-title">
               {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0 }}>
+            <p className="hero-sub">
               {started.length === 0
                 ? 'You have not started a course yet.'
                 : `${overall}% through ${started.length} course${started.length === 1 ? '' : 's'}.`}
             </p>
           </div>
+
           {resumeCourse && (
-            <Link
+            <Button
               to={`/trainee/courses/${resumeCourse.id}`}
-              className="btn btn-primary"
-              style={{ textDecoration: 'none' }}
+              variant="primary"
+              iconAfter="forward"
             >
-              Continue {resumeCourse.title} →
-            </Link>
+              {/*
+                The title is not in the label. A course called "Workplace
+                Health, Safety and Environmental Compliance" made this button
+                wider than the panel it sits in, and wrapped the hero.
+              */}
+              Continue where you left off
+            </Button>
           )}
         </div>
-      </motion.div>
+      </motion.section>
 
-      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
-        <StatCard label="Overall progress" value={`${overall}%`} icon="📈" color="var(--brand-primary)" />
-        <StatCard label="In progress" value={active.length} icon="📚" color="var(--brand-secondary)" />
-        <StatCard label="Completed" value={completed.length} icon="✅" color="#28a745" />
+      <motion.div className="stat-grid" variants={stagger(0.05, 0.08)}>
+        <StatCard label="Overall progress" value={`${overall}%`} icon="trend" color="var(--brand-primary)" />
+        <StatCard label="In progress" value={active.length} icon="courses" color="var(--brand-accent)" />
+        <StatCard label="Completed" value={completed.length} icon="complete" color="#1a7f37" />
         <StatCard
           label="Awaiting approval"
           value={waiting.length}
-          icon="⏳"
-          color={waiting.length > 0 ? 'var(--brand-accent)' : 'var(--text-3)'}
+          icon="waiting"
+          color={waiting.length > 0 ? '#b8860b' : 'var(--text-3)'}
+          tone={waiting.length > 0 ? 'attention' : undefined}
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} custom={2} className="card no-hover">
-        <div className="card-title">📚 My courses</div>
+      <motion.section className="card no-hover" variants={item}>
+        <h2 className="card-title">
+          <Icon name="courses" size={17} />
+          My courses
+        </h2>
+
         {started.length === 0 && waiting.length === 0 ? (
           <EmptyState
-            icon="🎓"
+            icon="catalog"
             title="Nothing on your plate yet"
-            action={(
-              <Link to="/trainee/catalog" className="btn btn-primary"
-                    style={{ textDecoration: 'none' }}>
-                Browse the catalog
-              </Link>
-            )}
+            action={<Button to="/trainee/catalog" variant="primary" icon="catalog">Browse the catalog</Button>}
           >
             You are not enrolled in any course yet. Find one in the catalog and
             apply — a trainer approves you, then you can start.
           </EmptyState>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <motion.div className="stack" variants={stagger(0.04)}>
             {started.map((e) => {
               const course = byId.get(e.courseId);
               if (!course) return null;
               return (
-                <Link
-                  key={e.id}
-                  to={`/trainee/courses/${course.id}`}
-                  className="student-row"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
-                >
-                  <div style={{
-                    fontSize: '1.5rem', width: '2.5rem', height: '2.5rem', flexShrink: 0,
-                    background: `${course.color ?? '#00a3e0'}22`, borderRadius: 'var(--r-lg)',
-                    display: 'grid', placeItems: 'center',
-                  }}>
-                    {course.icon ?? '📘'}
-                  </div>
-                  <div className="student-row-info">
-                    <div className="student-row-name">{course.title}</div>
-                    <div className="student-row-meta">
-                      {e.status === 'completed' ? 'Completed' : course.subtitle}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <ProgressRing radius={24} stroke={4} progress={e.percent ?? 0} />
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-3)' }}>→</span>
-                  </div>
-                </Link>
+                <motion.div key={e.id} variants={item}>
+                  <Link to={`/trainee/courses/${course.id}`} className="row-link">
+                    <span
+                      className="course-chip"
+                      aria-hidden="true"
+                      style={{ '--chip': course.color ?? 'var(--brand-accent)' }}
+                    >
+                      {course.icon ?? '\u{1F4D8}'}
+                    </span>
+                    <span className="data-row-main">
+                      <span className="data-row-title">{course.title}</span>
+                      <span className="data-row-meta">
+                        {e.status === 'completed' ? 'Completed' : course.subtitle}
+                      </span>
+                    </span>
+                    <ProgressRing radius={22} stroke={4} progress={e.percent ?? 0} />
+                    <Icon name="next" size={16} className="row-chevron" />
+                  </Link>
+                </motion.div>
               );
             })}
 
@@ -191,25 +174,24 @@ export default function TraineeDashboard() {
               const course = byId.get(e.courseId);
               if (!course) return null;
               return (
-                <div key={e.id} className="student-row" style={{ cursor: 'default', opacity: 0.75 }}>
-                  <div style={{
-                    fontSize: '1.5rem', width: '2.5rem', height: '2.5rem', flexShrink: 0,
-                    background: 'var(--surface-alt)', borderRadius: 'var(--r-lg)',
-                    display: 'grid', placeItems: 'center',
-                  }}>
-                    {course.icon ?? '📘'}
-                  </div>
-                  <div className="student-row-info">
-                    <div className="student-row-name">{course.title}</div>
-                    <div className="student-row-meta">Waiting for a trainer to approve you</div>
-                  </div>
-                  <span className="chip">⏳ Pending</span>
-                </div>
+                <motion.div key={e.id} className="row-static" variants={item}>
+                  <span className="course-chip course-chip-muted" aria-hidden="true">
+                    {course.icon ?? '\u{1F4D8}'}
+                  </span>
+                  <span className="data-row-main">
+                    <span className="data-row-title">{course.title}</span>
+                    <span className="data-row-meta">Waiting for a trainer to approve you</span>
+                  </span>
+                  <span className="chip">
+                    <Icon name="pending" size={12} />
+                    Pending
+                  </span>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         )}
-      </motion.div>
+      </motion.section>
     </motion.div>
   );
 }

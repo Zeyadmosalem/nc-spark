@@ -26,6 +26,7 @@ export function useCompleteActivity() {
       // the padlock stays shut on screen exactly as the comment above warns.
       queryClient.invalidateQueries({ queryKey: ['progress', 'enrollment-completions'] });
       queryClient.invalidateQueries({ queryKey: ['roster'] });
+      queryClient.invalidateQueries({ queryKey: ['library'] });
     },
   });
 }
