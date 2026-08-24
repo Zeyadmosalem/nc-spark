@@ -59,7 +59,7 @@ export default function TrainerCourses() {
       />
 
       {mine.length === 0 ? (
-        <EmptyState icon="📋" title="No courses yet">
+        <EmptyState icon="teaching" title="No courses yet">
           Nothing is assigned to you. Ask to take a course on below, or an
           administrator can assign you one.
         </EmptyState>

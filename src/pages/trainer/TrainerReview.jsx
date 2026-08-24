@@ -7,6 +7,7 @@ import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
+import Icon from '../../components/ui/Icon';
 
 /**
  * The two actions only a trainer can take, in one place.
@@ -44,14 +45,15 @@ export default function TrainerReview() {
       </div>
 
       {paragraphs.length === 0 && stuck.length === 0 ? (
-        <EmptyState icon="✅" title="All clear">
+        <EmptyState icon="complete" title="All clear">
           Nothing is waiting on you. Every trainee can keep going.
         </EmptyState>
       ) : (
         <>
           <section className="stack-md">
             <h2 style={{ fontSize: '1.1rem' }}>
-              ✍️ Paragraphs awaiting a grade ({paragraphs.length})
+              <Icon name="review" size={16} />
+            Paragraphs awaiting a grade ({paragraphs.length})
             </h2>
             {paragraphs.length === 0
               ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
@@ -59,7 +61,10 @@ export default function TrainerReview() {
           </section>
 
           <section className="stack-md">
-            <h2 style={{ fontSize: '1.1rem' }}>🔁 Blocked on a retake ({stuck.length})</h2>
+            <h2 className="group-title">
+              <Icon name="retry" size={16} />
+              Blocked on a retake ({stuck.length})
+            </h2>
             {stuck.length === 0
               ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
               : stuck.map((a) => (

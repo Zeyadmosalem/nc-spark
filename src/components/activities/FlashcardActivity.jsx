@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Icon from '../ui/Icon';
 
 export default function FlashcardActivity({ activity }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -62,7 +63,10 @@ export default function FlashcardActivity({ activity }) {
       </div>
 
       <div style={{ display: 'flex', gap: '1rem' }}>
-        <button className="btn btn-outline" onClick={handlePrev} disabled={currentIndex === 0}>← Previous</button>
+        <button className="btn btn-outline" onClick={handlePrev} disabled={currentIndex === 0}>
+          <Icon name="back" size={14} />
+          Previous
+        </button>
         <button className="btn btn-ghost" onClick={() => setFlipped(!flipped)}>Flip</button>
         <button className="btn btn-outline" onClick={handleNext} disabled={currentIndex === total - 1}>Next →</button>
       </div>

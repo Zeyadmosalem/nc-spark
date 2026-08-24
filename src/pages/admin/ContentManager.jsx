@@ -122,7 +122,7 @@ export default function ContentManager() {
 
       {list.length === 0 ? (
         <EmptyState
-          icon="📚"
+          icon="courses"
           title="No courses yet"
           action={(
             <button type="button" className="btn btn-primary" onClick={openNew}>

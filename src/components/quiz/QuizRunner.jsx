@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from '../ui/Icon';
 import { useMyAttempt, useStartQuiz, useSubmitQuiz } from '../../hooks/useQuizzes';
 import Alert from '../ui/Alert';
 import PageSkeleton from '../ui/Skeleton';
@@ -102,7 +103,9 @@ export default function QuizRunner({ quiz, onPassed }) {
                     : p.isCorrect ? '#28a745' : '#dc3545',
                 }}
               >
-                {p.isCorrect === null ? '…' : p.isCorrect ? '✓' : '✕'}
+                {p.isCorrect === null
+                ? '\u2026'
+                : <Icon name={p.isCorrect ? 'done' : 'close'} size={12} />}
               </span>
             ))}
           </div>
@@ -175,7 +178,10 @@ export default function QuizRunner({ quiz, onPassed }) {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }}>
           <button className="btn btn-ghost btn-sm" disabled={index === 0}
-                  onClick={() => setIndex((i) => i - 1)}>← Back</button>
+                  onClick={() => setIndex((i) => i - 1)}>
+              <Icon name="back" size={14} />
+              Back
+            </button>
           {last ? (
             <button className="btn btn-primary" disabled={!answered || submit.isPending}
                     onClick={finish}>
@@ -183,7 +189,10 @@ export default function QuizRunner({ quiz, onPassed }) {
             </button>
           ) : (
             <button className="btn btn-primary" disabled={!answered}
-                    onClick={() => setIndex((i) => i + 1)}>Next →</button>
+                    onClick={() => setIndex((i) => i + 1)}>
+              Next
+              <Icon name="forward" size={14} />
+            </button>
           )}
         </div>
       </div>
@@ -227,7 +236,7 @@ export default function QuizRunner({ quiz, onPassed }) {
             </p>
             <button className="btn btn-primary btn-lg btn-block"
                     disabled={start.isPending} onClick={begin}>
-              {start.isPending ? 'Starting…' : '🚀 Start Quiz'}
+              {start.isPending ? 'Starting\u2026' : 'Start the quiz'}
             </button>
           </>
         )}

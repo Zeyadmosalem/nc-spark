@@ -65,7 +65,7 @@ export default function QuizEditor({ activityId, activityTitle, courseId }) {
   if (!quiz) {
     return (
       <div className="stack">
-        <EmptyState icon="📝" title="No quiz here yet">
+        <EmptyState icon="quiz" title="No quiz here yet">
           This activity is a quiz with nothing behind it. A trainee opening it
           finds nothing to answer, and the course cannot be published until it
           has questions.
@@ -186,7 +186,7 @@ function QuestionList({ quiz, questions, activityId, courseId }) {
   return (
     <div className="stack">
       {questions.length === 0 ? (
-        <EmptyState icon="❓" title="No questions yet">
+        <EmptyState icon="warning" title="No questions yet">
           A quiz with no questions cannot be passed — every pass mark is above
           zero and an empty quiz scores zero. The course will not publish until
           this has at least one.
@@ -277,11 +277,11 @@ function QuestionRow({ question, index, last, quiz, activityId, courseId, onMove
         <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
           <button type="button" className="btn btn-ghost btn-sm" disabled={index === 0 || reordering}
                   aria-label={`Move question ${index + 1} up`} onClick={() => onMove(-1)}>
-            ↑
+            <Icon name="up" size={14} />
           </button>
           <button type="button" className="btn btn-ghost btn-sm" disabled={last || reordering}
                   aria-label={`Move question ${index + 1} down`} onClick={() => onMove(1)}>
-            ↓
+            <Icon name="down" size={14} />
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen((o) => !o)}>
             {open ? 'Close' : 'Edit'}
@@ -519,7 +519,7 @@ function McqOptions({ q, set, idBase }) {
                 set({ options: kept, answer: { index: next } });
               }}
             >
-              ✕
+              <Icon name="close" size={13} />
             </button>
           </div>
         ))}

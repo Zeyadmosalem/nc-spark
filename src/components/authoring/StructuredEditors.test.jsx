@@ -125,7 +125,7 @@ describe('the scenario editor', () => {
         ],
       }],
     }} />);
-    await userEvent.click(screen.getAllByRole('button', { name: '✕' })[0]);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove option 1 of situation 1' }));
     const choices = contentOf().steps[0].choices;
     expect(choices).toHaveLength(2);
     expect(choices.filter((c) => c.isCorrect)).toHaveLength(1);
@@ -133,7 +133,9 @@ describe('the scenario editor', () => {
 
   it('will not go below two options', () => {
     render(<Host Editor={ScenarioEditor} initial={EMPTY_CONTENT.scenario} />);
-    for (const b of screen.getAllByRole('button', { name: '✕' })) expect(b).toBeDisabled();
+    for (const b of screen.getAllByRole('button', { name: /Remove option \d+ of situation 1/ })) {
+      expect(b).toBeDisabled();
+    }
   });
 
   /** Radios in separate situations must not share a name, or one steals the other. */

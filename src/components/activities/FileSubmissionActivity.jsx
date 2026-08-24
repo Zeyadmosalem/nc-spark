@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeHtml } from '../../lib/sanitizeHtml';
+import Icon from '../ui/Icon';
 import { uploadSubmission } from '../../api/storage';
 
 export default function FileSubmissionActivity({ activity, onComplete }) {
@@ -89,7 +90,9 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
                 onChange={handleFileSelect} 
                 style={{ display: 'none' }} 
               />
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📄</div>
+              <div className="empty-state-icon" style={{ margin: '0 auto 1rem' }}>
+            <Icon name="file" size={22} />
+          </div>
               <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
                 {file ? file.name : 'Drag & drop your file here'}
               </h3>
@@ -141,7 +144,9 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
               borderRadius: 'var(--r-lg)',
             }}
           >
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#28a745' }}>✅</div>
+            <div className="empty-state-icon success" style={{ margin: '0 auto 1rem' }}>
+            <Icon name="complete" size={24} />
+          </div>
             <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem', color: '#28a745' }}>Assignment Submitted!</h3>
             <p className="muted-2">Your file <strong>{file?.name}</strong> was successfully uploaded.</p>
           </motion.div>

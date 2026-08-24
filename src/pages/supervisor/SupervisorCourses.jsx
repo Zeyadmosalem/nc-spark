@@ -82,7 +82,7 @@ export default function SupervisorCourses() {
       />
 
       {list.length === 0 ? (
-        <EmptyState icon="📚" title="Nothing to show">
+        <EmptyState icon="courses" title="Nothing to show">
           {team.length === 0
             ? 'No trainers are assigned to you yet.'
             : 'Your trainers have no courses yet.'}

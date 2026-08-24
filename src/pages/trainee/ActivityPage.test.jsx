@@ -85,7 +85,7 @@ describe('ActivityPage', () => {
     });
     mocks.myAttempt.mockResolvedValue(null);
     renderAt();
-    expect(await screen.findByRole('button', { name: /start quiz/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /start the quiz/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /mark as complete/i })).not.toBeInTheDocument();
   });
 

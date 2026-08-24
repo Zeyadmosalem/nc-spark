@@ -6,6 +6,7 @@ import {
 import QueryError from '../shared/QueryError';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
+import Icon from '../ui/Icon';
 import { SkeletonList } from '../ui/Skeleton';
 import { useToast } from '../ui/toast-context';
 
@@ -53,7 +54,7 @@ export default function AllowedDomains() {
   return (
     <div className="stack-md">
       {list.length === 0 ? (
-        <EmptyState icon="🔒" title="Every signup needs approval">
+        <EmptyState icon="locked" title="Every signup needs approval">
           No domains are allowlisted, so everyone who signs up waits for you.
           Add a domain to let colleagues in without review.
         </EmptyState>
@@ -69,7 +70,9 @@ export default function AllowedDomains() {
                 exit={{ opacity: 0, height: 0 }}
                 className="data-row"
               >
-                <span style={{ fontSize: '1.1rem' }} aria-hidden="true">✉️</span>
+                <span className="row-icon">
+                  <Icon name="email" size={15} />
+                </span>
                 <div className="data-row-main">
                   <div className="data-row-title">@{d.domain}</div>
                   <div className="data-row-meta">signs in without review</div>

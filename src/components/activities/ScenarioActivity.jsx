@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeHtml } from '../../lib/sanitizeHtml';
+import Icon from '../ui/Icon';
 
 export default function ScenarioActivity({ activity }) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -95,8 +96,8 @@ export default function ScenarioActivity({ activity }) {
                 width: 24, height: 24, borderRadius: '50%', border: `2px solid ${borderColor}`, 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
               }}>
-                {showFeedback && choice.isCorrect && '✓'}
-                {showFeedback && isSelected && !choice.isCorrect && '✕'}
+                {showFeedback && choice.isCorrect && <Icon name="done" size={14} />}
+                {showFeedback && isSelected && !choice.isCorrect && <Icon name="close" size={14} />}
               </div>
               {choice.text}
             </button>
@@ -124,7 +125,8 @@ export default function ScenarioActivity({ activity }) {
             <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
               {!isDone ? (
                 <button className="btn btn-primary" onClick={handleNextStep}>
-                  {currentStepIndex < activity.steps.length - 1 ? 'Next Situation →' : 'Finish Scenario'}
+                  {currentStepIndex < activity.steps.length - 1 ? 'Next situation' : 'Finish'}
+                  <Icon name="forward" size={14} />
                 </button>
               ) : (
                 <span style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Scenario Complete! You can now mark this activity as complete.</span>

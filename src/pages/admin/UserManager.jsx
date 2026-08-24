@@ -107,7 +107,7 @@ export default function UserManager() {
         </div>
         {signups.error && <QueryError error={signups.error} what="the approval queue" />}
         {!signups.error && (queue.length === 0 ? (
-          <EmptyState icon="✅" title="Nobody is waiting">
+          <EmptyState icon="complete" title="Nobody is waiting">
             Signups from allowlisted domains activate themselves. Anyone else lands
             here for you to review.
           </EmptyState>
@@ -162,7 +162,7 @@ export default function UserManager() {
           animate={{ opacity: 1, y: 0 }}
         >
           {shown.length === 0 ? (
-            <EmptyState icon="🔍" title={term ? 'No matches' : 'Nobody here'}>
+            <EmptyState icon="search" title={term ? 'No matches' : 'Nobody here'}>
               {term
                 ? `Nobody matches "${search}". Try part of a name or an email domain.`
                 : 'No users in this group yet.'}

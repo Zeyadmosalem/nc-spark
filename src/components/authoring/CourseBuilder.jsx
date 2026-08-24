@@ -141,7 +141,10 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
         <p className="muted-2">
           That course does not exist, or you cannot edit it.
         </p>
-        <Link to={backTo} className="btn btn-ghost btn-sm">← Back</Link>
+        <Link to={backTo} className="crumb">
+          <Icon name="back" size={14} />
+          Back
+        </Link>
       </div>
     );
   }
@@ -170,7 +173,8 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
     <div className="page-body stack-lg">
       <div>
         <Link to={backTo} style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
-          ← Back
+          <Icon name="back" size={14} />
+          Back
         </Link>
         <h1 className="section-heading" style={{ margin: '0.5rem 0 0.35rem' }}>{title}</h1>
         <p className="section-sub">
@@ -184,12 +188,13 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
             route without the builder knowing which one mounted it. */}
         <Link to="people" className="btn btn-ghost btn-sm"
               style={{ textDecoration: 'none', marginTop: '0.5rem' }}>
-          See who is on this course →
+          See who is on this course
+          <Icon name="forward" size={14} />
         </Link>
       </div>
 
       {modules.length === 0 ? (
-        <EmptyState icon="🧱" title="No modules yet">
+        <EmptyState icon="curriculum" title="No modules yet">
           A course is a list of modules, and each module is a list of activities.
           Add the first module below.
         </EmptyState>

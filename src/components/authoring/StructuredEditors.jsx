@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from '../ui/Icon';
 import { BLANK_CARD, BLANK_PAIR, BLANK_CHOICE, BLANK_STEP } from '../../api/authoring';
 
 /**
@@ -310,6 +311,10 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                         className="btn btn-ghost btn-sm"
                         style={{ color: choices.length > 2 ? '#dc3545' : 'var(--text-3)' }}
                         disabled={choices.length <= 2}
+                        // The glyph used to be a literal ✕, which gave the
+                        // button its only accessible name by accident. An icon
+                        // is aria-hidden, so the name has to be said.
+                        aria-label={`Remove option ${c + 1} of situation ${i + 1}`}
                         title={choices.length > 2 ? undefined : 'A situation needs at least two options'}
                         onClick={() => {
                           const kept = choices.filter((_, j) => j !== c);
@@ -320,7 +325,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                           setChoices(kept);
                         }}
                       >
-                        ✕
+                        <Icon name="close" size={13} />
                       </button>
                     </div>
                   ))}
