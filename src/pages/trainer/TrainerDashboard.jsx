@@ -10,6 +10,10 @@ import StatCard from '../../components/ui/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
 import Alert from '../../components/ui/Alert';
 import { useToast } from '../../components/ui/toast-context';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import PageHeader from '../../components/ui/PageHeader';
+import { fadeUp, stagger, item } from '../../lib/motion';
 
 /**
  * What a trainer needs to see first, on real data.
@@ -26,14 +30,6 @@ import { useToast } from '../../components/ui/toast-context';
  *
  * Absent on purpose: XP and leaderboards (backlog B7, nothing awards them).
  */
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
 
 const mean = (nums) =>
   (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
@@ -74,33 +70,26 @@ export default function TrainerDashboard() {
   const firstName = (profile?.name ?? '').split(' ')[0];
 
   return (
-    <motion.div
-      className="page-body"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={fadeUp} custom={0}>
-        <p className="eyebrow">Teaching</p>
-        <h1 className="section-heading" style={{ marginBottom: '0.35rem' }}>
-          {firstName ? `Hello, ${firstName}` : 'Hello'}
-        </h1>
-        <p className="section-sub">
-          {mine.length === 0
-            ? 'No courses are assigned to you yet.'
-            : `${mine.length} course${mine.length === 1 ? '' : 's'}, ${started.length} learner${started.length === 1 ? '' : 's'}.`}
-        </p>
-      </motion.div>
+    <motion.div className="page-body" variants={stagger()} initial="hidden" animate="visible">
+      <PageHeader
+        eyebrow="Teaching"
+        icon="teaching"
+        title={firstName ? `Hello, ${firstName}` : 'Hello'}
+        subtitle={mine.length === 0
+          ? 'No courses are assigned to you yet.'
+          : `${mine.length} course${mine.length === 1 ? '' : 's'}, ${started.length} learner${started.length === 1 ? '' : 's'}.`}
+      />
 
       {/* Everything in this block stops a trainee from progressing. */}
       <motion.section variants={fadeUp} custom={1}>
-        <div className="section-header" style={{ marginBottom: '0.75rem' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Waiting on you</h2>
-          {waiting > 0 && <span className="section-count">{waiting} in total</span>}
-        </div>
+        <h2 className="group-title">
+          <Icon name="inbox" size={17} />
+          Waiting on you
+          {waiting > 0 && <span className="group-count">{waiting} in total</span>}
+        </h2>
 
         {waiting === 0 ? (
-          <EmptyState icon="✅" title="All clear">
+          <EmptyState icon="complete" title="All clear">
             Nothing is blocked on you. Every trainee on your courses can keep going.
           </EmptyState>
         ) : (
@@ -109,8 +98,8 @@ export default function TrainerDashboard() {
               <ApplicationQueue applications={toApprove} />
             )}
             {(toMark.length > 0 || stuck.length > 0) && (
-              <div className="card no-hover">
-                <div className="card-title">Assessment</div>
+              <div className="card no-hover card-accent">
+                <h3 className="card-title"><Icon name="review" size={16} />Assessment</h3>
                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   {toMark.length > 0 && (
                     <span style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
@@ -124,10 +113,9 @@ export default function TrainerDashboard() {
                       without a retake
                     </span>
                   )}
-                  <Link to="/trainer/review" className="btn btn-primary btn-sm"
-                        style={{ textDecoration: 'none' }}>
-                    Open the review queue →
-                  </Link>
+                  <Button to="/trainer/review" variant="primary" size="sm" iconAfter="forward">
+                    Open the review queue
+                  </Button>
                 </div>
               </div>
             )}
@@ -135,32 +123,33 @@ export default function TrainerDashboard() {
         )}
       </motion.section>
 
-      <motion.div variants={fadeUp} custom={2} className="stat-grid stat-grid-4">
-        <StatCard label="Courses" value={mine.length}
+      <motion.div className="stat-grid" variants={stagger(0.045, 0.06)}>
+        <StatCard label="Courses" value={mine.length} icon="courses"
                   sub={`${mine.filter((c) => c.status === 'published').length} published`}
                   color="var(--brand-primary)" />
-        <StatCard label="Learners" value={started.length} color="var(--brand-secondary)" />
+        <StatCard label="Learners" value={started.length} icon="users" color="var(--brand-accent)" />
         <StatCard
           label="Average progress"
           value={averageProgress === null ? '—' : `${averageProgress}%`}
-          color="#28a745"
+          icon="trend"
+          color="#1a7f37"
         />
         <StatCard
           label="Completed"
           value={cohort.filter((e) => e.status === 'completed').length}
+          icon="complete"
           color="var(--heading)"
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} custom={3} className="card no-hover">
-        <div className="card-title">Your courses</div>
+      <motion.section className="card no-hover" variants={item}>
+        <h2 className="card-title"><Icon name="courses" size={16} />Your courses</h2>
         {mine.length === 0 ? (
-          <EmptyState icon="📋" title="Nothing assigned yet"
+          <EmptyState icon="teaching" title="Nothing assigned yet"
                       action={(
-                        <Link to="/trainer/courses" className="btn btn-primary"
-                              style={{ textDecoration: 'none' }}>
+                        <Button to="/trainer/courses" variant="primary" icon="catalog">
                           Find a course to teach
-                        </Link>
+                        </Button>
                       )}>
             An administrator assigns courses, or you can ask to take one on.
           </EmptyState>
@@ -173,23 +162,26 @@ export default function TrainerDashboard() {
                 <Link
                   key={course.id}
                   to={`/trainer/courses/${course.id}`}
-                  className="data-row"
+                  className="row-link"
                 >
-                  <span style={{ fontSize: '1.3rem' }} aria-hidden="true">{course.icon ?? '📘'}</span>
-                  <div className="data-row-main">
-                    <div className="data-row-title">{course.title}</div>
-                    <div className="data-row-meta">
+                  <span className="course-chip" aria-hidden="true"
+                        style={{ '--chip': course.color ?? 'var(--brand-accent)' }}>
+                    {course.icon ?? '\u{1F4D8}'}
+                  </span>
+                  <span className="data-row-main">
+                    <span className="data-row-title">{course.title}</span>
+                    <span className="data-row-meta">
                       {onCourse.length} learner{onCourse.length === 1 ? '' : 's'}
                       {progress !== null && ` · ${progress}% average progress`}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-3)' }} aria-hidden="true">→</span>
+                    </span>
+                  </span>
+                  <Icon name="next" size={16} className="row-chevron" />
                 </Link>
               );
             })}
           </div>
         )}
-      </motion.div>
+      </motion.section>
     </motion.div>
   );
 }

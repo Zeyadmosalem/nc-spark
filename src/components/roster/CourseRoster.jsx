@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCourseRoster } from '../../hooks/useRoster';
 import { useCourseForEditing } from '../../hooks/useAuthoring';
 import QueryError from '../shared/QueryError';
 import PageSkeleton from '../ui/Skeleton';
+import PageHeader from '../ui/PageHeader';
 import StatCard from '../ui/StatCard';
 import StatusPill from '../ui/StatusPill';
 import Icon from '../ui/Icon';
@@ -79,50 +80,52 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
   const sorted = people.sort(ORDER[order].sort);
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div>
-        <Link to={backTo} style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>← Back</Link>
-        <h1 className="section-heading" style={{ margin: '0.5rem 0 0.35rem' }}>
-          {course.data?.title ?? 'Course'} — who is on it
-        </h1>
-        <p className="section-sub">
-          {people.length} {people.length === 1 ? 'person' : 'people'}, across{' '}
-          {activities.length} activit{activities.length === 1 ? 'y' : 'ies'}.
-        </p>
-      </div>
+    <div className="page-body">
+      <PageHeader
+        eyebrow={course.data?.title ?? 'Course'}
+        icon="users"
+        title="Who is on this course"
+        subtitle={`${people.length} ${people.length === 1 ? 'person' : 'people'}, across `
+          + `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'}.`}
+        backTo={backTo}
+        backLabel="Back to courses"
+      />
 
       {people.length === 0 ? (
-        <EmptyState icon="🪑" title="Nobody is enrolled yet">
+        <EmptyState icon="users" title="Nobody is enrolled yet">
           Trainees enrol from the catalog, and a published course is the only
           kind they can see. Applications appear on your dashboard for approval.
         </EmptyState>
       ) : (
         <>
-          <div className="stat-grid stat-grid-4">
-            <StatCard label="Enrolled" value={active.length} color="var(--brand-primary)" />
+          <div className="stat-grid">
+            <StatCard label="Enrolled" value={active.length} icon="users" color="var(--brand-primary)" />
             <StatCard
               label="Not started"
               value={notStarted.length}
               sub={notStarted.length ? 'no activity completed' : 'everyone has begun'}
+              icon="waiting"
               color={notStarted.length ? 'var(--brand-accent)' : 'var(--text-3)'}
             />
             <StatCard
               label="Finished"
               value={finished.length}
               sub={averageProgress === null ? '' : `${averageProgress}% average progress`}
-              color="#28a745"
+              icon="complete"
+              color="#1a7f37"
             />
             <StatCard
               label="Awaiting your marking"
               value={toMark}
               sub={toMark ? 'blocking those trainees' : 'nothing waiting'}
+              icon="review"
               color={toMark ? 'var(--brand-accent)' : 'var(--text-3)'}
             />
           </div>
 
           {waiting.length > 0 && (
-            <div className="card no-hover" style={{ borderLeft: '4px solid #b8860b' }}>
-              <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.9rem' }}>
+            <div className="card no-hover card-accent card-warn">
+              <p className="text-sm" style={{ margin: 0, color: 'var(--text-2)' }}>
                 <strong>{waiting.length}</strong> application
                 {waiting.length === 1 ? '' : 's'} on this course{' '}
                 {waiting.length === 1 ? 'is' : 'are'} still waiting for a decision.

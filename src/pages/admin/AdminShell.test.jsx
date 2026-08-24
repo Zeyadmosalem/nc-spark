@@ -70,7 +70,7 @@ describe('what needs an admin', () => {
   it('links straight to the queue when signups are waiting', () => {
     mocks.usePendingSignups.mockReturnValue(query([{ id: 'p1' }, { id: 'p2' }]));
     show();
-    const link = screen.getByRole('link', { name: /2 signups to review/ });
+    const link = screen.getByRole('link', { name: /Review 2 signups/ });
     expect(link).toHaveAttribute('href', '/admin/users');
   });
 
@@ -97,8 +97,11 @@ describe('the audit trail', () => {
       createdAt: new Date(Date.now() - 3600000).toISOString(),
     }]));
     show();
-    expect(screen.getByText(/admin@x\.io changed a role from trainee to trainer/))
-      .toBeInTheDocument();
+    // The action leads the row and the actor is the second line, so they are
+    // two elements now: a row that opened with an email in bold put the least
+    // useful thing on the line first.
+    expect(screen.getByText('changed a role from trainee to trainer')).toBeInTheDocument();
+    expect(screen.getByText('admin@x.io')).toBeInTheDocument();
     expect(screen.getByText('1h ago')).toBeInTheDocument();
   });
 

@@ -9,6 +9,9 @@ import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
 import UserManager from './UserManager';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import { fadeUp, stagger, item } from '../../lib/motion';
 import AccountPage from '../shared/AccountPage';
 
 /**
@@ -29,15 +32,6 @@ const NAV = [
   { to: '/admin/account', icon: 'account', label: 'My Account' },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-  }),
-};
-
 /** Turns an audit row into a sentence. Unknown actions still render usefully. */
 function describe(entry) {
   const from = entry.before ?? {};
@@ -48,15 +42,40 @@ function describe(entry) {
     case 'profile.signup_reviewed':
       return to.status === 'active'
         ? `approved a signup as ${to.role ?? 'trainee'}`
-        : `rejected a signup`;
+        : 'rejected a signup';
     case 'profile.suspended':
       return 'suspended an account';
     case 'profile.reinstated':
       return 'reinstated an account';
+    case 'course.published':
+      return 'published a course';
+    case 'course.unpublished':
+      return 'returned a course to draft';
+    case 'quiz.created':
+      return 'created a quiz';
+    case 'quiz.question_added':
+      return 'added a quiz question';
+    case 'quiz.question_updated':
+      return 'edited a quiz question';
+    case 'quiz.question_removed':
+      return 'removed a quiz question';
+    case 'allowed_domain.added':
+      return `allowlisted ${entry.entityId}`;
+    case 'allowed_domain.removed':
+      return `removed ${entry.entityId} from the allowlist`;
     default:
       return entry.action.replace(/[._]/g, ' ');
   }
 }
+
+/** Which icon an audit entry gets, from the first segment of its action. */
+const AUDIT_ICON = {
+  profile: 'users',
+  course: 'courses',
+  quiz: 'quiz',
+  quiz_question: 'quiz',
+  allowed_domain: 'verified',
+};
 
 const when = (iso) => {
   const ms = Date.now() - new Date(iso).getTime();
@@ -70,7 +89,7 @@ const when = (iso) => {
 };
 
 // Exported for its test: rendering the whole shell would drag in the sidebar
-// and AppContext to assert numbers that have nothing to do with either.
+// to assert numbers that have nothing to do with it.
 export function Dashboard() {
   const users = useUsers();
   const signups = usePendingSignups();
@@ -97,99 +116,69 @@ export function Dashboard() {
   const s = stats.data;
 
   return (
-    <motion.div
-      className="page-body"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div
-        variants={fadeUp}
-        custom={0}
-        className="xp-hero"
-        style={{ background: 'linear-gradient(145deg, rgba(0,0,0,0.92), rgba(10,10,18,0.95)), radial-gradient(500px 300px at 10% 10%, rgba(0,163,224,0.2), transparent), radial-gradient(500px 400px at 95% 5%, rgba(107,44,141,0.25), transparent)' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-              Admin Console
+    <motion.div className="page-body" variants={stagger()} initial="hidden" animate="visible">
+      <motion.section className="hero" variants={fadeUp} custom={0}>
+        <div className="hero-inner">
+          <div style={{ minWidth: 0 }}>
+            <p className="hero-eyebrow">
+              <Icon name="settings" size={12} />
+              Admin console
             </p>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', color: '#fff', lineHeight: 1.1, marginBottom: '0.5rem' }}>
-              Platform Overview
-            </h1>
-            <div className="level-badge">
-              <span>⚙️</span>
-              <span>Administrator</span>
-            </div>
+            <h1 className="hero-title">Platform overview</h1>
+            <p className="hero-sub">
+              {all.length} account{all.length === 1 ? '' : 's'}, {s.courses.total} course
+              {s.courses.total === 1 ? '' : 's'}, {s.enrollments.active} active enrolment
+              {s.enrollments.active === 1 ? '' : 's'}.
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>
-                {all.length}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Accounts</div>
-            </div>
-            <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.15)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 700, color: '#fff' }}>
-                {s.enrollments.active}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Active Enrolments</div>
-            </div>
-          </div>
+          {waiting > 0 && (
+            <Button to="/admin/users" variant="primary" iconAfter="forward">
+              Review {waiting} signup{waiting === 1 ? '' : 's'}
+            </Button>
+          )}
         </div>
-      </motion.div>
+      </motion.section>
 
       {/* Anything here is a person or a request blocked on an admin. It sits
           above the statistics because statistics are not actionable. */}
-      {(waiting > 0 || s.enrollments.pending > 0) && (
-        <motion.div variants={fadeUp} custom={1} className="card no-hover"
-                    style={{ borderLeft: '4px solid #b8860b' }}>
-          <div className="card-title">Waiting on you</div>
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {waiting > 0 && (
-              <Link to="/admin/users" className="btn btn-primary btn-sm">
-                {waiting} signup{waiting === 1 ? '' : 's'} to review →
-              </Link>
-            )}
-            {s.enrollments.pending > 0 && (
-              <span style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>
-                {s.enrollments.pending} course application
-                {s.enrollments.pending === 1 ? '' : 's'} pending a trainer&apos;s decision
-              </span>
-            )}
-          </div>
+      {s.enrollments.pending > 0 && (
+        <motion.div className="card no-hover card-accent card-warn" variants={item}>
+          <p className="text-sm" style={{ margin: 0, color: 'var(--text-2)' }}>
+            <strong>{s.enrollments.pending}</strong> course application
+            {s.enrollments.pending === 1 ? '' : 's'} waiting on a trainer&apos;s decision.
+            Nobody in that queue can start until it is decided.
+          </p>
         </motion.div>
       )}
 
-      <motion.div variants={fadeUp} custom={2} className="stat-grid stat-grid-4">
-        <StatCard label="Trainees" value={byRole('trainee')} color="var(--brand-primary)" />
-        <StatCard label="Trainers" value={byRole('trainer')} color="var(--brand-secondary)" />
-        <StatCard label="Supervisors" value={byRole('supervisor')} color="var(--brand-accent)" />
-        <StatCard label="Admins" value={byRole('admin')} color="#b8860b" />
+      <motion.div className="stat-grid" variants={stagger(0.045, 0.06)}>
+        <StatCard label="Trainees" value={byRole('trainee')} icon="users" color="var(--brand-primary)" />
+        <StatCard label="Trainers" value={byRole('trainer')} icon="teaching" color="var(--brand-accent)" />
+        <StatCard label="Supervisors" value={byRole('supervisor')} icon="team" color="#6b46c1" />
+        <StatCard label="Admins" value={byRole('admin')} icon="settings" color="#b8860b" />
       </motion.div>
 
-      <motion.div variants={fadeUp} custom={3} className="stat-grid stat-grid-4">
+      <motion.div className="stat-grid" variants={stagger(0.045, 0.06)}>
         <StatCard
-          label="Courses"
-          value={s.courses.total}
-          sub={`${s.courses.published} published`}
-          color="var(--heading)"
+          label="Courses" value={s.courses.total} icon="courses"
+          sub={`${s.courses.published} published`} color="var(--heading)"
         />
-        <StatCard label="Active enrolments" value={s.enrollments.active} color="#28a745" />
-        <StatCard label="Quiz attempts" value={s.attempts.total} color="var(--heading)" />
+        <StatCard label="Active enrolments" value={s.enrollments.active} icon="trend" color="#1a7f37" />
+        <StatCard label="Quiz attempts" value={s.attempts.total} icon="quiz" color="var(--brand-secondary)" />
         <StatCard
           label="Awaiting marking"
           value={s.attempts.pendingReview}
-          sub="paragraph answers"
+          icon="waiting"
+          sub="written answers"
           color={s.attempts.pendingReview > 0 ? 'var(--brand-accent)' : 'var(--text-3)'}
+          tone={s.attempts.pendingReview > 0 ? 'attention' : undefined}
         />
       </motion.div>
 
       {suspended > 0 && (
-        <motion.div variants={fadeUp} custom={4} className="card no-hover">
-          <div className="card-title">Account health</div>
-          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
+        <motion.div className="card no-hover" variants={item}>
+          <h2 className="card-title"><Icon name="blocked" size={16} />Account health</h2>
+          <p className="text-sm" style={{ color: 'var(--text-2)', margin: 0 }}>
             {suspended} account{suspended === 1 ? ' is' : 's are'} suspended.{' '}
             <Link to="/admin/users" style={{ color: 'var(--brand-primary)' }}>Review them</Link>.
           </p>
@@ -199,32 +188,39 @@ export function Dashboard() {
       {/* The audit trail is append-only at the database level, enforced for
           every role including service_role. Surfacing it is the only reason it
           is worth writing. */}
-      <motion.div variants={fadeUp} custom={5} className="card no-hover">
-        <div className="card-title">Recent admin activity</div>
+      <motion.section className="card no-hover" variants={item}>
+        <h2 className="card-title"><Icon name="inbox" size={16} />Recent admin activity</h2>
         {audit.error ? (
           <QueryError error={audit.error} what="the audit trail" />
         ) : (audit.data ?? []).length === 0 ? (
-          <p style={{ color: 'var(--text-2)', margin: 0, fontSize: '0.9rem' }}>
-            Nothing recorded yet.
-          </p>
+          <p className="text-sm muted" style={{ margin: 0 }}>Nothing recorded yet.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className="stack">
             {audit.data.map((e) => (
-              <div key={e.id} className="student-row" style={{ cursor: 'default' }}>
-                <div className="student-row-info">
-                  <div className="student-row-name" style={{ fontSize: '0.9rem' }}>
-                    {e.actorEmail ?? 'Unknown admin'} {describe(e)}
+              <div key={e.id} className="data-row">
+                <span className="row-icon">
+                  <Icon name={AUDIT_ICON[e.entityType] ?? 'info'} size={15} />
+                </span>
+                <div className="data-row-main">
+                  {/*
+                    The action leads. This row used to open with the actor's
+                    email in bold and carry a raw uuid underneath it — so the
+                    least useful thing on the line was the most prominent, and
+                    the identifier was one no human can resolve.
+                  */}
+                  <div className="data-row-title" style={{ fontWeight: 500 }}>
+                    {describe(e)}
                   </div>
-                  <div className="student-row-meta">{e.entityType} · {e.entityId}</div>
+                  <div className="data-row-meta">{e.actorEmail ?? 'Unknown admin'}</div>
                 </div>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                <span className="text-xs muted" style={{ whiteSpace: 'nowrap' }}>
                   {when(e.createdAt)}
                 </span>
               </div>
             ))}
           </div>
         )}
-      </motion.div>
+      </motion.section>
     </motion.div>
   );
 }
