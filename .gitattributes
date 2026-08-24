@@ -1,0 +1,19 @@
+# Line endings are stored and checked out as LF, everywhere.
+#
+# Without this, a Windows checkout gets CRLF in the working tree while git
+# stores LF. Every commit warned about it, and — the part that actually cost
+# something — a local `vite build` hashed CRLF bytes while CI hashed LF ones,
+# so the same commit produced different bundle hashes in the two places. That
+# made "compare the local hash to the deployed one" a useless way to check
+# whether a deploy had landed, which is exactly how it was being used.
+* text=auto eol=lf
+
+# Binary, never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
