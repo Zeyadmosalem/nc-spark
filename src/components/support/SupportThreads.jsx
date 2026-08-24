@@ -332,9 +332,9 @@ function Thread({ thread, mine }) {
                 <span className="muted">{when(m.createdAt)}</span>
               </div>
               {/*
-                Plain text in a <p>, never dangerouslySetInnerHTML. This is the
-                one place in the product where one user's words are rendered to
-                another's screen.
+                Rendered as text, never as markup. This is the one place in the
+                product where one user's words reach another's screen, so it is
+                the one place raw HTML injection would matter most.
               */}
               <p className="support-message-body">{m.body}</p>
             </motion.div>

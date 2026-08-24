@@ -36,7 +36,11 @@ jobs:
             echo "::error::Hardcoded development password found in src/"
             exit 1
           fi
-          if grep -rn "dangerouslySetInnerHTML" src/ --include=*.jsx; then
+          # Matches the JSX attribute form only. The bare word used to be
+          # enough, which meant a code comment explaining that a component
+          # deliberately does NOT use the API failed the build — a guard that
+          # fires on prose about the thing it guards trains people to ignore it.
+          if grep -rnE "dangerouslySetInnerHTML[[:space:]]*[=:]" src/ --include=*.jsx; then
             echo "::error::Raw dangerouslySetInnerHTML in a component; use safeHtml() from src/lib/sanitizeHtml.js"
             exit 1
           fi
