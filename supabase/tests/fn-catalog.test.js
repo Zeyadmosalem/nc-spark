@@ -34,19 +34,33 @@ async function callOk(fn, client, body) {
 const auditFor = async (entityId, action) =>
   (await svc.from('audit_log').select('*').eq('entity_id', entityId).eq('action', action)).data ?? [];
 
+/**
+ * Fails with its own name and the database's message.
+ *
+ * These inserts used to discard the error and return null, so a fixture that
+ * could not build a course surfaced three lines later as
+ * "Cannot read properties of null (reading 'id')" — which reads like a bug in
+ * the code under test rather than in the setup.
+ */
+function must(what, { data, error }) {
+  if (error) throw new Error(`fixture ${what}: ${error.message}`);
+  if (!data) throw new Error(`fixture ${what}: no row returned`);
+  return data;
+}
+
 let seq = 0;
 async function makeCourse(status = 'published', withActivity = true) {
   seq += 1;
-  const { data: c } = await svc.from('courses').insert({
+  const c = must('course', await svc.from('courses').insert({
     slug: `${PREFIX}-${seq}`, title: 'Fn Course', status,
     trainer_id: ownerTrainer.id, created_by: admin.id,
-  }).select().single();
+  }).select().single());
   if (withActivity) {
-    const { data: m } = await svc.from('modules')
-      .insert({ course_id: c.id, title: 'M', position: 1 }).select().single();
-    await svc.from('activities').insert({
+    const m = must('module', await svc.from('modules')
+      .insert({ course_id: c.id, title: 'M', position: 1 }).select().single());
+    must('activity', await svc.from('activities').insert({
       module_id: m.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
-    });
+    }).select().single());
   }
   return c.id;
 }

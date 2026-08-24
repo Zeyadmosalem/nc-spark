@@ -253,12 +253,17 @@ describe('adding an activity', () => {
     expect(screen.getByText(/Nothing else to set up/)).toBeInTheDocument();
   });
 
-  it('is honest that a quiz slot is not a quiz', async () => {
+  /**
+   * A quiz hangs off an activity_id, so there is nothing to attach one to
+   * until the activity has been saved. Saying where the questions are written
+   * beats a form that cannot work yet.
+   */
+  it('points at where the questions are written', async () => {
     mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
     show();
     await userEvent.click(screen.getByRole('button', { name: '+ Add activity' }));
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'quiz');
-    expect(screen.getByText(/questions themselves are still/)).toBeInTheDocument();
+    expect(screen.getByText(/Add the activity first, then open it/)).toBeInTheDocument();
   });
 
   /**

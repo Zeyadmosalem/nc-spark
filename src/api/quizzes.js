@@ -62,3 +62,74 @@ export const startQuiz = (quizId) => invokeFn('start-quiz', { quizId });
 /** Grading happens server-side; the result carries no correct answers. */
 export const submitQuiz = (attemptId, answers = []) =>
   invokeFn('submit-quiz', { attemptId, answers });
+
+/* --------------------------------------------------------------- authoring */
+
+/**
+ * Writing quizzes goes through one Edge Function, `author-quiz`.
+ *
+ * Not because a policy would be awkward, but because quiz_answer_keys has no
+ * grant for `authenticated` at all — deliberately, so that "a trainee can
+ * never read the answers" is a property of the grant table rather than of
+ * every future select remembering to exclude a column. Giving trainers write
+ * access through RLS would mean adding the grant that decision avoids.
+ *
+ * A trainer's own answer keys do reach their browser here. They are editing
+ * them; the difference is that a function authorised the read first.
+ */
+
+/** The quiz behind a quiz activity, with its answer keys. null if none yet. */
+export const quizForAuthoring = (activityId) =>
+  invokeFn('author-quiz', { action: 'get', activityId });
+
+/** Creates the quiz if quizId is absent, updates it if present. */
+export const saveQuiz = ({ quizId, activityId, title, passMark, timeLimitSeconds }) =>
+  invokeFn('author-quiz', {
+    action: 'save-quiz', quizId, activityId, title, passMark, timeLimitSeconds,
+  });
+
+/**
+ * One call writes the question and its answer key. They live in two tables and
+ * a question without a key is one submit-quiz marks wrong for everybody, so
+ * they are never saved apart.
+ */
+export const saveQuizQuestion = (payload) =>
+  invokeFn('author-quiz', { action: 'save-question', ...payload });
+
+export const deleteQuizQuestion = (questionId) =>
+  invokeFn('author-quiz', { action: 'delete-question', questionId });
+
+/** `order` is every question id in the quiz, in the order they should appear. */
+export const reorderQuizQuestions = (quizId, order) =>
+  invokeFn('author-quiz', { action: 'reorder', quizId, order });
+
+const filled = (s) => typeof s === 'string' && s.trim() !== '';
+
+/**
+ * The same rules author-quiz enforces, said before the request rather than
+ * after it. The function is still the authority — this only decides whether
+ * Save is worth clicking.
+ */
+export function questionProblem(q) {
+  if (!filled(q.prompt)) return 'The question needs a prompt.';
+  if (!Number.isInteger(Number(q.points)) || Number(q.points) < 1) {
+    return 'Points must be a whole number of at least 1.';
+  }
+  if (q.type === 'mcq') {
+    const options = q.options ?? [];
+    if (options.length < 2) return 'A multiple-choice question needs at least two options.';
+    const blank = options.findIndex((o) => !filled(o));
+    if (blank !== -1) return `Option ${blank + 1} is empty.`;
+    const seen = options.map((o) => o.trim().toLowerCase());
+    const dupe = seen.findIndex((o, i) => seen.indexOf(o) !== i);
+    if (dupe !== -1) return `Option ${dupe + 1} repeats an earlier one.`;
+    const i = q.answer?.index;
+    if (!Number.isInteger(i) || i < 0 || i >= options.length) {
+      return 'Mark which option is correct.';
+    }
+  }
+  if (q.type === 'truefalse' && typeof q.answer?.value !== 'boolean') {
+    return 'Mark whether the statement is true or false.';
+  }
+  return null;
+}

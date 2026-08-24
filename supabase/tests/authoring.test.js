@@ -35,6 +35,7 @@ const {
   AUTHORABLE_TYPES, EMPTY_CONTENT,
 } = await import('../../src/api/authoring.js');
 const { createCourse, publishCourse } = await import('../../src/api/courses.js');
+const { saveQuiz, saveQuizQuestion } = await import('../../src/api/quizzes.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
@@ -187,10 +188,34 @@ describe('an admin building a course', () => {
   });
 
   /**
+   * The AUTHORABLE_TYPES loop above added a quiz activity, and nothing gave it
+   * questions. An empty quiz cannot be passed — submit-quiz scores
+   * `possible === 0 ? 0` against a pass mark that is always above zero — and a
+   * module quiz gates the next module, so publishing this would put a course
+   * in the catalog that every trainee gets permanently stuck in.
+   */
+  it('refuses to publish while a quiz activity is empty', async () => {
+    await expect(publishCourse(courseId, true))
+      .rejects.toThrow(/quiz with nothing in it/);
+    const { data } = await svc.from('courses').select('status').eq('id', courseId).single();
+    expect(data.status).toBe('draft');
+  });
+
+  /**
    * This is the loop closing. Everything above exists so that this line stops
    * throwing.
    */
-  it('publishes the course now that it has content', async () => {
+  it('publishes the course once the quiz has a question', async () => {
+    const course = await getCourseForEditing(courseId);
+    const quizActivity = course.modules[0].activities.find((a) => a.type === 'quiz');
+    const { quiz } = await saveQuiz({
+      activityId: quizActivity.id, title: 'Module check',
+    });
+    await saveQuizQuestion({
+      quizId: quiz.id, type: 'truefalse', prompt: 'Ready to publish?',
+      answer: { value: true },
+    });
+
     const result = await publishCourse(courseId, true);
     expect(result.ok).toBe(true);
     const { data } = await svc.from('courses').select('status').eq('id', courseId).single();

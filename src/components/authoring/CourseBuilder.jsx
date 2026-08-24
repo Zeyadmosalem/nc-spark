@@ -9,6 +9,7 @@ import EmptyState from '../ui/EmptyState';
 import { useToast } from '../ui/toast-context';
 import { AUTHORABLE_TYPES, EMPTY_CONTENT, structuredProblem } from '../../api/authoring';
 import { FlashcardsEditor, MatchingEditor, ScenarioEditor } from './StructuredEditors';
+import QuizEditor from './QuizEditor';
 import {
   useCourseForEditing,
   useCreateModule, useUpdateModule, useDeleteModule,
@@ -105,11 +106,12 @@ function ContentFields({ type, content, onChange, idPrefix }) {
   if (type === 'scenario') {
     return <ScenarioEditor content={content} onChange={onChange} idPrefix={idPrefix} />;
   }
+  // quiz. The questions are edited from the saved activity, in ActivityRow:
+  // a quiz hangs off an activity_id, so there is nothing to attach one to
+  // until the activity exists.
   return (
     <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
-      This adds the quiz slot to the module. The questions themselves are still
-      seeded with <code className="inline-code">npm run db:seed-quizzes</code> —
-      trainer quiz authoring is backlog B6.
+      Add the activity first, then open it to write the questions.
     </p>
   );
 }
@@ -514,6 +516,16 @@ function ActivityRow({ courseId, activity }) {
 
           <ContentFields type={activity.type} content={content} idPrefix={`a${activity.id}`}
                          onChange={(patch) => setContent((c) => ({ ...c, ...patch }))} />
+
+          {/* The quiz lives in its own tables behind an Edge Function, so it
+              saves on its own rather than through this row's Save button. */}
+          {activity.type === 'quiz' && (
+            <QuizEditor
+              activityId={activity.id}
+              activityTitle={activity.title}
+              courseId={courseId}
+            />
+          )}
 
           {problem && (
             <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>

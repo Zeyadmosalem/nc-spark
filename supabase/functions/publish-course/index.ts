@@ -34,6 +34,43 @@ Deno.serve(async (req) => {
       if ((count ?? 0) === 0) {
         throw new HttpError(422, 'A course needs at least one activity before it can be published');
       }
+
+      /*
+       * An empty quiz is a wall, not an inconvenience. submit-quiz scores
+       * `possible === 0 ? 0` and every pass mark is above zero, so a quiz
+       * activity with no questions can never be passed — and a module quiz
+       * gates the next module, so the whole course past it is unreachable for
+       * every trainee who enrols. The same is true of a quiz activity that
+       * has no quizzes row behind it at all.
+       *
+       * Checked at publish rather than at save, because a half-written quiz is
+       * a normal thing to have in a draft.
+       */
+      const { data: quizActivities, error: qaErr } = await service
+        .from('activities')
+        .select('id, title, modules!inner(course_id)')
+        .eq('type', 'quiz')
+        .eq('modules.course_id', courseId);
+      if (qaErr) throw new HttpError(500, qaErr.message);
+
+      for (const activity of quizActivities ?? []) {
+        const { data: quiz } = await service
+          .from('quizzes').select('id').eq('activity_id', activity.id).maybeSingle();
+        if (!quiz) {
+          throw new HttpError(422,
+            `"${activity.title}" is a quiz with nothing in it. Add its questions, `
+            + 'or remove the activity — a trainee cannot pass an empty quiz and the '
+            + 'rest of the course stays locked behind it.');
+        }
+        const { count: questions } = await service
+          .from('quiz_questions').select('id', { count: 'exact', head: true })
+          .eq('quiz_id', quiz.id);
+        if ((questions ?? 0) === 0) {
+          throw new HttpError(422,
+            `"${activity.title}" has no questions yet. A trainee cannot pass an empty `
+            + 'quiz, and the rest of the course stays locked behind it.');
+        }
+      }
     }
 
     const nextStatus = publish ? 'published' : 'draft';
