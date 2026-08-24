@@ -32,14 +32,47 @@ export const CONTENT_KEY = {
   scenario: 'steps',
 };
 
-/** Types this editor can author. The rest need a structured editor of their own. */
-export const AUTHORABLE_TYPES = ['reading', 'video', 'submission', 'quiz'];
+/**
+ * Every type the builder can author.
+ *
+ * This was four for one milestone: flashcards, matching and scenario store
+ * nested arrays that a single text field cannot express, so the picker refused
+ * to offer them. Three of the six types the trainee side renders could be
+ * shown and not written. src/components/authoring/StructuredEditors.jsx is the
+ * form each of them needed.
+ */
+export const AUTHORABLE_TYPES = [
+  'reading', 'video', 'submission', 'quiz', 'flashcards', 'matching', 'scenario',
+];
 
+/** The types whose content is a nested array rather than a single field. */
+export const STRUCTURED_TYPES = ['flashcards', 'matching', 'scenario'];
+
+export const BLANK_CARD = { front: '', back: '' };
+export const BLANK_PAIR = { term: '', definition: '' };
+export const BLANK_CHOICE = { text: '', isCorrect: false, feedback: '' };
+export const BLANK_STEP = {
+  text: '',
+  choices: [{ ...BLANK_CHOICE, isCorrect: true }, { ...BLANK_CHOICE }],
+};
+
+/**
+ * What a freshly picked type starts as.
+ *
+ * The structured types start with one blank row rather than an empty array, so
+ * that what the editor draws and what state holds are the same thing. With an
+ * empty array the editor still shows a row — its own fallback — and the
+ * validator would report "add at least one card" about a card the trainer can
+ * see on screen.
+ */
 export const EMPTY_CONTENT = {
   reading: { body: '' },
   video: { videoId: '' },
   submission: {},
   quiz: {},
+  flashcards: { cards: [{ ...BLANK_CARD }] },
+  matching: { pairs: [{ ...BLANK_PAIR }] },
+  scenario: { steps: [structuredClone(BLANK_STEP)] },
 };
 
 const moduleToCamel = (r) => ({
@@ -160,4 +193,53 @@ export async function updateActivity(id, { title, xp, content }) {
 
 export async function deleteActivity(id) {
   unwrap(await requireClient().from('activities').delete().eq('id', id));
+}
+
+const filled = (s) => typeof s === 'string' && s.trim() !== '';
+
+/**
+ * Why the Save button is disabled, in words, or null when it is fine.
+ *
+ * The CHECK constraint only asks that the key exists, so `{cards: []}` stores
+ * happily and renders as "No cards provided." to every trainee in the course.
+ * These are the rules that keep an activity worth opening, and they are stated
+ * rather than enforced silently: a disabled button with no explanation is its
+ * own kind of dead end.
+ */
+export function structuredProblem(type, content) {
+  if (type === 'flashcards') {
+    const cards = content.cards ?? [];
+    if (cards.length === 0) return 'Add at least one card.';
+    const i = cards.findIndex((c) => !filled(c.front) || !filled(c.back));
+    return i === -1 ? null : `Card ${i + 1} needs both a front and a back.`;
+  }
+
+  if (type === 'matching') {
+    const pairs = content.pairs ?? [];
+    if (pairs.length === 0) return 'Add at least one pair.';
+    const i = pairs.findIndex((p) => !filled(p.term) || !filled(p.definition));
+    if (i !== -1) return `Pair ${i + 1} needs both a term and a definition.`;
+    const defs = pairs.map((p) => p.definition.trim().toLowerCase());
+    const dupe = defs.findIndex((d, j) => defs.indexOf(d) !== j);
+    return dupe === -1 ? null : `Pair ${dupe + 1} repeats a definition — trainees could not tell them apart.`;
+  }
+
+  if (type === 'scenario') {
+    const steps = content.steps ?? [];
+    if (steps.length === 0) return 'Add at least one situation.';
+    for (let i = 0; i < steps.length; i += 1) {
+      const step = steps[i];
+      if (!filled(step.text)) return `Situation ${i + 1} needs a description.`;
+      const choices = step.choices ?? [];
+      if (choices.length < 2) return `Situation ${i + 1} needs at least two options.`;
+      const blank = choices.findIndex((c) => !filled(c.text));
+      if (blank !== -1) return `Option ${blank + 1} of situation ${i + 1} is empty.`;
+      if (!choices.some((c) => c.isCorrect)) {
+        return `Situation ${i + 1} has no correct option selected.`;
+      }
+    }
+    return null;
+  }
+
+  return null;
 }

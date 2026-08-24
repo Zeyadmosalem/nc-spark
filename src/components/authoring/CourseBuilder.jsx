@@ -7,7 +7,8 @@ import PageSkeleton from '../ui/Skeleton';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
 import { useToast } from '../ui/toast-context';
-import { AUTHORABLE_TYPES, EMPTY_CONTENT } from '../../api/authoring';
+import { AUTHORABLE_TYPES, EMPTY_CONTENT, structuredProblem } from '../../api/authoring';
+import { FlashcardsEditor, MatchingEditor, ScenarioEditor } from './StructuredEditors';
 import {
   useCourseForEditing,
   useCreateModule, useUpdateModule, useDeleteModule,
@@ -25,11 +26,11 @@ import {
  * course with zero activities and the only way to add one was
  * `npm run db:seed-catalog`.
  *
- * Four of the seven activity types are authorable here. flashcards, matching
- * and scenario store structured content — decks, pairs, branching steps — and
- * each needs an editor of its own; a textarea of raw JSON is not one. They
- * remain seed-only and the picker says so rather than offering a form that
- * produces something the CHECK constraint rejects.
+ * Every activity type the trainee side renders can now be written here.
+ * flashcards, matching and scenario each store a nested array, and each has an
+ * editor of its own in StructuredEditors.jsx — a textarea of raw JSON was the
+ * alternative, and `activities_content_shape` would have turned every typo in
+ * it into an unexplained 400.
  */
 
 const TYPE_LABEL = {
@@ -37,6 +38,9 @@ const TYPE_LABEL = {
   video: 'Video',
   submission: 'File submission',
   quiz: 'Quiz',
+  flashcards: 'Flashcards',
+  matching: 'Matching',
+  scenario: 'Scenario',
 };
 
 const TYPE_ICON = {
@@ -44,14 +48,26 @@ const TYPE_ICON = {
   flashcards: '🃏', matching: '🔗', scenario: '🧭',
 };
 
-/** The one field each authorable type needs beyond a title. */
-function ContentFields({ type, content, onChange }) {
+/**
+ * Whatever the chosen type needs beyond a title.
+ *
+ * The structured editors hand back a whole array (`{cards: [...]}`), and the
+ * single-field ones hand back one key. Both are merged into the existing
+ * content by the caller, so a type that keeps a stale key from a previous
+ * choice is prevented by resetting content on the type picker rather than
+ * here.
+ *
+ * @param idPrefix  keeps input ids unique. Two of these render at once — the
+ *                  add form and any open activity row — and duplicate ids
+ *                  point every label at the first field of that name.
+ */
+function ContentFields({ type, content, onChange, idPrefix }) {
   if (type === 'reading') {
     return (
       <div>
-        <label className="input-label" htmlFor="act-body">Text</label>
+        <label className="input-label" htmlFor={`${idPrefix}-body`}>Text</label>
         <textarea
-          id="act-body" rows={6} className="input-field"
+          id={`${idPrefix}-body`} rows={6} className="input-field"
           value={content.body ?? ''}
           onChange={(e) => onChange({ body: e.target.value })}
         />
@@ -61,9 +77,9 @@ function ContentFields({ type, content, onChange }) {
   if (type === 'video') {
     return (
       <div>
-        <label className="input-label" htmlFor="act-video">YouTube video ID</label>
+        <label className="input-label" htmlFor={`${idPrefix}-video`}>YouTube video ID</label>
         <input
-          id="act-video" className="input-field" placeholder="dQw4w9WgXcQ"
+          id={`${idPrefix}-video`} className="input-field" placeholder="dQw4w9WgXcQ"
           value={content.videoId ?? ''}
           onChange={(e) => onChange({ videoId: e.target.value })}
         />
@@ -79,6 +95,15 @@ function ContentFields({ type, content, onChange }) {
         Trainees upload a file here and a trainer reviews it. Nothing else to set up.
       </p>
     );
+  }
+  if (type === 'flashcards') {
+    return <FlashcardsEditor content={content} onChange={onChange} idPrefix={idPrefix} />;
+  }
+  if (type === 'matching') {
+    return <MatchingEditor content={content} onChange={onChange} idPrefix={idPrefix} />;
+  }
+  if (type === 'scenario') {
+    return <ScenarioEditor content={content} onChange={onChange} idPrefix={idPrefix} />;
   }
   return (
     <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: 0 }}>
@@ -360,6 +385,9 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onD
   // attribute, which React rejects and which leaves the input unusable.
   const points = Number(xp);
   const badXp = xp.trim() === '' || Number.isNaN(points) || points < 0;
+  // Empty content passes the CHECK constraint — `{cards: []}` stores fine and
+  // renders to a trainee as "No cards provided."
+  const problem = structuredProblem(type, content);
 
   async function submit(e) {
     e.preventDefault();
@@ -403,19 +431,22 @@ function ActivityForm({ moduleId, courseId, nextPosition, mutation, onAdded, onD
         </div>
       </div>
 
-      <ContentFields type={type} content={content}
+      <ContentFields type={type} content={content} idPrefix="new"
                      onChange={(patch) => setContent((c) => ({ ...c, ...patch }))} />
 
-      <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', margin: 0 }}>
-        Flashcards, matching and scenario activities are still seeded — each stores
-        structured content that needs an editor of its own.
-      </p>
+      {/* Said, not just enforced. A Save button that is disabled for a reason
+          nobody states is its own dead end. */}
+      {problem && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>
+          {problem}
+        </p>
+      )}
 
       <Alert error={mutation.error} />
 
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button type="submit" className="btn btn-primary btn-sm"
-                disabled={mutation.isPending || !title.trim() || badXp}>
+                disabled={mutation.isPending || !title.trim() || badXp || Boolean(problem)}>
           {mutation.isPending ? 'Adding…' : 'Add activity'}
         </button>
         <button type="button" className="btn btn-ghost btn-sm" onClick={onDone}>Cancel</button>
@@ -436,6 +467,7 @@ function ActivityRow({ courseId, activity }) {
   const busy = update.isPending || remove.isPending;
   const points = Number(xp);
   const badXp = xp.trim() === '' || Number.isNaN(points) || points < 0;
+  const problem = structuredProblem(activity.type, content);
 
   return (
     <div style={{
@@ -480,15 +512,21 @@ function ActivityRow({ courseId, activity }) {
             </div>
           </div>
 
-          <ContentFields type={activity.type} content={content}
+          <ContentFields type={activity.type} content={content} idPrefix={`a${activity.id}`}
                          onChange={(patch) => setContent((c) => ({ ...c, ...patch }))} />
+
+          {problem && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--brand-accent)', margin: 0 }}>
+              {problem}
+            </p>
+          )}
 
           <Alert error={update.error ?? remove.error} />
 
           <div>
             <button
               type="button" className="btn btn-primary btn-sm"
-              disabled={busy || !title.trim() || badXp}
+              disabled={busy || !title.trim() || badXp || Boolean(problem)}
               onClick={() => update.mutate(
                 { id: activity.id, courseId, title: title.trim(), xp: points, content },
                 { onSuccess: () => notify('Activity saved.') },

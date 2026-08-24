@@ -262,18 +262,70 @@ describe('adding an activity', () => {
   });
 
   /**
-   * Only four of seven types are offered. The three that are missing store
-   * structured content and each needs its own editor; saying so beats leaving
-   * a picker that silently cannot make them.
+   * Every type the trainee side can render. flashcards, matching and scenario
+   * were offered by neither the picker nor any other screen for a milestone,
+   * so three of the six renderers had no way to be given content.
    */
-  it('offers only the types it can actually author, and says why', async () => {
+  it('offers every type the trainee side can render', async () => {
     mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
     show();
     await userEvent.click(screen.getByRole('button', { name: '+ Add activity' }));
     const options = within(screen.getByLabelText('Type'))
-      .getAllByRole('option').map((o) => o.textContent);
-    expect(options.join(' ')).not.toMatch(/Flashcards|Matching|Scenario/i);
-    expect(screen.getByText(/still seeded/)).toBeInTheDocument();
+      .getAllByRole('option').map((o) => o.textContent).join(' ');
+    for (const label of ['Reading', 'Video', 'File submission', 'Quiz',
+                         'Flashcards', 'Matching', 'Scenario']) {
+      expect(options).toContain(label);
+    }
+  });
+
+  /** Picking a structured type has to produce its editor, not an empty gap. */
+  it.each([
+    ['flashcards', 'Front'],
+    ['matching', 'Term'],
+    ['scenario', 'What is happening'],
+  ])('shows the %s editor when it is picked', async (type, field) => {
+    mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
+    show();
+    await userEvent.click(screen.getByRole('button', { name: '+ Add activity' }));
+    await userEvent.selectOptions(screen.getByLabelText('Type'), type);
+    expect(screen.getByLabelText(field)).toBeInTheDocument();
+  });
+
+  /**
+   * The CHECK constraint accepts a card with no text on it, so nothing but
+   * this stops an activity that renders as a blank flashcard.
+   */
+  it('will not add a structured activity that is still blank', async () => {
+    mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
+    show();
+    await userEvent.click(screen.getByRole('button', { name: '+ Add activity' }));
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'flashcards');
+    await userEvent.type(screen.getByLabelText('Title'), 'Key terms');
+
+    const submit = screen.getByRole('button', { name: 'Add activity' });
+    expect(submit).toBeDisabled();
+    expect(screen.getByText('Card 1 needs both a front and a back.')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Front'), 'PPE');
+    await userEvent.type(screen.getByLabelText('Back'), 'Personal Protective Equipment');
+    expect(submit).toBeEnabled();
+  });
+
+  it('sends the authored cards with the new activity', async () => {
+    mocks.useCourseForEditing.mockReturnValue(courseWith([mod()]));
+    show();
+    await userEvent.click(screen.getByRole('button', { name: '+ Add activity' }));
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'flashcards');
+    await userEvent.type(screen.getByLabelText('Title'), 'Key terms');
+    await userEvent.type(screen.getByLabelText('Front'), 'PPE');
+    await userEvent.type(screen.getByLabelText('Back'), 'Personal Protective Equipment');
+    await userEvent.click(screen.getByRole('button', { name: 'Add activity' }));
+
+    expect(mocks.createActivity.mock.calls.at(-1)[0]).toMatchObject({
+      type: 'flashcards',
+      title: 'Key terms',
+      content: { cards: [{ front: 'PPE', back: 'Personal Protective Equipment' }] },
+    });
   });
 
   it('will not submit without a title', async () => {

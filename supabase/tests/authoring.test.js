@@ -112,6 +112,47 @@ describe('an admin building a course', () => {
     expect(created.content).toEqual(EMPTY_CONTENT[type]);
   });
 
+  /**
+   * The three structured types, with content a trainer would actually author.
+   * jsonb round-tripping is the risk the default-shape test above cannot see:
+   * the defaults are one blank row, so a nested array of objects — the thing
+   * scenario stores — is never exercised by it.
+   */
+  it('stores authored flashcards, pairs and scenario steps unchanged', async () => {
+    const authored = {
+      flashcards: { cards: [
+        { front: 'What does PPE stand for?', back: 'Personal Protective Equipment' },
+        { front: 'Class A fire', back: 'Ordinary combustibles' },
+      ] },
+      matching: { pairs: [
+        { term: 'Class A', definition: 'Wood and paper' },
+        { term: 'Class B', definition: 'Flammable liquids' },
+      ] },
+      scenario: { steps: [{
+        text: 'The fire door is propped open with a chair.',
+        choices: [
+          { text: 'Close it and report it', isCorrect: true, feedback: 'Right — it is a fire route.' },
+          { text: 'Leave it, someone needed it open', isCorrect: false, feedback: 'A propped fire door is a breach.' },
+        ],
+      }] },
+    };
+
+    let position = 20;
+    for (const [type, content] of Object.entries(authored)) {
+      position += 1;
+      const created = await createActivity({
+        moduleId, type, title: `Authored ${type}`, position, content,
+      });
+      // toEqual, not a spot check on one key: isCorrect is a boolean inside a
+      // nested array, and the scenario renderer branches on it.
+      expect(created.content).toEqual(content);
+
+      const back = await getCourseForEditing(courseId);
+      const stored = back.modules[0].activities.find((a) => a.id === created.id);
+      expect(stored.content).toEqual(content);
+    }
+  });
+
   it('rejects content of the wrong shape, rather than storing it', async () => {
     await expect(createActivity({
       moduleId, type: 'reading', title: 'Broken', position: 90, content: { videoId: 'x' },
@@ -130,7 +171,8 @@ describe('an admin building a course', () => {
     expect(course.modules).toHaveLength(1);
     const positions = course.modules[0].activities.map((a) => a.position);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
-    expect(course.modules[0].activities).toHaveLength(AUTHORABLE_TYPES.length);
+    // The seven defaults, plus the three authored ones above.
+    expect(course.modules[0].activities).toHaveLength(AUTHORABLE_TYPES.length + 3);
   });
 
   it('edits an activity', async () => {
