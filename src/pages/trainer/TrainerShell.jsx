@@ -5,8 +5,8 @@ import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
-import SupportThreads from '../../components/support/SupportThreads';
-import { useSupportThreads } from '../../hooks/useSupport';
+import SupportInbox from '../../components/support/SupportInbox';
+import { useSupportUnread } from '../../hooks/useSupport';
 import AccountPage from '../shared/AccountPage';
 import { usePendingReviews, useBlockedAttempts } from '../../hooks/useReview';
 
@@ -25,13 +25,11 @@ export default function TrainerShell() {
   // page, and a trainee waits until they happen to.
   const pending = usePendingReviews();
   const blocked = useBlockedAttempts();
-  const support = useSupportThreads();
   const waiting = (pending.data?.length ?? 0) + (blocked.data?.length ?? 0);
 
-  // Both queues carry a count, because a trainer who does not visit the page
-  // has no other way to learn that somebody is waiting on them.
-  const asking = (support.data ?? [])
-    .filter((t) => t.status === 'open' && t.awaitingStaff).length;
+  // Counts threads with something the reader has not seen, rather than ones
+  // "awaiting staff" — a reply you have already read is not a notification.
+  const asking = useSupportUnread();
 
   const nav = NAV.map((item) => {
     if (item.to === '/trainer/review') return { ...item, badge: waiting };
@@ -59,7 +57,7 @@ export default function TrainerShell() {
         {/* RLS decides what lands here: a request tagged with a course
             reaches whoever teaches it, and nothing else does. */}
         <Route path="support" element={(
-          <SupportThreads
+          <SupportInbox
             eyebrow="Support"
             title="Questions from your trainees"
             subtitle="Requests naming one of your courses. Anything else goes to an administrator."

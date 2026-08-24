@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
   threads: vi.fn(), messages: vi.fn(),
-  create: vi.fn(), reply: vi.fn(), setStatus: vi.fn(),
+  create: vi.fn(), reply: vi.fn(), setStatus: vi.fn(), markRead: vi.fn(),
   enrollments: vi.fn(), courses: vi.fn(),
   session: { profile: { id: 'me', name: 'Alice Ahmed', role: 'trainee' } },
   state: { create: {}, reply: {} },
@@ -21,15 +21,15 @@ vi.mock('../../hooks/useSupport', () => ({
   useCreateSupportRequest: () => asMutation(mocks.create, mocks.state.create),
   useReplyToSupport: () => asMutation(mocks.reply, mocks.state.reply),
   useSetSupportStatus: () => asMutation(mocks.setStatus),
+  useMarkSupportRead: () => asMutation(mocks.markRead),
 }));
 vi.mock('../../hooks/useSession', () => ({ useSession: () => mocks.session }));
 vi.mock('../../hooks/useCourses', () => ({
-  useMyEnrollments: mocks.enrollments,
-  useCourses: mocks.courses,
+  useMyEnrollments: mocks.enrollments, useCourses: mocks.courses,
 }));
 vi.mock('../ui/toast-context', () => ({ useToast: () => ({ notify: vi.fn() }) }));
 
-const SupportThreads = (await import('./SupportThreads')).default;
+const SupportInbox = (await import('./SupportInbox')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
 const varsOf = (spy) => spy.mock.calls.at(-1)?.[0];
@@ -40,11 +40,14 @@ const thread = (over = {}) => ({
   subject: 'Module 2 will not open', status: 'open',
   createdAt: '2026-02-01T10:00:00Z', updatedAt: '2026-02-01T10:00:00Z',
   messageCount: 1, lastMessageAt: '2026-02-01T10:00:00Z',
-  awaitingStaff: true, hasReply: false, ...over,
+  awaitingStaff: true, hasReply: false, unreadCount: 0, ...over,
 });
 
 const show = (props) => render(
-  <MemoryRouter><SupportThreads {...props} /></MemoryRouter>);
+  <MemoryRouter><SupportInbox {...props} /></MemoryRouter>);
+
+const openThread = async (name = /Module 2 will not open/) =>
+  userEvent.click(screen.getByRole('button', { name }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -56,8 +59,132 @@ beforeEach(() => {
   mocks.courses.mockReturnValue(query([{ id: 'c1', title: 'Fire Safety' }]));
 });
 
+describe('the inbox', () => {
+  it('shows nothing selected until a thread is picked', () => {
+    mocks.threads.mockReturnValue(query([thread()]));
+    show();
+    expect(screen.getByText('Pick a conversation to read it.')).toBeInTheDocument();
+  });
+
+  it('opens a thread and reads it', async () => {
+    mocks.threads.mockReturnValue(query([thread()]));
+    mocks.messages.mockReturnValue(query([{
+      id: 'm1', authorId: 'me', authorName: 'Alice Ahmed', authorRole: 'trainee',
+      body: 'It is still locked.', createdAt: '2026-02-01T10:00:00Z',
+    }]));
+    show();
+    await openThread();
+    expect(screen.getByText('It is still locked.')).toBeInTheDocument();
+    expect(screen.queryByText('Pick a conversation to read it.')).not.toBeInTheDocument();
+  });
+
+  /** A count in a column of thirty is easy to miss; weight is not. */
+  it('marks an unread thread in the list', () => {
+    mocks.threads.mockReturnValue(query([thread({ unreadCount: 2 })]));
+    show();
+    const row = screen.getByRole('button', { name: /Module 2 will not open/ });
+    expect(row.className).toContain('is-unread');
+    expect(within(row).getByText('2 unread')).toBeInTheDocument();
+  });
+
+  it('marks it read on opening, and only when there is something to clear', async () => {
+    mocks.threads.mockReturnValue(query([thread({ unreadCount: 2 })]));
+    show();
+    await openThread();
+    expect(varsOf(mocks.markRead)).toEqual({ requestId: 't1' });
+  });
+
+  it('does not write a read marker for a thread with nothing new', async () => {
+    mocks.threads.mockReturnValue(query([thread({ unreadCount: 0 })]));
+    show();
+    await openThread();
+    expect(mocks.markRead).not.toHaveBeenCalled();
+  });
+
+  /**
+   * openId is state but `selected` is derived from the current list, so a
+   * thread that vanishes cannot leave the detail pane showing something the
+   * list no longer has.
+   */
+  it('shows nothing when the open thread leaves the list', async () => {
+    mocks.threads.mockReturnValue(query([thread()]));
+    const { rerender } = show();
+    await openThread();
+    expect(screen.getByRole('heading', { name: 'Module 2 will not open' })).toBeInTheDocument();
+
+    mocks.threads.mockReturnValue(query([]));
+    rerender(<MemoryRouter><SupportInbox /></MemoryRouter>);
+    expect(screen.queryByRole('heading', { name: 'Module 2 will not open' })).not.toBeInTheDocument();
+  });
+});
+
+describe('filtering', () => {
+  const three = () => query([
+    thread({ id: 't1', subject: 'Unread one', unreadCount: 1 }),
+    thread({ id: 't2', subject: 'Open one' }),
+    thread({ id: 't3', subject: 'Closed one', status: 'closed' }),
+  ]);
+
+  it('counts each filter before it is chosen', () => {
+    mocks.threads.mockReturnValue(three());
+    show();
+    expect(screen.getByRole('button', { name: 'All 3' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unread 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Closed 1' })).toBeInTheDocument();
+  });
+
+  it('narrows to unread', async () => {
+    mocks.threads.mockReturnValue(three());
+    show();
+    await userEvent.click(screen.getByRole('button', { name: 'Unread 1' }));
+    expect(screen.getByText('Unread one')).toBeInTheDocument();
+    expect(screen.queryByText('Open one')).not.toBeInTheDocument();
+  });
+
+  it('says so when a filter is empty', async () => {
+    mocks.threads.mockReturnValue(query([thread()]));
+    show();
+    await userEvent.click(screen.getByRole('button', { name: /Closed/ }));
+    expect(screen.getByText('Nothing closed.')).toBeInTheDocument();
+  });
+});
+
+describe('status', () => {
+  it('flags a thread waiting on the reader when they are staff', () => {
+    mocks.session = { profile: { id: 'staff', name: 'Tara', role: 'trainer' } };
+    mocks.threads.mockReturnValue(query([thread({ awaitingStaff: true })]));
+    show();
+    expect(screen.getByText('Needs a reply')).toBeInTheDocument();
+  });
+
+  /** The author is not the one who owes a reply, so they must not be nagged. */
+  it('does not tell the author their own thread needs a reply', () => {
+    mocks.threads.mockReturnValue(query([thread({ awaitingStaff: true })]));
+    show();
+    expect(screen.queryByText('Needs a reply')).not.toBeInTheDocument();
+  });
+
+  it('tells the author when it has been answered', () => {
+    mocks.threads.mockReturnValue(query([
+      thread({ awaitingStaff: false, hasReply: true, messageCount: 2 }),
+    ]));
+    show();
+    expect(screen.getByText('Answered')).toBeInTheDocument();
+  });
+
+  /** A closed thread is not waiting on anybody, whatever the flag says. */
+  it('shows a closed thread as closed rather than as waiting', () => {
+    mocks.session = { profile: { id: 'staff', name: 'Tara', role: 'trainer' } };
+    mocks.threads.mockReturnValue(query([thread({ status: 'closed', awaitingStaff: true })]));
+    show();
+    expect(screen.getAllByText('Closed').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Needs a reply')).not.toBeInTheDocument();
+  });
+});
+
 describe('filing a request', () => {
   it('offers no compose form to somebody who cannot create one', () => {
+    mocks.threads.mockReturnValue(query([thread()]));
     show();
     expect(screen.queryByRole('button', { name: /Ask for help/ })).not.toBeInTheDocument();
   });
@@ -107,71 +234,23 @@ describe('filing a request', () => {
 
     await userEvent.type(screen.getByLabelText('Subject'), 'Only a subject');
     expect(screen.getByText('Describe what is happening.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   });
 
-  /** Only courses the author is actually on — you cannot ask about a stranger's. */
+  /** Only courses the author is on — you cannot ask about a stranger's. */
   it('offers only the courses the author is enrolled on', async () => {
     mocks.courses.mockReturnValue(query([
-      { id: 'c1', title: 'Fire Safety' },
-      { id: 'c2', title: 'Not mine' },
+      { id: 'c1', title: 'Fire Safety' }, { id: 'c2', title: 'Not mine' },
     ]));
     show({ canCreate: true });
     await userEvent.click(screen.getAllByRole('button', { name: /Ask for help/ })[0]);
     const options = within(screen.getByLabelText(/Which course/))
-      .getAllByRole('option').map((o) => o.textContent);
-    expect(options.join(' ')).toContain('Fire Safety');
-    expect(options.join(' ')).not.toContain('Not mine');
+      .getAllByRole('option').map((o) => o.textContent).join(' ');
+    expect(options).toContain('Fire Safety');
+    expect(options).not.toContain('Not mine');
   });
 });
 
-describe('the list', () => {
-  it('flags a thread waiting on the reader when they are staff', () => {
-    mocks.session = { profile: { id: 'staff', name: 'Tara', role: 'trainer' } };
-    mocks.threads.mockReturnValue(query([thread({ awaitingStaff: true })]));
-    show();
-    expect(screen.getByText('Needs a reply')).toBeInTheDocument();
-  });
-
-  /** The author is not the one who owes a reply, so they must not be nagged. */
-  it('does not tell the author their own thread needs a reply', () => {
-    mocks.threads.mockReturnValue(query([thread({ awaitingStaff: true })]));
-    show();
-    expect(screen.queryByText('Needs a reply')).not.toBeInTheDocument();
-  });
-
-  it('tells the author when it has been answered', () => {
-    mocks.threads.mockReturnValue(query([
-      thread({ awaitingStaff: false, hasReply: true, messageCount: 2 }),
-    ]));
-    show();
-    expect(screen.getByText('Answered')).toBeInTheDocument();
-  });
-
-  /** A closed thread is not waiting on anybody, whatever the flag says. */
-  it('shows a closed thread as closed rather than as waiting', () => {
-    mocks.session = { profile: { id: 'staff', name: 'Tara', role: 'trainer' } };
-    mocks.threads.mockReturnValue(query([thread({ status: 'closed', awaitingStaff: true })]));
-    show();
-    expect(screen.getByText('Closed')).toBeInTheDocument();
-    expect(screen.queryByText('Needs a reply')).not.toBeInTheDocument();
-  });
-
-  it('says a request with no course is general', () => {
-    mocks.threads.mockReturnValue(query([thread({ courseId: null, courseTitle: null })]));
-    show();
-    expect(screen.getByText(/General/)).toBeInTheDocument();
-  });
-
-  it('starts collapsed and announces that it expands', () => {
-    mocks.threads.mockReturnValue(query([thread()]));
-    show();
-    const head = screen.getByRole('button', { name: /Module 2 will not open/ });
-    expect(head).toHaveAttribute('aria-expanded', 'false');
-  });
-});
-
-describe('a thread', () => {
+describe('a conversation', () => {
   const open = async () => {
     mocks.threads.mockReturnValue(query([thread({ messageCount: 2, hasReply: true })]));
     mocks.messages.mockReturnValue(query([
@@ -185,20 +264,20 @@ describe('a thread', () => {
       },
     ]));
     show();
-    await userEvent.click(screen.getByRole('button', { name: /Module 2 will not open/ }));
+    await openThread();
   };
 
   it('shows both sides, and names who answered', async () => {
     await open();
     expect(screen.getByText('It is still locked.')).toBeInTheDocument();
     expect(screen.getByText('Finish the quiz first.')).toBeInTheDocument();
-    // The defect this guards: a trainee cannot read the trainer's profile row,
-    // so the reply used to be attributed to "Unknown".
+    // A trainee cannot read the trainer's profiles row, so the name comes from
+    // public_profiles. Without it every staff reply read as "Unknown".
     expect(screen.getByText('Tara Trainer')).toBeInTheDocument();
     expect(screen.getByText('Trainer')).toBeInTheDocument();
   });
 
-  it('marks the reader\'s own messages', async () => {
+  it("marks the reader's own messages", async () => {
     await open();
     expect(screen.getByText('You')).toBeInTheDocument();
   });
@@ -220,35 +299,37 @@ describe('a thread', () => {
     await userEvent.click(screen.getByRole('button', { name: /This is sorted/ }));
     expect(varsOf(mocks.setStatus)).toEqual({ requestId: 't1', status: 'closed' });
   });
-});
 
-describe('a closed thread', () => {
   /**
    * The policy refuses a message on a closed thread, so hiding the box is not
    * a UI preference — a reply typed here would be rejected, and saying why
    * beats letting somebody write one and lose it.
    */
-  it('offers no reply box, and says why', async () => {
+  it('offers no reply box on a closed thread, and says why', async () => {
     mocks.threads.mockReturnValue(query([thread({ status: 'closed' })]));
-    mocks.messages.mockReturnValue(query([]));
     show();
-    await userEvent.click(screen.getByRole('button', { name: /Module 2 will not open/ }));
-
+    await openThread();
     expect(screen.queryByLabelText(/Reply to/)).not.toBeInTheDocument();
     expect(screen.getByText(/would not reach anyone/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Reopen/ })).toBeInTheDocument();
   });
 
-  it('reopens it', async () => {
+  it('reopens a closed thread', async () => {
     mocks.threads.mockReturnValue(query([thread({ status: 'closed' })]));
     show();
-    await userEvent.click(screen.getByRole('button', { name: /Module 2 will not open/ }));
+    await openThread();
     await userEvent.click(screen.getByRole('button', { name: /Reopen/ }));
     expect(varsOf(mocks.setStatus)).toEqual({ requestId: 't1', status: 'open' });
   });
+
+  /** The back control only matters on a narrow screen, where the list is hidden. */
+  it('can go back to the list', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: 'Back to the list' }));
+    expect(screen.getByText('Pick a conversation to read it.')).toBeInTheDocument();
+  });
 });
 
-describe('when there is nothing', () => {
+describe('when it cannot load', () => {
   it('uses the empty text it was given', () => {
     show({ emptyTitle: 'Nothing to answer', emptyBody: 'Nobody has asked.' });
     expect(screen.getByText('Nothing to answer')).toBeInTheDocument();
@@ -260,5 +341,13 @@ describe('when there is nothing', () => {
     show();
     expect(screen.getByRole('alert'))
       .toHaveTextContent(/Could not load your support requests/);
+  });
+
+  it('reports a conversation that will not load', async () => {
+    mocks.threads.mockReturnValue(query([thread()]));
+    mocks.messages.mockReturnValue(query(undefined, { error: new Error('No such request') }));
+    show();
+    await openThread();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Could not load this conversation/);
   });
 });

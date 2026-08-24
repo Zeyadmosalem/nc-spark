@@ -1,5 +1,5 @@
 import { requireClient } from './client';
-import { unwrap, currentUserId } from './helpers';
+import { unwrap, currentUserId, invokeFn } from './helpers';
 
 /**
  * Support threads.
@@ -10,12 +10,23 @@ import { unwrap, currentUserId } from './helpers';
  * on a course could fill it in, read a confirmation and wait for an answer
  * that was never coming.
  *
- * Everything here is plain RLS, no Edge Function. There is no privileged write
- * to make: a request is filed as yourself (`author_id = auth.uid()` in the
- * WITH CHECK), and a reply is only accepted on a thread you can already see.
- * The one thing worth stating is what a trainer can reach — a request carrying
- * a course_id is visible to whoever teaches that course, and one without goes
- * to administrators only.
+ * Requests are plain RLS: one is filed as yourself (`author_id = auth.uid()`
+ * in the WITH CHECK), and what a trainer can reach is decided by policy — a
+ * request carrying a course_id is visible to whoever teaches that course, and
+ * one without goes to administrators only.
+ *
+ * MESSAGE BODIES are different. They are encrypted with a per-thread data key,
+ * itself wrapped with a master key that lives in the support-messages function's
+ * secrets and never touches the database. So a stolen database dump holds no
+ * readable message text — and reading one back means asking the function,
+ * because nothing else can decrypt it.
+ *
+ * It is not end-to-end encryption and does not claim to be. The server can
+ * decrypt by design, because requests route to a ROLE that changes hands, there
+ * is no native client to hold a key safely, and these threads are business
+ * records an administrator has to be able to recover. See
+ * supabase/migrations/20260827000100_support_encryption.sql for the full
+ * reasoning and the honest limit.
  */
 
 /*
@@ -60,6 +71,10 @@ const toCamel = (r, state) => ({
   updatedAt: r.updated_at,
   messageCount: state?.message_count ?? 0,
   lastMessageAt: state?.last_message_at ?? r.created_at,
+  // Messages somebody else wrote since this reader last opened the thread.
+  // Per participant: a trainer having read something says nothing about
+  // whether the trainee has.
+  unreadCount: state?.unread_count ?? 0,
   // null when nobody has posted at all, which cannot happen through this api
   // — the first message is written with the request — but can if a row is
   // inserted by hand.
@@ -84,30 +99,33 @@ export async function supportThreads() {
   if ((rows ?? []).length === 0) return [];
 
   const state = unwrap(await client
-    .from('support_request_state')
-    .select('request_id, message_count, last_message_at, has_reply, awaiting_staff')
+    .from('support_inbox')
+    .select('request_id, message_count, last_message_at, has_reply, awaiting_staff, unread_count')
     .in('request_id', rows.map((r) => r.id)));
 
   const byId = new Map((state ?? []).map((s) => [s.request_id, s]));
   return rows.map((r) => toCamel(r, byId.get(r.id)));
 }
 
-/** The messages on one thread, oldest first — the order it was written in. */
+/**
+ * The messages on one thread, oldest first — the order it was written in.
+ *
+ * Through the function, because the bodies are ciphertext and only it holds
+ * the key. It re-checks visibility on the caller's behalf: it runs as
+ * service_role, which bypasses RLS, so the policy that would have protected a
+ * direct read does not apply to it.
+ */
 export async function supportMessages(requestId) {
   if (!requestId) return [];
-  const rows = unwrap(await requireClient()
-    .from('support_messages')
-    .select('id, request_id, author_id, body, created_at, public_profiles(id, name, avatar, role)')
-    .eq('request_id', requestId)
-    .order('created_at'));
+  const { messages } = await invokeFn('support-messages', { action: 'list', requestId });
 
-  return (rows ?? []).map((m) => ({
+  return (messages ?? []).map((m) => ({
     id: m.id,
     requestId: m.request_id,
     authorId: m.author_id,
-    authorName: nameOf(m.public_profiles),
-    authorAvatar: m.public_profiles?.avatar ?? null,
-    authorRole: m.public_profiles?.role ?? null,
+    authorName: nameOf(m.author),
+    authorAvatar: m.author?.avatar ?? null,
+    authorRole: m.author?.role ?? null,
     body: m.body,
     createdAt: m.created_at,
   }));
@@ -132,22 +150,35 @@ export async function createSupportRequest({ subject, body, courseId = null }) {
     .single());
 
   try {
-    unwrap(await client
-      .from('support_messages')
-      .insert({ request_id: request.id, author_id: authorId, body: body.trim() }));
+    // Through the function, so the opening message is encrypted like every
+    // other one. A first message written in the clear would defeat the whole
+    // arrangement for the message most likely to describe the problem.
+    await invokeFn('support-messages', {
+      action: 'send', requestId: request.id, body: body.trim(),
+    });
   } catch (err) {
     await client.from('support_requests').delete().eq('id', request.id);
     throw err;
   }
 
-  return toCamel(request, { message_count: 1, awaiting_staff: true, has_reply: false });
+  return toCamel(request, {
+    message_count: 1, awaiting_staff: true, has_reply: false, unread_count: 0,
+  });
 }
 
 export async function replyToSupportRequest({ requestId, body }) {
-  const authorId = await currentUserId();
-  unwrap(await requireClient()
-    .from('support_messages')
-    .insert({ request_id: requestId, author_id: authorId, body: body.trim() }));
+  await invokeFn('support-messages', { action: 'send', requestId, body: body.trim() });
+}
+
+/**
+ * Marks a thread read up to now, for this reader only.
+ *
+ * Fire-and-forget from the caller's point of view: failing to record that
+ * somebody opened a thread is not worth an error message on top of the thread
+ * they are already reading.
+ */
+export async function markSupportRead(requestId) {
+  await invokeFn('support-messages', { action: 'mark-read', requestId });
 }
 
 /**

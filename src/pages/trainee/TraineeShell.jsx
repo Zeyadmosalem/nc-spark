@@ -10,7 +10,7 @@ import ActivityPage from './ActivityPage';
 import AchievementsPage from './AchievementsPage';
 import CourseCatalog from './CourseCatalog';
 import LibraryPage from './LibraryPage';
-import SupportThreads from '../../components/support/SupportThreads';
+import SupportInbox from '../../components/support/SupportInbox';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
@@ -156,7 +156,7 @@ export function MyCoursesPage() {
  */
 function SupportPage() {
   return (
-    <SupportThreads
+    <SupportInbox
       canCreate
       eyebrow="Support"
       title="Get help"

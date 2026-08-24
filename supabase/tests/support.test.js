@@ -32,7 +32,7 @@ process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
 const { supabase } = await import('../../src/api/client.js');
 const {
   supportThreads, supportMessages, createSupportRequest,
-  replyToSupportRequest, setSupportStatus,
+  replyToSupportRequest, setSupportStatus, markSupportRead,
 } = await import('../../src/api/support.js');
 
 const svc = serviceClient();
@@ -160,7 +160,11 @@ describe('who can see a thread', () => {
   it('a trainer of a different course cannot', async () => {
     await become(otherTrainer.email);
     expect((await supportThreads()).map((t) => t.id)).not.toContain(mine.id);
-    expect(await supportMessages(mine.id)).toEqual([]);
+    // Refused outright, rather than the empty array a filtered read used to
+    // return. Since the bodies moved behind the function this is an explicit
+    // "no", which is a better answer than a result indistinguishable from an
+    // empty conversation.
+    await expect(supportMessages(mine.id)).rejects.toThrow(/No such request/);
   });
 
   /**
@@ -176,7 +180,7 @@ describe('who can see a thread', () => {
   it('another trainee cannot', async () => {
     await become(bob.email);
     expect((await supportThreads()).map((t) => t.id)).not.toContain(mine.id);
-    expect(await supportMessages(mine.id)).toEqual([]);
+    await expect(supportMessages(mine.id)).rejects.toThrow(/No such request/);
   });
 
   /**
@@ -345,13 +349,160 @@ describe('the record cannot be rewritten', () => {
     });
     const [message] = await supportMessages(thread.id);
 
+    const { data: before } = await svc.from('support_messages')
+      .select('body_cipher').eq('id', message.id).single();
+
     const { error: updErr } = await supabase.from('support_messages')
-      .update({ body: 'Rewritten' }).eq('id', message.id);
+      .update({ body_cipher: 'Rewritten' }).eq('id', message.id);
     expect(updErr).toBeTruthy();
 
     await supabase.from('support_messages').delete().eq('id', message.id);
+
+    // The stored ciphertext is byte-for-byte what it was, and still reads back
+    // as the original words.
+    const { data: after } = await svc.from('support_messages')
+      .select('body_cipher').eq('id', message.id).single();
+    expect(after.body_cipher).toBe(before.body_cipher);
+
+    await become(alice.email);
+    expect((await supportMessages(thread.id))[0].body).toBe('Original wording.');
+  });
+});
+
+/**
+ * The point of the encryption, checked against what is actually stored.
+ *
+ * Everything else in this file goes through the api, which decrypts — so none
+ * of it would notice if the bodies were being written in the clear. These read
+ * the raw rows with the service role, the way a leaked database dump would.
+ */
+describe('what is actually stored', () => {
+  let thread;
+  const SECRET = 'My password is hunter2 and I cannot open module 3.';
+
+  beforeAll(async () => {
+    await become(alice.email);
+    thread = await createSupportRequest({
+      subject: 'Encryption check', body: SECRET, courseId,
+    });
+  });
+
+  it('holds no plaintext body', async () => {
     const { data } = await svc.from('support_messages')
-      .select('body').eq('id', message.id).single();
-    expect(data.body).toBe('Original wording.');
+      .select('body, body_cipher, body_iv').eq('request_id', thread.id);
+
+    expect(data).toHaveLength(1);
+    expect(data[0].body).toBeNull();
+    expect(data[0].body_cipher).toBeTruthy();
+    expect(data[0].body_iv).toBeTruthy();
+    // The obvious mistake would be base64 of the plaintext rather than of a
+    // ciphertext, which looks encrypted and is not.
+    expect(Buffer.from(data[0].body_cipher, 'base64').toString('utf8'))
+      .not.toContain('hunter2');
+  });
+
+  it('reads back as what was written', async () => {
+    const [message] = await supportMessages(thread.id);
+    expect(message.body).toBe(SECRET);
+  });
+
+  /**
+   * A fresh IV per message. Reusing one with the same key is the single
+   * mistake that breaks AES-GCM outright, and two identical messages are
+   * exactly how it would show.
+   */
+  it('never reuses an initialisation vector', async () => {
+    await replyToSupportRequest({ requestId: thread.id, body: 'Same text' });
+    await replyToSupportRequest({ requestId: thread.id, body: 'Same text' });
+
+    const { data } = await svc.from('support_messages')
+      .select('body_cipher, body_iv').eq('request_id', thread.id);
+
+    const ivs = data.map((m) => m.body_iv);
+    expect(new Set(ivs).size).toBe(ivs.length);
+    // Identical plaintext under different IVs must produce different bytes.
+    const ciphers = data.map((m) => m.body_cipher);
+    expect(new Set(ciphers).size).toBe(ciphers.length);
+  });
+
+  /** The data key is wrapped, so the database never holds it either. */
+  it('stores the thread key only in wrapped form', async () => {
+    const { data } = await svc.from('support_thread_keys')
+      .select('wrapped_key, wrap_iv, key_version').eq('request_id', thread.id).single();
+    expect(data.wrapped_key).toBeTruthy();
+    expect(data.wrap_iv).toBeTruthy();
+    expect(data.key_version).toBe(1);
+  });
+
+  /**
+   * No grant at all on support_thread_keys, the same arrangement quiz_answer_keys
+   * uses: "a browser can never read this" is a property of the grant table
+   * rather than of every future query remembering to exclude a column.
+   */
+  it('lets no browser session near the thread keys', async () => {
+    const { error } = await supabase.from('support_thread_keys').select('wrapped_key');
+    expect(error).toBeTruthy();
+    expect(error.message).toMatch(/permission denied/i);
+  });
+
+  /** The function is the door, and it re-checks visibility itself. */
+  it('refuses to decrypt for somebody who cannot see the thread', async () => {
+    await become(bob.email);
+    await expect(supportMessages(thread.id)).rejects.toThrow(/No such request/);
+  });
+
+  /**
+   * 404, not 403. Telling somebody a thread exists but is not theirs confirms
+   * that a given person filed a request about a given course.
+   */
+  it('does not confirm that a hidden thread exists', async () => {
+    await become(otherTrainer.email);
+    await expect(supportMessages(thread.id)).rejects.toThrow(/No such request/);
+  });
+});
+
+describe('unread state', () => {
+  let thread;
+
+  beforeAll(async () => {
+    await become(alice.email);
+    thread = await createSupportRequest({
+      subject: 'Unread check', body: 'First.', courseId,
+    });
+  });
+
+  /** Your own messages are never unread to you. */
+  it("does not count the reader's own messages", async () => {
+    const seen = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(seen.unreadCount).toBe(0);
+  });
+
+  it('counts a reply the reader has not opened', async () => {
+    await become(trainer.email);
+    await replyToSupportRequest({ requestId: thread.id, body: 'Try this.' });
+
+    await become(alice.email);
+    const seen = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(seen.unreadCount).toBe(1);
+  });
+
+  it('clears once the thread is opened', async () => {
+    await markSupportRead(thread.id);
+    const seen = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(seen.unreadCount).toBe(0);
+  });
+
+  /** Per participant: one reader's state must not clear another's. */
+  it('is tracked separately for each participant', async () => {
+    await become(alice.email);
+    await replyToSupportRequest({ requestId: thread.id, body: 'Did not work.' });
+
+    await become(trainer.email);
+    const forTrainer = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(forTrainer.unreadCount).toBeGreaterThan(0);
+
+    await become(alice.email);
+    const forAlice = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(forAlice.unreadCount).toBe(0);
   });
 });

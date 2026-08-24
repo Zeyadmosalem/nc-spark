@@ -2096,3 +2096,203 @@ input[type='radio'] {
   gap: var(--gap-md);
   flex-wrap: wrap;
 }
+
+/* ====================================================== inbox == */
+
+/* Two panes on a wide screen, one at a time on a narrow one. The list
+   column is fixed because a thread subject is roughly a fixed length
+   and the conversation is what benefits from the space. */
+.inbox {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  gap: var(--gap-md);
+  align-items: start;
+}
+
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  min-width: 0;
+  /* Sticks while a long conversation scrolls beside it. */
+  position: sticky;
+  top: var(--gap-md);
+  max-height: calc(100vh - 3rem);
+}
+
+.inbox-threads {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.inbox-thread {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.inbox-thread:hover {
+  background: var(--surface-alt);
+}
+
+.inbox-thread.is-selected {
+  background: var(--surface);
+  border-color: var(--brand-accent);
+  box-shadow: var(--shadow-xs);
+}
+
+.inbox-thread-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inbox-thread-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.inbox-thread-subject {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Unread is carried by weight, not only by the dot — a count alone is
+   easy to miss when scanning a column of thirty. */
+.inbox-thread.is-unread .inbox-thread-subject {
+  font-weight: 700;
+}
+
+.inbox-thread-time {
+  font-size: var(--text-2xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox-thread-meta {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-thread-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.inbox-detail {
+  min-width: 0;
+}
+
+.inbox-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 16rem;
+  color: var(--text-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+
+.thread-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  padding: var(--sp-4);
+}
+
+.thread-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: var(--gap-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+/* The list is beside this on a wide screen, so a back button would go
+   nowhere. It appears only where the list is a separate view. */
+.thread-back {
+  display: none;
+}
+
+.thread-subject {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: var(--tracking-tight);
+  color: var(--heading);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-meta {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  margin: 0.1rem 0 0;
+}
+
+/* Below 60rem the two panes become one screen at a time: the list, or
+   the conversation with a way back to it. Showing a 22rem sidebar and a
+   conversation side by side on a phone gives neither enough room. */
+@media (max-width: 60rem) {
+  .inbox {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inbox-list {
+    position: static;
+    max-height: none;
+  }
+
+  .inbox-threads {
+    overflow: visible;
+  }
+
+  /* With a thread open the list steps aside entirely. */
+  .inbox.has-detail .inbox-list {
+    display: none;
+  }
+
+  .inbox:not(.has-detail) .inbox-detail {
+    display: none;
+  }
+
+  .thread-back {
+    display: grid;
+  }
+}
