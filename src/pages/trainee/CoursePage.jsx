@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
+import { useMyCompletions } from '../../hooks/useProgress';
+import { moduleLockState } from '../../api/progress';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import CourseMaterials from '../../components/shared/CourseMaterials';
@@ -21,6 +23,12 @@ export default function CoursePage() {
   } = useMyEnrollments();
 
   const [activeTab, setActiveTab] = useState('path');
+
+  // Above the early returns, like every other hook here: this page has
+  // already crashed once with "Rendered fewer hooks than expected" because
+  // router navigation between two course ids reuses the same fiber.
+  const myEnrollment = (enrollments ?? []).find((e) => e.courseId === courseId);
+  const completions = useMyCompletions(myEnrollment?.id);
 
   // Every hook must run before the early returns below. This page used to
   // crash with "Rendered fewer hooks than expected" because router navigation
@@ -73,6 +81,12 @@ export default function CoursePage() {
   const accent = course.color || '#002F6C';
   const percent = enrollment.percent ?? 0;
   const modules = course.modules ?? [];
+
+  // An empty set until the completions arrive, so a gated module reads as
+  // locked for that moment. That is the safe direction to be wrong in: the
+  // alternative flashes an open course and then shuts it.
+  const done = completions.data ?? new Set();
+  const locks = moduleLockState(modules, done);
 
   return (
     <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
@@ -139,36 +153,99 @@ export default function CoursePage() {
                 <p style={{ color: 'var(--text-2)' }}>This course has no content yet.</p>
               </div>
             ) : (
-              modules.map((mod) => (
-                <div key={mod.id} className="card no-hover">
-                  <div className="card-title">{mod.position}. {mod.title}</div>
-                  {(mod.activities ?? []).length === 0 ? (
-                    <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No activities yet.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      {mod.activities.map((a) => (
-                        <Link
-                          key={a.id}
-                          to={`/trainee/activity/${a.id}`}
-                          state={{ courseId }}
-                          style={{
+              modules.map((mod) => {
+                const gate = locks.get(mod.id) ?? { unlocked: true, blockedBy: null };
+                const activities = mod.activities ?? [];
+                const finished = activities.filter((a) => done.has(a.id)).length;
+
+                return (
+                  <div key={mod.id} className="card no-hover"
+                       style={gate.unlocked ? undefined : { opacity: 0.75 }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', gap: '0.6rem',
+                      justifyContent: 'space-between', flexWrap: 'wrap',
+                    }}>
+                      <div className="card-title" style={{ marginBottom: 0 }}>
+                        <span aria-hidden="true">{gate.unlocked ? '' : '🔒 '}</span>
+                        {mod.position}. {mod.title}
+                      </div>
+                      {activities.length > 0 && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
+                          {finished === activities.length
+                            ? 'Complete'
+                            : `${finished} of ${activities.length} done`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/*
+                      complete-activity checks app.is_module_unlocked and
+                      refuses a locked activity, and always will. Without this
+                      the only way to discover a lock was to open an activity
+                      and be turned away, with nothing to say what was in the
+                      way or how much of it was left.
+                    */}
+                    {!gate.unlocked && (
+                      <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
+                        {gate.blockedBy
+                          ? `Finish ${gate.blockedBy.module.position}. ${gate.blockedBy.module.title} first — ${gate.blockedBy.remaining} activit${gate.blockedBy.remaining === 1 ? 'y' : 'ies'} to go.`
+                          : 'This module opens once an earlier one is finished.'}
+                      </p>
+                    )}
+
+                    {activities.length === 0 ? (
+                      <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No activities yet.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        {activities.map((a) => {
+                          const isDone = done.has(a.id);
+                          const shared = {
                             display: 'flex', alignItems: 'center', gap: '0.75rem',
-                            textDecoration: 'none', color: 'inherit',
                             padding: '0.75rem', borderRadius: 'var(--r-md)',
                             background: 'var(--surface-alt)', border: '1px solid var(--border)',
-                          }}
-                        >
-                          <span style={{ fontSize: '1.25rem' }}>{TYPE_ICONS[a.type] ?? '📘'}</span>
-                          <span style={{ flex: 1 }}>{a.title}</span>
-                          <span className="badge-pill" style={{ background: 'var(--surface)', color: 'var(--brand-primary)' }}>
-                            +{a.xp} XP
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
+                          };
+                          const body = (
+                            <>
+                              <span style={{ fontSize: '1.25rem' }} aria-hidden="true">
+                                {TYPE_ICONS[a.type] ?? '📘'}
+                              </span>
+                              <span style={{ flex: 1 }}>{a.title}</span>
+                              {/* Said in words as well as with a tick: a
+                                  coloured pill is not a status to somebody
+                                  using a screen reader. */}
+                              {isDone && (
+                                <span className="badge-pill"
+                                      style={{ background: 'rgba(40,167,69,0.15)', color: '#28a745' }}>
+                                  Done
+                                </span>
+                              )}
+                            </>
+                          );
+
+                          // A locked activity is not a link. Offering one the
+                          // server will refuse is an invitation to a dead end,
+                          // and it stays in the tab order while it is there.
+                          return gate.unlocked ? (
+                            <Link
+                              key={a.id}
+                              to={`/trainee/activity/${a.id}`}
+                              state={{ courseId }}
+                              style={{ ...shared, textDecoration: 'none', color: 'inherit' }}
+                            >
+                              {body}
+                            </Link>
+                          ) : (
+                            <div key={a.id} style={{ ...shared, color: 'var(--text-3)' }}>
+                              {body}
+                              <span className="sr-only">Locked</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )
           )}
 

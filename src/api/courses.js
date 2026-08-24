@@ -42,7 +42,7 @@ export async function getCourse(id) {
 export async function getCourseOutline(id) {
   const data = unwrap(await requireClient()
     .from('courses')
-    .select(`${COURSE_COLUMNS}, modules(id, title, position, activities(id, type, title, position, xp))`)
+    .select(`${COURSE_COLUMNS}, modules(id, title, position, unlock_after_module_id, activities(id, type, title, position, xp))`)
     .eq('id', id)
     .maybeSingle());
   if (!data) return null;
@@ -54,6 +54,10 @@ export async function getCourseOutline(id) {
         id: m.id,
         title: m.title,
         position: m.position,
+        // Not a secret, and the trainee is the person who most needs it: the
+        // server refuses a locked activity, so without this the only way to
+        // discover a lock is to click into one and be turned away.
+        unlockAfterModuleId: m.unlock_after_module_id ?? null,
         activities: (m.activities ?? [])
           .sort((a, b) => a.position - b.position)
           .map((a) => ({ id: a.id, type: a.type, title: a.title, position: a.position, xp: a.xp })),

@@ -22,6 +22,10 @@ export function useCompleteActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: courseKeys.myEnrollments });
       queryClient.invalidateQueries({ queryKey: ['courses', 'outline'] });
+      // The ticks and the lock state are computed from this, so without it
+      // the padlock stays shut on screen exactly as the comment above warns.
+      queryClient.invalidateQueries({ queryKey: ['progress', 'enrollment-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
     },
   });
 }

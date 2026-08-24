@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -9,12 +9,21 @@ const mocks = vi.hoisted(() => ({
   myEnrollments: vi.fn(async () => []),
   applyForCourse: vi.fn(),
   sendChatMessage: vi.fn(),
+  myCompletions: vi.fn(async () => new Set()),
 }));
 vi.mock('../../api/courses', () => ({
   getCourseOutline: mocks.getCourseOutline, listCourses: mocks.listCourses,
 }));
 vi.mock('../../api/enrollments', () => ({
   myEnrollments: mocks.myEnrollments, applyForCourse: mocks.applyForCourse,
+}));
+// moduleLockState is deliberately NOT mocked. It is the browser's copy of
+// app.is_module_unlocked, and supabase/tests/module-locks.test.js pins it
+// against the database; mocking it here would leave these tests asserting
+// nothing about which modules actually open.
+vi.mock('../../api/progress', async (importOriginal) => ({
+  ...await importOriginal(),
+  myCompletions: mocks.myCompletions,
 }));
 
 const { default: CoursePage } = await import('./CoursePage');
@@ -44,6 +53,18 @@ const outline = {
   ],
 };
 const enrolled = [{ id: 'e1', courseId: 'c1', status: 'active', percent: 50 }];
+
+/** Module two gated behind module one, which is how a real course is built. */
+const gatedOutline = {
+  ...outline,
+  modules: [
+    outline.modules[0],
+    {
+      id: 'm2', title: 'Assessment', position: 2, unlockAfterModuleId: 'm1',
+      activities: [{ id: 'a3', type: 'quiz', title: 'Final check', position: 1, xp: 20 }],
+    },
+  ],
+};
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -126,5 +147,106 @@ describe('CoursePage outline', () => {
     renderAt();
     await screen.findByRole('button', { name: /learning path/i });
     expect(screen.queryByRole('button', { name: /course chat/i })).not.toBeInTheDocument();
+  });
+
+  /**
+   * XP is authored on every activity and awarded by nothing (backlog B7).
+   * "+8 XP" next to an activity was the last fabricated figure on a trainee's
+   * screen: a promise of a total that does not exist anywhere in the product.
+   */
+  it('does not promise XP that nothing awards', async () => {
+    mocks.getCourseOutline.mockResolvedValue(outline);
+    mocks.myEnrollments.mockResolvedValue(enrolled);
+    renderAt();
+    await screen.findByText('Hazards');
+    expect(screen.queryByText(/XP/)).not.toBeInTheDocument();
+  });
+});
+
+describe('what a trainee has finished', () => {
+  beforeEach(() => {
+    mocks.getCourseOutline.mockResolvedValue(outline);
+    mocks.myEnrollments.mockResolvedValue(enrolled);
+  });
+
+  it('ticks the activities that are done', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set(['a1']));
+    renderAt();
+    // The link renders from the outline, which arrives before the
+    // completions do — so waiting on the link alone would assert before the
+    // ticks exist.
+    await screen.findByText('Done');
+    const hazards = screen.getByRole('link', { name: /Hazards/ });
+    expect(within(hazards).getByText('Done')).toBeInTheDocument();
+
+    const video = screen.getByRole('link', { name: /Walkthrough/ });
+    expect(within(video).queryByText('Done')).not.toBeInTheDocument();
+  });
+
+  it('counts them per module', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set(['a1']));
+    renderAt();
+    expect(await screen.findByText('1 of 2 done')).toBeInTheDocument();
+  });
+
+  it('says a module is complete rather than counting to itself', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set(['a1', 'a2']));
+    renderAt();
+    expect(await screen.findByText('Complete')).toBeInTheDocument();
+  });
+});
+
+describe('a module behind a gate', () => {
+  beforeEach(() => {
+    mocks.getCourseOutline.mockResolvedValue(gatedOutline);
+    mocks.myEnrollments.mockResolvedValue(enrolled);
+  });
+
+  /**
+   * complete-activity refuses a locked activity server-side. Before this the
+   * only way to discover that was to open one and be turned away, with nothing
+   * to say what was in the way.
+   */
+  it('says what is in the way, and how much of it is left', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set());
+    renderAt();
+    expect(await screen.findByText(/Finish 1\. Fundamentals first/))
+      .toHaveTextContent('2 activities to go');
+  });
+
+  it('counts down as the prerequisite is worked through', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set(['a1']));
+    renderAt();
+    expect(await screen.findByText(/1 activity to go/)).toBeInTheDocument();
+  });
+
+  /** A link the server will refuse is an invitation to a dead end. */
+  it('does not link a locked activity at all', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set());
+    renderAt();
+    await screen.findByText('Final check');
+    expect(screen.queryByRole('link', { name: /Final check/ })).not.toBeInTheDocument();
+    // A padlock glyph is not a status to somebody using a screen reader.
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+  });
+
+  it('opens it once the prerequisite is finished', async () => {
+    mocks.myCompletions.mockResolvedValue(new Set(['a1', 'a2']));
+    renderAt();
+    expect(await screen.findByRole('link', { name: /Final check/ }))
+      .toHaveAttribute('href', '/trainee/activity/a3');
+    expect(screen.queryByText(/first/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * Completions arrive after the outline. Treating "not loaded yet" as
+   * unlocked would show an open course for a moment and then shut it, which
+   * looks like the app taking something away.
+   */
+  it('stays locked while the completions are still loading', async () => {
+    mocks.myCompletions.mockReturnValue(new Promise(() => {}));
+    renderAt();
+    await screen.findByText('Final check');
+    expect(screen.queryByRole('link', { name: /Final check/ })).not.toBeInTheDocument();
   });
 });
