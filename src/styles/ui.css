@@ -154,13 +154,6 @@
 .skeleton-title  { height: 1.6rem; width: 40%; }
 .skeleton-circle { border-radius: 50%; flex-shrink: 0; }
 
-.skeleton-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  padding: var(--sp-6);
-}
-
 .skeleton-row {
   display: flex;
   align-items: center;
@@ -288,8 +281,7 @@
 }
 
 a.data-row { text-decoration: none; color: inherit; }
-a.data-row:hover,
-.data-row-interactive:hover { background: var(--surface-alt); }
+a.data-row:hover{ background: var(--surface-alt); }
 
 /* =============================================
    Section headers
@@ -323,9 +315,6 @@ a.data-row:hover,
 
 @media (max-width: 820px) {
   .stat-grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .dashboard-grid,
-  .dashboard-grid-main,
-  .dashboard-grid-equal { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 560px) {

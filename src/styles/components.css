@@ -1363,37 +1363,6 @@ input[type='radio'] {
 }
 
 /* Figures sitting inside the hero — a streak, a count, a percentage. */
-.hero-figures {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-lg);
-}
-
-.hero-figure {
-  text-align: center;
-  min-width: 4rem;
-}
-
-.hero-figure-value {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero-figure-label {
-  font-size: var(--text-2xs);
-  color: rgb(255 255 255 / 0.7);
-  margin-top: 0.25rem;
-}
-
-.hero-rule {
-  width: 1px;
-  height: 2.5rem;
-  background: rgb(255 255 255 / 0.22);
-}
-
 /* ============================================== group headings == */
 
 /* The label above a group of rows — a course name over its
@@ -1915,6 +1884,23 @@ input[type='radio'] {
   line-height: 1;
   background: rgb(255 255 255 / 0.14);
   border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+/* Used by the course hero. These were removed by hand during the dead-CSS
+   sweep on the assumption that nothing rendered them — wrongly, and the
+   before/after screenshot comparison is what caught it. */
+.hero-figure-value {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-figure-label {
+  font-size: var(--text-2xs);
+  color: rgb(255 255 255 / 0.7);
+  margin-top: 0.25rem;
 }
 
 .hero-progress {
