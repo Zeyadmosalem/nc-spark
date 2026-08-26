@@ -42,6 +42,9 @@ async function hasValidSession(request, env) {
 }
 
 async function authenticate(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return new Response('Worker authentication is not configured.', { status: 503 });
+  }
   const form = await request.formData();
   const email = String(form.get('email') || '').trim();
   const password = String(form.get('password') || '');
@@ -78,6 +81,9 @@ export default {
         status: 303,
         headers: { Location: '/__auth/login', 'Set-Cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` },
       });
+    }
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      return new Response('Worker authentication is not configured.', { status: 503 });
     }
     if (!(await hasValidSession(request, env))) {
       return Response.redirect(`${url.origin}/__auth/login?next=${encodeURIComponent(url.pathname + url.search)}`, 302);
