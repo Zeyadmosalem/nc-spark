@@ -32,6 +32,14 @@ function tokenFromCookie(request) {
     .find(([name]) => name === COOKIE)?.[1] ?? null;
 }
 
+function configured(env) {
+  try {
+    return Boolean(env.SUPABASE_ANON_KEY && new URL(env.SUPABASE_URL));
+  } catch {
+    return false;
+  }
+}
+
 async function hasValidSession(request, env) {
   const token = tokenFromCookie(request);
   if (!token) return false;
@@ -42,7 +50,7 @@ async function hasValidSession(request, env) {
 }
 
 async function authenticate(request, env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+  if (!configured(env)) {
     return new Response('Worker authentication is not configured.', { status: 503 });
   }
   const form = await request.formData();
@@ -82,7 +90,7 @@ export default {
         headers: { Location: '/__auth/login', 'Set-Cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` },
       });
     }
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    if (!configured(env)) {
       return new Response('Worker authentication is not configured.', { status: 503 });
     }
     if (!(await hasValidSession(request, env))) {
