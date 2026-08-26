@@ -2,19 +2,21 @@
 // ALLOWED_ORIGINS secret, e.g.
 //   https://ncspark.example.com,http://localhost:5173
 //
-// Left unset, this falls back to '*', which is what every deployment did
-// before this file changed. That fallback is deliberate: silently breaking a
-// running app is worse than the risk it mitigates, and the risk here is small
-// — these functions authenticate with a bearer header, not a cookie, so no
-// browser attaches credentials to a cross-origin call on its own. Setting the
-// secret in production is the hardening step; the warning below is the nudge.
+// Local development gets a narrow fallback so the app remains usable without
+// configuring a secret. Deployed functions fail closed until the secret is set.
 const configured = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
 
-if (configured.length === 0) {
-  console.warn('ALLOWED_ORIGINS is not set; falling back to Access-Control-Allow-Origin: *');
+const localOrigin = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(
+  Deno.env.get('SUPABASE_URL') ?? '',
+)
+  ? 'http://localhost:5173'
+  : null;
+
+if (configured.length === 0 && !localOrigin) {
+  console.error('ALLOWED_ORIGINS is not set; cross-origin requests are blocked');
 }
 
 const BASE = {
@@ -28,20 +30,19 @@ const BASE = {
  * listed, because the header accepts a single value, not a list.
  */
 export function corsFor(req: Request): Record<string, string> {
-  if (configured.length === 0) return { ...BASE, 'Access-Control-Allow-Origin': '*' };
+  const allowed = configured.length > 0 ? configured : localOrigin ? [localOrigin] : [];
 
   const origin = req.headers.get('Origin') ?? '';
+  if (!allowed.includes(origin)) return { ...BASE };
+
   return {
     ...BASE,
-    // An unrecognised origin gets the first allowed one, which is not a match,
-    // so the browser blocks the response. Omitting the header entirely would
-    // do the same, but this keeps the shape predictable for logging.
-    'Access-Control-Allow-Origin': configured.includes(origin) ? origin : configured[0],
+    'Access-Control-Allow-Origin': origin,
   };
 }
 
-/** Retained for call sites that predate corsFor; equivalent to the '*' case. */
-export const corsHeaders = { ...BASE, 'Access-Control-Allow-Origin': '*' };
+/** Retained for call sites that predate corsFor; it intentionally grants no origin. */
+export const corsHeaders = { ...BASE };
 
 export function handleOptions(req: Request): Response | null {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsFor(req) });
