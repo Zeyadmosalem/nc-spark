@@ -98,6 +98,29 @@ done
 completing an activity, submitting a quiz — with a CORS error in the console
 and no visible error in the UI.
 
+## Optional: no-billing per-user access gate
+
+Cloudflare Zero Trust may request a payment method even on its free plan. This
+repository also contains a custom Worker gateway for that case. It validates
+each user's existing Supabase email/password and serves the built site only
+after authentication. The session is held in an `HttpOnly`, `Secure` cookie;
+passwords are sent only to Supabase Auth and are never stored by the Worker.
+
+Deploy it from the repository root after setting the two Worker secrets:
+
+```bash
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_ANON_KEY
+npm run build:worker
+```
+
+The Worker name is `nc-spark-gate`, so use its `*.workers.dev` hostname or
+attach your own hostname. Do not put either secret in `worker/` or
+`wrangler.jsonc`. This gate protects the built HTML, JavaScript, CSS and
+assets from unauthenticated visitors, but an authenticated browser can still
+inspect its downloaded frontend code. The app's normal Supabase sign-in still
+establishes its own client session after the gateway login.
+
 ## 5. Sign in
 
 `npm run db:seed-review` creates one account per role:

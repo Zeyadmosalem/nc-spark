@@ -18,7 +18,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
-const SITE = process.env.SITE_URL ?? 'https://nc-spark.ncspark.workers.dev';
+const SITE = process.env.SITE_URL ?? 'https://nc-spark-gate.ncspark.workers.dev';
 
 let failures = 0;
 let warnings = 0;
@@ -44,7 +44,7 @@ console.log(`\n1. The gate, on ${SITE}\n`);
 const res = await fetch(SITE, { redirect: 'manual' });
 const location = res.headers.get('location') ?? '';
 const gated = res.status >= 300 && res.status < 400
-  && /cloudflareaccess\.com/i.test(location);
+  && (/cloudflareaccess\.com/i.test(location) || /\/__auth\/login(?:\?|$)/i.test(location));
 
 if (gated) {
   pass('an unauthenticated request is challenged', `${res.status} → Access`);
@@ -66,7 +66,8 @@ if (gated) {
 if (gated) {
   const asset = await fetch(`${SITE}/assets/`, { redirect: 'manual' });
   const assetGated = asset.status >= 300 && asset.status < 400
-    && /cloudflareaccess\.com/i.test(asset.headers.get('location') ?? '');
+    && (/cloudflareaccess\.com/i.test(asset.headers.get('location') ?? '')
+      || /\/__auth\/login(?:\?|$)/i.test(asset.headers.get('location') ?? ''));
   if (assetGated) pass('static assets are behind the same gate');
   else warn('static assets are behind the same gate', `got ${asset.status}`);
 }
