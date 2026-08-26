@@ -145,10 +145,10 @@ describe('who can see a thread', () => {
     });
   });
 
-  it('the trainer of the course it names can', async () => {
+  it('the trainer of the course it names cannot see admin support', async () => {
     await become(trainer.email);
     const ids = (await supportThreads()).map((t) => t.id);
-    expect(ids).toContain(mine.id);
+    expect(ids).not.toContain(mine.id);
   });
 
   it('an admin can', async () => {
@@ -183,12 +183,7 @@ describe('who can see a thread', () => {
     await expect(supportMessages(mine.id)).rejects.toThrow(/No such request/);
   });
 
-  /**
-   * The inverse of the test above, and the stronger half: it is not that this
-   * trainer sees nothing, it is that each trainer sees exactly their own
-   * course's requests.
-   */
-  it('routes each request to the trainer of the course it names', async () => {
+  it('keeps course-linked support requests in the administrator inbox', async () => {
     await become(alice.email);
     const hygiene = await createSupportRequest({
       subject: 'Kitchen module', body: 'About Food Hygiene.', courseId: otherCourseId,
@@ -196,13 +191,13 @@ describe('who can see a thread', () => {
 
     await become(otherTrainer.email);
     const theirs = (await supportThreads()).map((t) => t.id);
-    expect(theirs).toContain(hygiene.id);
+    expect(theirs).not.toContain(hygiene.id);
     expect(theirs).not.toContain(mine.id);
 
-    await become(trainer.email);
-    const ours = (await supportThreads()).map((t) => t.id);
-    expect(ours).toContain(mine.id);
-    expect(ours).not.toContain(hygiene.id);
+    await become(admin.email);
+    const adminThreads = (await supportThreads()).map((t) => t.id);
+    expect(adminThreads).toContain(mine.id);
+    expect(adminThreads).toContain(hygiene.id);
   });
 
   it('a request naming no course reaches admins but not trainers', async () => {

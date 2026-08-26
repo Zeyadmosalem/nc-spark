@@ -14,7 +14,7 @@ const NAV = [
   { to: '/trainer', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/trainer/courses', icon: 'courses', label: 'My Courses' },
   { to: '/trainer/review', icon: 'review', label: 'Review Work' },
-  { to: '/trainer/support', icon: 'support', label: 'Support' },
+  { to: '/trainer/support', icon: 'support', label: 'Contact admin' },
   { section: 'Account' },
   { to: '/trainer/account', icon: 'account', label: 'My Account' },
 ];
@@ -54,15 +54,16 @@ export default function TrainerShell() {
         can: an activity needs a module to live in. */}
         <Route path="create/*" element={<Navigate to="/trainer/courses" replace />} />
         <Route path="review" element={<TrainerReview />} />
-        {/* RLS decides what lands here: a request tagged with a course
-            reaches whoever teaches it, and nothing else does. */}
+        {/* Support is the platform-wide channel to administrators. Course
+            questions belong in the course chat. */}
         <Route path="support" element={(
           <SupportInbox
+            canCreate
             eyebrow="Support"
-            title="Questions from your trainees"
-            subtitle="Requests naming one of your courses. Anything else goes to an administrator."
+            title="Contact an administrator"
+            subtitle="Ask the administrator team about a platform issue."
             emptyTitle="Nothing to answer"
-            emptyBody="Nobody on your courses has asked for help. Requests that name one of them appear here."
+            emptyBody="You have no administrator support requests yet."
           />
         )} />
         <Route path="account" element={<AccountPage />} />

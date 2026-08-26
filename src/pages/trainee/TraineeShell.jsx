@@ -160,9 +160,9 @@ function SupportPage() {
       canCreate
       eyebrow="Support"
       title="Get help"
-      subtitle="Ask your trainer about a course, or an administrator about anything else."
+      subtitle="Ask the administrator team about anything on the platform."
       emptyTitle="No requests yet"
-      emptyBody="Stuck on something? Ask, and the reply arrives here rather than in your inbox."
+      emptyBody="Stuck on something? Ask the administrator team, and the reply arrives here."
     />
   );
 }

@@ -254,7 +254,7 @@ export default function AdminShell() {
           <SupportInbox
             eyebrow="Support"
             title="Support requests"
-            subtitle="Everything asked across the platform, including requests sent to a trainer."
+            subtitle="Every support request from trainees and staff."
             emptyTitle="Nothing to answer"
             emptyBody="No support requests have been filed yet."
           />

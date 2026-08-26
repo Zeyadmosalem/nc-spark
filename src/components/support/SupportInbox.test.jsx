@@ -204,17 +204,12 @@ describe('filing a request', () => {
     });
   });
 
-  /**
-   * The dropdown decides who reads the request, and from the outside there is
-   * nothing to suggest that. Leaving it blank has to be a real choice, not a
-   * default nobody understood.
-   */
-  it('says that the course picker chooses the audience', async () => {
+  it('says that course context still goes to the administrator team', async () => {
     show({ canCreate: true });
     await userEvent.click(screen.getAllByRole('button', { name: /Ask for help/ })[0]);
     const hint = screen.getByLabelText(/Which course/).getAttribute('aria-describedby');
-    expect(document.getElementById(hint)).toHaveTextContent(/sends this to the trainer who runs it/);
-    expect(document.getElementById(hint)).toHaveTextContent(/goes to an administrator instead/);
+    expect(document.getElementById(hint)).toHaveTextContent(/course context for an administrator/);
+    expect(document.getElementById(hint)).toHaveTextContent(/All support requests are answered by the admin team/);
   });
 
   it('sends null rather than an empty course id', async () => {

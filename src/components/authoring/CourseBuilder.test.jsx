@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   useCourseForEditing: vi.fn(),
   createModule: vi.fn(), updateModule: vi.fn(), deleteModule: vi.fn(),
   createActivity: vi.fn(), updateActivity: vi.fn(), deleteActivity: vi.fn(),
+  courseMessages: vi.fn(), sendCourseMessage: vi.fn(),
   state: { createActivity: { isPending: false, error: null } },
 }));
 
@@ -29,6 +30,11 @@ vi.mock('../../hooks/useAuthoring', () => ({
   useCreateActivity: () => asMutation(mocks.createActivity, mocks.state.createActivity),
   useUpdateActivity: () => asMutation(mocks.updateActivity),
   useDeleteActivity: () => asMutation(mocks.deleteActivity),
+}));
+
+vi.mock('../../hooks/useMessages', () => ({
+  useCourseMessages: () => query(mocks.courseMessages()),
+  useSendCourseMessage: () => asMutation(mocks.sendCourseMessage),
 }));
 
 // Materials have their own tests and their own queries; this file is about
@@ -69,6 +75,7 @@ const courseWith = (modules) => query({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.courseMessages.mockReturnValue([]);
   mocks.useCourseForEditing.mockReturnValue(courseWith([]));
   mocks.state.createActivity = { isPending: false, error: null };
 });

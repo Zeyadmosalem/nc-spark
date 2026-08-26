@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -135,18 +136,22 @@ describe('CoursePage outline', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not load/i);
   });
 
-  /**
-   * The reverse of the test that used to keep this tab. The chat behind it was
-   * the prototype's in-memory implementation: messages persisted nowhere and
-   * reached no one, so a trainee asking a question got silence and then lost
-   * the question on reload. It returns with M5 (backlog B8).
-   */
-  it('offers no chat tab, because the chat behind it reached nobody', async () => {
+  it('shows a course chat tab and allows a trainee to send a message', async () => {
+    const user = userEvent.setup();
     mocks.getCourseOutline.mockResolvedValue(outline);
     mocks.myEnrollments.mockResolvedValue(enrolled);
+    window.localStorage.clear();
+
     renderAt();
-    await screen.findByRole('tab', { name: /learning path/i });
-    expect(screen.queryByRole('tab', { name: /course chat/i })).not.toBeInTheDocument();
+    const chatTab = await screen.findByRole('tab', { name: /course chat/i });
+    expect(chatTab).toBeInTheDocument();
+
+    await user.click(chatTab);
+    const input = await screen.findByPlaceholderText(/type your message/i);
+    await user.type(input, 'Hi trainer');
+    await user.keyboard('{Enter}');
+
+    expect(await screen.findByText('Hi trainer')).toBeInTheDocument();
   });
 
   /**

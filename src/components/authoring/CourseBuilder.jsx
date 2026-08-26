@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import QueryError from '../shared/QueryError';
 import CourseMaterials from '../shared/CourseMaterials';
+import CourseChat from '../shared/CourseChat';
 import PageSkeleton from '../ui/Skeleton';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
@@ -221,6 +222,8 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
             database decides what is allowed. */}
         <CourseMaterials courseId={courseId} canManage />
       </section>
+
+      <CourseChat courseId={courseId} />
 
       <form onSubmit={submitModule} className="card no-hover cluster">
         <div className="grow-field">

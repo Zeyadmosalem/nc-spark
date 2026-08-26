@@ -299,12 +299,7 @@ function NewRequestForm({ onDone }) {
         />
       </div>
 
-      {/*
-        Optional, and it decides who reads this. A request naming a course
-        reaches the person who teaches it; one without goes to an
-        administrator. Said on the screen, because from the outside there is
-        nothing to suggest a dropdown changes the audience.
-      */}
+      {/* A course is context for the administrator, not a routing choice. */}
       <div className="field">
         <label className="input-label" htmlFor="support-course">Which course? (optional)</label>
         <select
@@ -316,8 +311,8 @@ function NewRequestForm({ onDone }) {
           {mine.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
         <p id="support-course-hint" className="input-hint">
-          Picking a course sends this to the trainer who runs it. Leave it blank
-          and it goes to an administrator instead.
+          This adds course context for an administrator. All support requests
+          are answered by the admin team.
         </p>
       </div>
 
