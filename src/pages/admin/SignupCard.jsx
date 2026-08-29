@@ -36,7 +36,7 @@ export default function SignupCard({ user }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       className="card no-hover"
-      style={{ borderLeft: '4px solid #b8860b' }}
+      style={{ borderLeft: '4px solid var(--warn)' }}
     >
       <div style={{
         display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',

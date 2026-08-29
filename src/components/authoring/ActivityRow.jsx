@@ -42,7 +42,7 @@ export default function ActivityRow({ courseId, activity }) {
             {open ? 'Close' : 'Edit'}
           </button>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
-                  style={{ color: '#dc3545' }}
+                  style={{ color: 'var(--danger)' }}
                   onClick={() => remove.mutate(
                     { id: activity.id, courseId },
                     { onSuccess: () => notify(`"${activity.title}" removed.`) },

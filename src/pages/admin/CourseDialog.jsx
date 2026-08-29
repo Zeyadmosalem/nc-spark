@@ -9,7 +9,7 @@ export default function CourseDialog({ title, form, setForm, submitting, error, 
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onCancel}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }}
+        style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 999 }}
       />
       <motion.div
         role="dialog"

@@ -14,7 +14,7 @@ export default function McqOptions({ q, set, idBase }) {
           <div key={i} style={{
             display: 'flex', gap: '0.5rem', alignItems: 'center',
             padding: '0.35rem 0.5rem', borderRadius: 'var(--r-sm)',
-            background: correct === i ? 'rgba(40,167,69,0.08)' : 'transparent',
+            background: correct === i ? 'var(--success-soft)' : 'transparent',
           }}>
             <input
               type="radio"
@@ -35,7 +35,7 @@ export default function McqOptions({ q, set, idBase }) {
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              style={{ color: options.length > 2 ? '#dc3545' : 'var(--text-3)' }}
+              style={{ color: options.length > 2 ? 'var(--danger)' : 'var(--text-3)' }}
               disabled={options.length <= 2}
               aria-label={`Remove option ${i + 1}`}
               onClick={() => {

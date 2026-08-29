@@ -98,9 +98,9 @@ export default function QuizRunner({ quiz, onPassed }) {
                 style={{
                   width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center',
                   background: p.isCorrect === null ? 'var(--surface-alt)'
-                    : p.isCorrect ? 'rgba(40,167,69,0.15)' : 'rgba(220,53,69,0.15)',
+                    : p.isCorrect ? 'var(--success-soft)' : 'var(--danger-soft)',
                   color: p.isCorrect === null ? 'var(--text-3)'
-                    : p.isCorrect ? '#28a745' : '#dc3545',
+                    : p.isCorrect ? 'var(--success)' : 'var(--danger)',
                 }}
               >
                 {p.isCorrect === null

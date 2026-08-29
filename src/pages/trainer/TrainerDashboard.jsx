@@ -199,7 +199,7 @@ function ApplicationQueue({ applications }) {
   const decide = useDecideEnrollment();
 
   return (
-    <div className="card no-hover" style={{ borderLeft: '4px solid #b8860b' }}>
+    <div className="card no-hover" style={{ borderLeft: '4px solid var(--warn)' }}>
       <div className="card-title">
         Course applications ({applications.length})
       </div>

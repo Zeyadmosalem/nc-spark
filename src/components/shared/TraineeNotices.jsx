@@ -35,7 +35,7 @@ export default function TraineeNotices() {
       ))}
 
       {recentlyGraded.map((n) => (
-        <Notice key={n.attemptId} tone={n.passed ? '#28a745' : '#dc3545'} icon={n.passed ? 'complete' : 'review'}>
+        <Notice key={n.attemptId} tone={n.passed ? 'var(--success)' : 'var(--danger)'} icon={n.passed ? 'complete' : 'review'}>
           <strong>{n.quizTitle} has been marked</strong> — {n.score}%,{' '}
           {n.passed ? 'passed' : 'not passed'}.
           {!n.passed && ' Ask your trainer if you need another attempt.'}

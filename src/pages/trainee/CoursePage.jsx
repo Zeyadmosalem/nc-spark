@@ -259,7 +259,7 @@ export default function CoursePage() {
                                   using a screen reader. */}
                               {isDone && (
                                 <span className="badge-pill"
-                                      style={{ background: 'rgba(40,167,69,0.15)', color: '#28a745' }}>
+                                      style={{ background: 'var(--success-soft)', color: 'var(--success)' }}>
                                   Done
                                 </span>
                               )}

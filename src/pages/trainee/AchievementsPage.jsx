@@ -177,7 +177,7 @@ export default function AchievementsPage() {
                     )}
                   </div>
                   <span style={{
-                    background: 'rgba(40,167,69,0.15)', color: '#28a745', fontSize: '0.7rem',
+                    background: 'var(--success-soft)', color: 'var(--success)', fontSize: '0.7rem',
                     fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 999,
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>

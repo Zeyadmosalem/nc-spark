@@ -159,7 +159,7 @@ export function Dashboard() {
         <StatCard label="Trainees" value={byRole('trainee')} icon="users" color="var(--brand-primary)" />
         <StatCard label="Trainers" value={byRole('trainer')} icon="teaching" color="var(--brand-accent)" />
         <StatCard label="Supervisors" value={byRole('supervisor')} icon="team" color="#6b46c1" />
-        <StatCard label="Admins" value={byRole('admin')} icon="settings" color="#b8860b" />
+        <StatCard label="Admins" value={byRole('admin')} icon="settings" color="var(--warn)" />
       </motion.div>
 
       <motion.div className="stat-grid" variants={stagger(0.045, 0.06)}>

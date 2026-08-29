@@ -120,7 +120,7 @@ export default function TraineeDashboard() {
           label="Awaiting approval"
           value={waiting.length}
           icon="waiting"
-          color={waiting.length > 0 ? '#b8860b' : 'var(--text-3)'}
+          color={waiting.length > 0 ? 'var(--warn)' : 'var(--text-3)'}
           tone={waiting.length > 0 ? 'attention' : undefined}
         />
       </motion.div>

@@ -72,7 +72,7 @@ export default function QuestionRow({ question, index, last, quiz, activityId, c
               </button>
             </>
           ) : (
-            <button type="button" className="btn btn-ghost btn-sm" style={{ color: '#dc3545' }}
+            <button type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }}
                     onClick={() => setConfirming(true)}>
               Remove
             </button>

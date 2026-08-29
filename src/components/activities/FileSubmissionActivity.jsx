@@ -142,15 +142,15 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
             style={{
               padding: '3rem 2rem',
               textAlign: 'center',
-              background: 'rgba(40, 167, 69, 0.05)',
-              border: '2px solid #28a745',
+              background: 'var(--success-soft)',
+              border: '2px solid var(--success)',
               borderRadius: 'var(--r-lg)',
             }}
           >
             <div className="empty-state-icon success" style={{ margin: '0 auto 1rem' }}>
             <Icon name="complete" size={24} />
           </div>
-            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem', color: '#28a745' }}>Assignment Submitted!</h3>
+            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem', color: 'var(--success)' }}>Assignment Submitted!</h3>
             <p className="muted-2">Your file <strong>{file?.name}</strong> was successfully uploaded.</p>
           </motion.div>
         )}

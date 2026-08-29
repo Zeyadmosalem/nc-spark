@@ -65,7 +65,7 @@ function RowFrame({ label, index, onRemove, canRemove, children }) {
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            style={{ color: canRemove ? '#dc3545' : 'var(--text-3)' }}
+            style={{ color: canRemove ? 'var(--danger)' : 'var(--text-3)' }}
             disabled={!canRemove}
             title={canRemove ? undefined : `A ${label.toLowerCase()} activity needs at least one`}
             onClick={onRemove}
@@ -257,7 +257,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                         display: 'flex', gap: '0.55rem', alignItems: 'flex-start',
                         padding: '0.5rem', borderRadius: 'var(--r-sm)',
                         background: choice.isCorrect
-                          ? 'rgba(40,167,69,0.08)' : 'var(--surface-alt)',
+                          ? 'var(--success-soft)' : 'var(--surface-alt)',
                       }}
                     >
                       {/*
@@ -309,7 +309,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
-                        style={{ color: choices.length > 2 ? '#dc3545' : 'var(--text-3)' }}
+                        style={{ color: choices.length > 2 ? 'var(--danger)' : 'var(--text-3)' }}
                         disabled={choices.length <= 2}
                         // The glyph used to be a literal ✕, which gave the
                         // button its only accessible name by accident. An icon

@@ -57,19 +57,19 @@ export default function ScenarioActivity({ activity }) {
           if (showFeedback) {
             if (isSelected) {
               if (choice.isCorrect) {
-                bgColor = 'rgba(40, 167, 69, 0.1)';
-                borderColor = '#28a745';
-                textColor = '#28a745';
+                bgColor = 'var(--success-soft)';
+                borderColor = 'var(--success)';
+                textColor = 'var(--success)';
               } else {
-                bgColor = 'rgba(220, 53, 69, 0.1)';
-                borderColor = '#dc3545';
-                textColor = '#dc3545';
+                bgColor = 'var(--danger-soft)';
+                borderColor = 'var(--danger)';
+                textColor = 'var(--danger)';
               }
             } else if (choice.isCorrect) {
               // Highlight correct answer if they got it wrong
-              bgColor = 'rgba(40, 167, 69, 0.05)';
-              borderColor = '#28a745';
-              textColor = '#28a745';
+              bgColor = 'var(--success-soft)';
+              borderColor = 'var(--success)';
+              textColor = 'var(--success)';
             }
           }
 
@@ -111,11 +111,11 @@ export default function ScenarioActivity({ activity }) {
             initial={{ opacity: 0, height: 0 }} 
             animate={{ opacity: 1, height: 'auto' }} 
             style={{ 
-              background: 'var(--surface)', borderLeft: `4px solid ${selectedChoice.isCorrect ? '#28a745' : '#dc3545'}`,
+              background: 'var(--surface)', borderLeft: `4px solid ${selectedChoice.isCorrect ? 'var(--success)' : 'var(--danger)'}`,
               padding: '1.25rem', borderRadius: '0 var(--r-md) var(--r-md) 0', marginTop: '1rem'
             }}
           >
-            <h4 style={{ color: selectedChoice.isCorrect ? '#28a745' : '#dc3545', marginBottom: '0.5rem', fontSize: '1rem' }}>
+            <h4 style={{ color: selectedChoice.isCorrect ? 'var(--success)' : 'var(--danger)', marginBottom: '0.5rem', fontSize: '1rem' }}>
               {selectedChoice.isCorrect ? 'Correct!' : 'Not quite.'}
             </h4>
             <p style={{ color: 'var(--text-2)', fontSize: '0.95rem', lineHeight: 1.5 }}>

@@ -118,7 +118,7 @@ export default function MatchingActivity({ activity }) {
         {matches.length === totalPairs && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            style={{ padding: '1rem', background: 'rgba(40, 167, 69, 0.1)', color: '#28a745', textAlign: 'center', borderRadius: 'var(--r-md)', fontWeight: 600 }}
+            style={{ padding: '1rem', background: 'var(--success-soft)', color: 'var(--success)', textAlign: 'center', borderRadius: 'var(--r-md)', fontWeight: 600 }}
           >
             All pairs matched correctly! You can now mark this activity as complete.
           </motion.div>

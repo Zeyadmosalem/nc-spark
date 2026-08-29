@@ -37,7 +37,7 @@ export default class ErrorBoundary extends Component {
     return (
       <div className="page-body">
         <div className="card no-hover" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <div className="empty-state-icon" style={{ margin: '0 auto 1rem', color: '#dc3545' }}>
+          <div className="empty-state-icon" style={{ margin: '0 auto 1rem', color: 'var(--danger)' }}>
               <Icon name="warning" size={24} />
             </div>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>

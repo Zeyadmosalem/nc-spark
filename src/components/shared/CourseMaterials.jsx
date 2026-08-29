@@ -144,7 +144,7 @@ function MaterialRow({ material, canManage }) {
           </>
         ) : (
           <button type="button" className="btn btn-ghost btn-sm"
-                  style={{ color: '#dc3545' }}
+                  style={{ color: 'var(--danger)' }}
                   disabled={remove.isPending}
                   onClick={() => setConfirming(true)}>
             Remove

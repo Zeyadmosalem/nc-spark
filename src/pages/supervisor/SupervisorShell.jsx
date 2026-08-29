@@ -116,7 +116,7 @@ export function Dashboard() {
           label="Learners enrolled"
           value={active.length}
           sub={averageProgress === null ? 'no progress yet' : `${averageProgress}% average progress`}
-          color="#28a745"
+          color="var(--success)"
         />
         <StatCard
           label="Quiz pass rate"
@@ -128,7 +128,7 @@ export function Dashboard() {
 
       {awaitingMarking > 0 && (
         <motion.div variants={fadeUp} custom={2} className="card no-hover"
-                    style={{ borderLeft: '4px solid #b8860b' }}>
+                    style={{ borderLeft: '4px solid var(--warn)' }}>
           <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.9rem' }}>
             <strong>{awaitingMarking}</strong> attempt{awaitingMarking === 1 ? ' is' : 's are'}{' '}
             waiting on a trainer to mark a written answer. Trainees cannot progress past a
@@ -152,7 +152,7 @@ export function Dashboard() {
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 {t.status !== 'active' && (
                   <span style={{
-                    background: 'rgba(220,53,69,0.15)', color: '#dc3545', fontSize: '0.7rem',
+                    background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: '0.7rem',
                     fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 999,
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>
