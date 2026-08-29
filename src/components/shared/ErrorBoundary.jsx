@@ -61,7 +61,7 @@ export default class ErrorBoundary extends Component {
             </pre>
           )}
 
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="u-row-top u-gap-3 u-center u-wrap">
             <button className="btn btn-primary" onClick={this.handleReset}>Try again</button>
             <button className="btn btn-ghost" onClick={() => window.location.assign('/')}>
               Back to start

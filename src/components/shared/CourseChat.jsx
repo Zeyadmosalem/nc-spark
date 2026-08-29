@@ -66,7 +66,7 @@ export default function CourseChat({
       {heading !== null && (
         <div>
           <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>{heading}</h2>
-          <p className="muted-2" style={{ margin: 0 }}>{subtitle}</p>
+          <p className="muted-2 u-m0">{subtitle}</p>
         </div>
       )}
 
@@ -74,7 +74,7 @@ export default function CourseChat({
 
       <div className="chat-log">
         {mayHaveMore && (
-          <div className="cluster" style={{ justifyContent: 'center' }}>
+          <div className="cluster u-center">
             <Button
               type="button"
               variant="ghost"
@@ -108,7 +108,7 @@ export default function CourseChat({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={submit} style={{ display: 'grid', gap: '0.75rem' }}>
+      <form onSubmit={submit} className="u-grid u-gap-3">
         <label className="sr-only" htmlFor={`course-chat-${courseId}`}>Type your message</label>
         <textarea
           id={`course-chat-${courseId}`}

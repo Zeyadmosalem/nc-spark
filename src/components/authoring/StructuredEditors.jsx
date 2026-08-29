@@ -246,7 +246,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
               </div>
 
               <fieldset className="bare-fieldset">
-                <legend className="input-label" style={{ padding: 0 }}>
+                <legend className="input-label u-p0">
                   Options — select the correct one
                 </legend>
                 <div className="stack">

@@ -37,7 +37,7 @@ export function SkeletonList({ rows = 4, label = 'Loading' }) {
             <Skeleton width={`${55 + ((i * 13) % 30)}%`} />
             <Skeleton width={`${30 + ((i * 17) % 25)}%`} height="0.7rem" />
           </div>
-          <Skeleton width={72} height={30} style={{ borderRadius: 'var(--r-md)' }} />
+          <Skeleton width={72} height={30} className="u-r-md" />
         </div>
       ))}
     </div>

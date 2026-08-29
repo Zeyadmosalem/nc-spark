@@ -96,8 +96,8 @@ function ParagraphCard({ attempt }) {
 
   return (
     <div className="card no-hover stack">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
+      <div className="u-row u-gap-3 u-wrap">
+        <span className="badge-pill u-alt">
           {attempt.traineeAvatar}
         </span>
         <strong>{attempt.traineeName}</strong>
@@ -164,8 +164,8 @@ function RetakeCard({ attempt, alreadyGranted }) {
 
   return (
     <div className="card no-hover stack">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <span className="badge-pill" style={{ background: 'var(--surface-alt)' }}>
+      <div className="u-row u-gap-3 u-wrap">
+        <span className="badge-pill u-alt">
           {attempt.traineeAvatar}
         </span>
         <strong>{attempt.traineeName}</strong>

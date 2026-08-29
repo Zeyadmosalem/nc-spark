@@ -26,7 +26,7 @@ export default function ActivityRow({ courseId, activity }) {
     <div style={{
       border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '0.6rem 0.8rem',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between' }}>
+      <div className="u-row u-gap-3 u-between">
         <div className="cluster grow">
           <span className="row-icon" style={{ width: '1.6rem', height: '1.6rem' }}>
             <Icon name={activity.type} size={14} />

@@ -70,8 +70,8 @@ export default function QuestionForm({ quiz, activityId, courseId, initial, ques
 
       {q.type === 'truefalse' && (
         <fieldset className="bare-fieldset">
-          <legend className="input-label" style={{ padding: 0 }}>The statement is</legend>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <legend className="input-label u-p0">The statement is</legend>
+          <div className="u-row-top u-gap-md">
             {[true, false].map((value) => (
               <label key={String(value)} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                 <input

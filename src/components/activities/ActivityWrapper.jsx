@@ -25,8 +25,7 @@ export default function ActivityWrapper({ activity, onComplete, onBack, isComple
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card no-hover"
-        style={{ padding: '2rem' }}
+        className="card no-hover u-p7"
       >
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, background: 'rgba(0,47,108,0.08)', borderRadius: '50%', fontSize: '1.5rem', marginBottom: '1rem' }}>

@@ -92,7 +92,7 @@ export default function LibraryPage({ initialKind = 'all' }) {
         </EmptyState>
       ) : (
         <>
-          <div className="cluster" style={{ justifyContent: 'space-between' }}>
+          <div className="cluster u-between">
             <div className="segmented" role="group" aria-label="Filter by kind">
               {Object.entries(KINDS).map(([value, { label, icon }]) => {
                 const count = everything.filter(KINDS[value].match).length;

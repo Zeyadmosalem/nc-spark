@@ -38,10 +38,7 @@ export default function SignupCard({ user }) {
       className="card no-hover"
       style={{ borderLeft: '4px solid var(--warn)' }}
     >
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
-        justifyContent: 'space-between',
-      }}>
+      <div className="u-row u-gap-md u-wrap u-between">
         <div className="cluster grow">
           <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
             {initialOf(user)}

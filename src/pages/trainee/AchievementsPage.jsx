@@ -208,7 +208,7 @@ export default function AchievementsPage() {
                     {a.attemptNo > 1 ? ` · attempt ${a.attemptNo}` : ''}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <div className="u-row u-gap-3">
                   {/* A dash, not a zero. An unmarked paragraph has no score
                       yet, and showing 0% reads as a fail. */}
                   <span style={{ fontWeight: 700, color: 'var(--heading)' }}>

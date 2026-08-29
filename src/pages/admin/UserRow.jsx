@@ -35,7 +35,7 @@ export default function UserRow({ user, isSelf, lastSeenAt }) {
               {user.email}
               {/* An account nobody uses looks exactly like one in daily use
                   without this. */}
-              <span style={{ color: 'var(--text-3)' }}> · last seen {sinceLabel(lastSeenAt)}</span>
+              <span className="muted"> · last seen {sinceLabel(lastSeenAt)}</span>
             </div>
           </div>
         </div>

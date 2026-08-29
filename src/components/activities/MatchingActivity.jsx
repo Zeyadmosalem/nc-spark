@@ -47,7 +47,7 @@ export default function MatchingActivity({ activity }) {
 
   return (
     <div className="stack-lg">
-      <div style={{ textAlign: 'center', color: 'var(--text-2)' }}>
+      <div className="u-text-center muted-2">
         Match the term on the left with its definition on the right.
         <br />
         <strong className="brand">{matches.length} of {totalPairs} matched</strong>

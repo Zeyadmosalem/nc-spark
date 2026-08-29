@@ -6,7 +6,7 @@ export default function McqOptions({ q, set, idBase }) {
 
   return (
     <fieldset className="bare-fieldset">
-      <legend className="input-label" style={{ padding: 0 }}>
+      <legend className="input-label u-p0">
         Options — select the correct one
       </legend>
       <div className="stack-xs">

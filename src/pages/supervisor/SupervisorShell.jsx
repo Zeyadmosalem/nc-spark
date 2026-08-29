@@ -149,7 +149,7 @@ export function Dashboard() {
                 <div className="student-row-name">{t.name || 'Unnamed'}</div>
                 <div className="student-row-meta">{t.email}</div>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div className="u-row u-gap-3">
                 {t.status !== 'active' && (
                   <span style={{
                     background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: '0.7rem',

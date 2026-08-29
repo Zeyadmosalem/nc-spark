@@ -62,7 +62,7 @@ export default function FlashcardActivity({ activity }) {
         </motion.div>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem' }}>
+      <div className="u-row-top u-gap-md">
         <button className="btn btn-outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <Icon name="back" size={14} />
           Previous

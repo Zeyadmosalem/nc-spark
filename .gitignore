@@ -37,3 +37,8 @@ shots/
 .dev.vars.*
 .wrangler/
 scripts/.auth-config.before.json
+
+# Coverage output.
+.cov/
+.cov-db/
+coverage/

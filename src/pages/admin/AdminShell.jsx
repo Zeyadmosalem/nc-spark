@@ -147,7 +147,7 @@ export function Dashboard() {
           above the statistics because statistics are not actionable. */}
       {s.enrollments.pending > 0 && (
         <motion.div className="card no-hover card-accent card-warn" variants={item}>
-          <p className="text-sm" style={{ margin: 0, color: 'var(--text-2)' }}>
+          <p className="text-sm u-m0 muted-2">
             <strong>{s.enrollments.pending}</strong> course application
             {s.enrollments.pending === 1 ? '' : 's'} waiting on a trainer&apos;s decision.
             Nobody in that queue can start until it is decided.
@@ -182,7 +182,7 @@ export function Dashboard() {
       {suspended > 0 && (
         <motion.div className="card no-hover" variants={item}>
           <h2 className="card-title"><Icon name="blocked" size={16} />Account health</h2>
-          <p className="text-sm" style={{ color: 'var(--text-2)', margin: 0 }}>
+          <p className="text-sm muted-2 u-m0">
             {suspended} account{suspended === 1 ? ' is' : 's are'} suspended.{' '}
             <Link className="brand" to="/admin/users">Review them</Link>.
           </p>

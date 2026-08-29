@@ -171,7 +171,7 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
 
           {waiting.length > 0 && (
             <div className="card no-hover card-accent card-warn">
-              <p className="text-sm" style={{ margin: 0, color: 'var(--text-2)' }}>
+              <p className="text-sm u-m0 muted-2">
                 <strong>{waiting.length}</strong> application
                 {waiting.length === 1 ? '' : 's'} on this course{' '}
                 {waiting.length === 1 ? 'is' : 'are'} still waiting for a decision.
@@ -219,7 +219,7 @@ function PersonRow({ person, activities }) {
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap',
       }}>
-        <div className="avatar" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <div aria-hidden="true" className="avatar u-shrink-0">
           {initialOf(person)}
         </div>
         <div className="grow-field">

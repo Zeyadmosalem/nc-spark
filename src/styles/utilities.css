@@ -1,0 +1,64 @@
+/* =============================================
+   Utilities
+   =============================================
+
+   A deliberately small, deliberately generic layer, and the only one in this
+   codebase — everything else is a named component class, which is the right
+   default and stays the right default.
+
+   It exists because of what a count showed. 292 inline style props looked like
+   a long tail: 203 distinct style objects, where turning each into a class
+   would just have moved the problem into a stylesheet. But counted one
+   DECLARATION at a time it is not a tail at all — 719 declarations, and the
+   top of the list carries most of them:
+
+       display: flex            50x
+       color: var(--text-3)     26x     (already .muted)
+       align-items: center      23x
+       color: var(--text-2)     22x     (already .muted-2)
+       margin: 0                20x
+       flex-wrap: wrap          16x
+
+   So these are the repeated ones, and nothing else. Anything genuinely
+   one-off, and anything computed from data — a bar's width, a course's colour
+   — stays an inline style, because that is what an inline style is for.
+
+   Loaded last so a utility beats a component class on the same property,
+   which is the order the inline styles they replace already had. */
+
+/* --- flow ------------------------------------------------------------- */
+.u-row      { display: flex; align-items: center; }
+.u-row-top  { display: flex; }
+.u-col      { display: flex; flex-direction: column; }
+.u-wrap     { flex-wrap: wrap; }
+.u-between  { justify-content: space-between; }
+.u-center   { justify-content: center; }
+.u-shrink-0 { flex-shrink: 0; }
+.u-grid     { display: grid; }
+
+/* --- gaps, on the existing scale --------------------------------------
+   Only values that already ARE a token are converted. 0.75rem is --sp-3 to
+   the pixel; 0.85rem is nothing in the type scale, so those stay inline
+   rather than being quietly snapped onto --text-sm. */
+.u-gap-xs { gap: var(--gap-xs); }
+.u-gap-sm { gap: var(--gap-sm); }
+.u-gap-md { gap: var(--gap-md); }
+.u-gap-lg { gap: var(--gap-lg); }
+.u-gap-2  { gap: var(--sp-2); }
+.u-gap-3  { gap: var(--sp-3); }
+
+/* --- box --------------------------------------------------------------- */
+.u-m0      { margin: 0; }
+.u-p0      { padding: 0; }
+.u-p7      { padding: var(--sp-7); }
+.u-full    { width: 100%; }
+.u-alt     { background: var(--surface-alt); }
+.u-bordered{ border: 1px solid var(--border); }
+.u-r-md    { border-radius: var(--r-md); }
+.u-r-lg    { border-radius: var(--r-lg); }
+
+/* --- text -------------------------------------------------------------- */
+.u-text-center { text-align: center; }
+.u-semibold    { font-weight: 600; }
+.u-bold        { font-weight: 700; }
+.u-heading     { font-family: var(--font-heading); }

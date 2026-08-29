@@ -80,7 +80,7 @@ export default function QuizRunner({ quiz, onPassed }) {
     return (
       <div className="page-body measure">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                    className="card no-hover" style={{ padding: '2rem', textAlign: 'center' }}>
+                    className="card no-hover u-p7 u-text-center">
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: 700 }}>
             {result.score}%
           </div>
@@ -88,7 +88,7 @@ export default function QuizRunner({ quiz, onPassed }) {
 
           {/* Right or wrong only. Never the correct answer, never the
               explanation — see the component docblock. */}
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="u-row-top u-gap-2 u-center u-wrap">
             {(result.perQuestion ?? []).map((p, i) => (
               <span
                 key={p.questionId}
@@ -138,7 +138,7 @@ export default function QuizRunner({ quiz, onPassed }) {
 
         <AnimatePresence mode="wait">
           <motion.div key={q.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }} className="card no-hover" style={{ padding: '2rem' }}>
+                      exit={{ opacity: 0, x: -20 }} className="card no-hover u-p7">
             <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>{q.prompt}</h2>
 
             {q.type === 'mcq' && (
@@ -206,7 +206,7 @@ export default function QuizRunner({ quiz, onPassed }) {
   return (
     <div className="page-body measure">
       <Alert error={start.error} />
-      <div className="card no-hover" style={{ padding: '2rem', textAlign: 'center' }}>
+      <div className="card no-hover u-p7 u-text-center">
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', marginBottom: '0.5rem' }}>
           {quiz.title}
         </h1>

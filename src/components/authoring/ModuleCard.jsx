@@ -27,10 +27,7 @@ export default function ModuleCard({ courseId, module: mod, earlier }) {
       exit={{ opacity: 0, height: 0 }}
       className="card no-hover"
     >
-      <div style={{
-        display: 'flex', gap: '0.75rem', alignItems: 'center',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-      }}>
+      <div className="u-row u-gap-3 u-between u-wrap">
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flex: 1, minWidth: 240 }}>
           <span style={{
             width: 28, height: 28, borderRadius: '50%', flexShrink: 0, fontSize: '0.8rem',
@@ -59,7 +56,7 @@ export default function ModuleCard({ courseId, module: mod, earlier }) {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="u-row u-gap-2">
           {/* Only earlier modules are offered. A module gated on a later one,
               or on itself, can never open. */}
           <label className="input-label m-0" htmlFor={`gate-${mod.id}`}>

@@ -302,7 +302,7 @@ export default function CoursePage() {
             <div className="card no-hover stack-md">
               <div>
                 <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>Standing</h2>
-                <p className="muted-2" style={{ margin: 0 }}>
+                <p className="muted-2 u-m0">
                   XP earned on this course by everyone taking it.
                 </p>
               </div>

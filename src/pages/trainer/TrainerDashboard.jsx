@@ -100,7 +100,7 @@ export default function TrainerDashboard() {
             {(toMark.length > 0 || stuck.length > 0) && (
               <div className="card no-hover card-accent">
                 <h3 className="card-title"><Icon name="review" size={16} />Assessment</h3>
-                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="u-row u-gap-lg u-wrap">
                   {toMark.length > 0 && (
                     <span className="text-sm muted-2">
                       <strong>{toMark.length}</strong> written answer
