@@ -3,16 +3,22 @@
 Work that has been deliberately deferred, with the reasoning. Anything here was
 seen, weighed and postponed — not missed.
 
-Last reviewed: 2026-08-24, after the prototype store was deleted. Nothing in
-the running app reads invented data. The site is live at
-`https://nc-spark.ncspark.workers.dev`.
+Last reviewed: 2026-08-30, after the security audit and the live test-suite
+work. Nothing in the running app reads invented data. The site is live at
+`https://nc-spark-gate.ncspark.workers.dev` — the older
+`nc-spark.ncspark.workers.dev` in this file was dead and returned 404.
 
 ## Next sprint
 
 | # | Item | Why it is waiting | Cost |
 |---|---|---|---|
-| **B1** | **Put an access gate in front of the live site** | Anyone with the URL reaches the login page. Cloudflare Access (free tier) adds an email allowlist with no code change. Agreed to revisit next sprint rather than before review. | ~5 min, dashboard only |
 | **B2** | **Delete or expire the review accounts** | Four admin-capable logins on `ncspark-review.local`, a domain nobody can receive mail at, so there is no password-reset path. Kept for now because review is ongoing. Password was rotated on 2026-08-23 after being found in the public repo. | ~1 min |
+
+## Done since this list was written
+
+| # | Item | Outcome |
+|---|---|---|
+| **B1** | Access gate in front of the live site | **Built**, not as predicted. The entry assumed Cloudflare Access, "~5 min, dashboard only"; that would have gated the URL but not the app, because Supabase Auth is a different origin the gate never sees — anyone with the public anon key could mint a token. `worker/index.js` therefore checks the session AND the profile's `status`, caches and de-duplicates the decision so one page load costs one round trip rather than ten, throttles sign-in, and carries the site's security headers. 48 tests. |
 
 ## Security, reviewed and accepted
 

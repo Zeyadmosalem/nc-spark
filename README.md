@@ -61,11 +61,14 @@ Edge Functions read a comma-separated allowlist of browser origins:
 npx supabase secrets set ALLOWED_ORIGINS="https://your-app.example.com" --project-ref <ref>
 ```
 
-Currently set to `http://localhost:5173,http://localhost:4173` — the Vite dev
-and preview ports. **Add the production origin before deploying the frontend,
-or the browser will block every function call.** That failure is loud and
-immediate, which is the intended trade: leaving it unset falls back to `*` and
-logs a warning instead.
+It holds the deployed origin plus the Vite dev and preview ports. **Any new
+origin has to be added here before the frontend is served from it, or the
+browser blocks every function call.** That failure is loud and immediate, which
+is the intended trade.
+
+Unset, it does **not** fall back to `*`: `corsFor()` returns no
+`Access-Control-Allow-Origin` at all and every cross-origin call fails closed.
+An earlier version of this file claimed the opposite.
 
 ## Testing
 
@@ -75,6 +78,7 @@ logs a warning instead.
 | `npm run test:db` | RLS policies and Edge Functions |
 | `npm run verify:m3` | Live end-to-end check of the learning loop |
 | `npm run verify:m4` | Live check of assessment integrity, including a grep of the built bundle |
+| `npm run verify:gate` | Live check of the access gate on a deployment |
 | `npm run lint` | oxlint |
 | `npm run build` | Production build |
 
@@ -97,13 +101,24 @@ client-side grading in scenario activities.
 
 ## Architecture notes
 
+- **The live site sits behind an access gate**: a Cloudflare Worker
+  (`worker/index.js`) that checks both a valid Supabase session and the
+  profile's `status` before serving a single asset, throttles sign-in
+  attempts, and sets the site's security headers (CSP, HSTS, frame-ancestors,
+  referrer policy). Checking the session alone would not gate anything —
+  Supabase Auth is a different origin the Worker never sees.
 - **Authentication** is Supabase Auth. Profiles are created by a database
   trigger that ignores any client-supplied role, so a role cannot be
   self-assigned at signup.
 - **Privilege escalation** is blocked by three independent layers: column-level
   grants, an RLS `WITH CHECK`, and a `BEFORE UPDATE` trigger.
-- **Signup** auto-activates allowlisted email domains; everything else is
-  queued for admin approval.
+- **Public signup is closed.** Accounts are created by an administrator; the
+  endpoint returns `422 signup_disabled`. Supabase Auth sits outside the access
+  gate, so while it was open anyone holding the public anon key could write
+  rows into `auth.users`, `profiles` and `trainee_stats`. The domain allowlist
+  and the pending queue still govern every account the trigger sees, and email
+  confirmation is now required — the trigger activates an allowlisted domain,
+  which is only safe if the address has been proved.
 - `src/api/` is the only place Supabase is touched and the only place
   `snake_case` becomes `camelCase`.
 - `src/components/ui/` is the only place a pill, alert, skeleton, empty state,
