@@ -2590,3 +2590,11 @@ input[type='radio'] {
 @media (prefers-reduced-motion: reduce) {
   .bar-fill { transition: none; }
 }
+
+/* Two charts side by side on a wide screen, stacked when there is not room
+   for a bar to be worth reading. */
+.chart-pair {
+  display: grid;
+  gap: var(--gap-md);
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}

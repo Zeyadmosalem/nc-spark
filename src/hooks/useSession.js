@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getSession, onAuthChange } from '../api/auth';
 import { fetchMyProfile } from '../api/profiles';
+import { touchActivity } from '../api/activity';
 
 /**
  * Every mounted useSession, so one profile edit reaches all of them.
@@ -66,6 +67,17 @@ export function useSession() {
       unsubscribe?.();
     };
   }, [load]);
+
+  // Record the visit once the session is settled and the account is real.
+  //
+  // Here rather than in a route or a page component: this is the one place
+  // that knows a session exists, and putting it on a route would count a
+  // navigation as a visit and turn the usage figures into a click counter.
+  const userId = session?.user?.id;
+  useEffect(() => {
+    if (!userId || profile?.status !== 'active') return;
+    touchActivity();
+  }, [userId, profile?.status]);
 
   let status = 'loading';
   if (!isLoading) {

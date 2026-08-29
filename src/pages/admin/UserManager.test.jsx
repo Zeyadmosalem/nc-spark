@@ -28,6 +28,10 @@ vi.mock('../../hooks/useAdmin', () => ({
   useSetUserRole: () => idle(mocks.setRole),
   useReviewSignup: () => idle(mocks.review),
   useSuspendUser: () => ({ mutate: mocks.suspend, ...mocks.state.suspend }),
+  // Usage has its own live tests; this file is about the approval queue and
+  // the directory, so it renders with nobody having been seen.
+  useUsageSummary: () => ({ data: [], isLoading: false, error: null }),
+  useDailyActiveUsers: () => ({ data: [], isLoading: false, error: null }),
 }));
 vi.mock('../../hooks/useSession', () => ({ useSession: mocks.useSession }));
 // The allowlist has its own tests and its own queries; this file is about the

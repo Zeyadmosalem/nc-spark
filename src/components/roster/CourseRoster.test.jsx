@@ -3,10 +3,13 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
-const mocks = vi.hoisted(() => ({ roster: vi.fn(), course: vi.fn() }));
+const mocks = vi.hoisted(() => ({ roster: vi.fn(), course: vi.fn(), standings: vi.fn() }));
 
 vi.mock('../../hooks/useRoster', () => ({ useCourseRoster: mocks.roster }));
 vi.mock('../../hooks/useAuthoring', () => ({ useCourseForEditing: mocks.course }));
+// The class charts read XP standings; the rows themselves are covered by
+// xp.test.js against the live project.
+vi.mock('../../hooks/useXp', () => ({ useCourseStandings: mocks.standings }));
 
 const CourseRoster = (await import('./CourseRoster')).default;
 
@@ -40,6 +43,7 @@ const show = () => render(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.standings.mockReturnValue(query([]));
   mocks.course.mockReturnValue(query(COURSE));
   mocks.roster.mockReturnValue(query([person()]));
 });
@@ -98,8 +102,11 @@ describe('ordering', () => {
    * order off the DOM is the only way this test can tell that the component
    * sorts rather than that the fixture happened to arrive sorted.
    */
+  // Scoped to the list. Every name is now also a bar label in the class
+  // charts above it, so an unscoped getByText finds two of each and the
+  // ordering being asserted here is the LIST's, not the chart's.
   const names = () => ['Alice Ahmed', 'Bob Brown', 'Carol Chen']
-    .map((n) => screen.getByText(n))
+    .map((n) => within(screen.getByRole('region', { name: 'Roster' })).getByText(n))
     .sort((a, b) => (
       a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
     .map((el) => el.textContent);
@@ -134,7 +141,9 @@ describe('one person', () => {
   it('shows their progress against the whole course', () => {
     show();
     expect(screen.getByText('1 of 2 activities')).toBeInTheDocument();
-    expect(screen.getByText('50%')).toBeInTheDocument();
+    // The bar chart shows the same figure, so this is the row's copy of it.
+    expect(within(screen.getByRole('region', { name: 'Roster' })).getByText('50%'))
+      .toBeInTheDocument();
   });
 
   it('lists which activities are done and which are not', async () => {

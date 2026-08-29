@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from '../../hooks/useSession';
 import {
   useUsers, usePendingSignups, useSetUserRole, useReviewSignup, useSuspendUser,
+  useUsageSummary, useDailyActiveUsers,
 } from '../../hooks/useAdmin';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
@@ -10,6 +11,10 @@ import StatusPill from '../../components/ui/StatusPill';
 import Alert from '../../components/ui/Alert';
 import EmptyState from '../../components/ui/EmptyState';
 import AllowedDomains from '../../components/admin/AllowedDomains';
+import StatCard from '../../components/ui/StatCard';
+import TrendChart from '../../components/charts/TrendChart';
+import BarChart from '../../components/charts/BarChart';
+import { sinceLabel } from '../../api/activity';
 import { useToast } from '../../components/ui/toast-context';
 
 /**
@@ -58,9 +63,46 @@ export default function UserManager() {
   const { profile } = useSession();
   const users = useUsers();
   const signups = usePendingSignups();
+  const usage = useUsageSummary();
+  const dau = useDailyActiveUsers(30);
 
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
+
+  // Captured at mount: a "days since" that moves between renders of the
+  // same data is the instability the purity rule exists to catch, and hours
+  // of staleness cannot change a figure measured in days.
+  const [now] = useState(() => Date.now());
+
+  // Usage, derived once. "Active" is a person seen in the last seven days,
+  // which is the only definition used anywhere on this screen.
+  //
+  // In a memo because it reads the clock: called straight from the render
+  // body, "days since" changes between two renders of the same data, which is
+  // exactly the instability the purity rule is about.
+  const { activeThisWeek, neverSeen, totalVisits, leastActive, seenBy } = useMemo(() => {
+    const list = usage.data ?? [];
+    const daysAway = (r) => (r.lastSeenAt
+      ? Math.floor((now - new Date(r.lastSeenAt).getTime()) / 86400000)
+      : 9999);
+
+    return {
+      activeThisWeek: list.filter(
+        (r) => r.lastSeenAt && now - new Date(r.lastSeenAt).getTime() < 7 * 86400000).length,
+      neverSeen: list.filter((r) => !r.lastSeenAt).length,
+      totalVisits: list.reduce((n, r) => n + (r.visits30 ?? 0), 0),
+      // Who has been away longest, so the list answers "who has stopped using
+      // it". A never-seen account sorts above everybody on a sentinel rather
+      // than being dropped: those are the ones most worth chasing.
+      leastActive: [...list]
+        .filter((r) => r.status === 'active')
+        .sort((a, b) => daysAway(b) - daysAway(a))
+        .slice(0, 6)
+        .map((r) => ({ id: r.userId, label: r.name || r.email, value: daysAway(r) })),
+      seenBy: new Map(list.map((r) => [r.userId, r.lastSeenAt])),
+    };
+  }, [usage.data, now]);
+
 
   if (users.isLoading) {
     return <PageSkeleton label="Loading users" stats={0} rows={5} />;
@@ -75,6 +117,7 @@ export default function UserManager() {
 
   const all = users.data ?? [];
   const queue = signups.data ?? [];
+
   const term = search.trim().toLowerCase();
   const activeTab = TABS.find((t) => t.key === tab) ?? TABS[0];
 
@@ -93,6 +136,65 @@ export default function UserManager() {
           {all.length} account{all.length === 1 ? '' : 's'} on the platform.
         </p>
       </div>
+
+      {/* Usage, which nothing recorded until now. audit_log answers "what was
+          done to the system"; this answers "is anybody using it", which is the
+          question an administrator of a training programme actually has. */}
+      <section className="card no-hover stack-md">
+        <div className="section-header" style={{ marginBottom: 0 }}>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Platform use</h2>
+          <span className="section-count">last 30 days</span>
+        </div>
+
+        {usage.error ? (
+          <QueryError error={usage.error} what="usage" />
+        ) : (
+          <>
+            <div className="stat-grid stat-grid-3">
+              <StatCard
+                label="Active this week"
+                value={activeThisWeek}
+                icon="users"
+                color="var(--brand-primary)"
+              />
+              <StatCard
+                label="Never signed in"
+                value={neverSeen}
+                sub={neverSeen > 0 ? 'Accounts that have not been used' : 'Everybody has been in'}
+                icon="waiting"
+                color="var(--warn)"
+              />
+              <StatCard
+                label="Visits (30 days)"
+                value={totalVisits}
+                icon="trend"
+                color="var(--brand-accent)"
+              />
+            </div>
+
+            {(dau.data ?? []).some((d) => d.points > 0) && (
+              <TrendChart
+                data={dau.data}
+                label="People using the platform"
+                formatValue={(n) => `${n} ${n === 1 ? 'person' : 'people'}`}
+              />
+            )}
+
+            {leastActive.length > 0 && (
+              <div>
+                <h3 className="text-sm" style={{ margin: '0 0 0.5rem' }}>
+                  Longest without signing in
+                </h3>
+                <BarChart
+                  rows={leastActive}
+                  formatValue={(n) => (n >= 9999 ? 'Never' : `${n}d`)}
+                  emptyLabel="Everybody has been in recently."
+                />
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {/* The queue comes first and unprompted. A pending user cannot sign in,
           and nothing else in the product tells anyone they are waiting. */}
@@ -168,7 +270,14 @@ export default function UserManager() {
                 : 'No users in this group yet.'}
             </EmptyState>
           ) : (
-            shown.map((u) => <UserRow key={u.id} user={u} isSelf={u.id === profile?.id} />)
+            shown.map((u) => (
+              <UserRow
+                key={u.id}
+                user={u}
+                isSelf={u.id === profile?.id}
+                lastSeenAt={seenBy.get(u.id)}
+              />
+            ))
           )}
         </motion.div>
       </section>
@@ -293,7 +402,7 @@ function SignupCard({ user }) {
   );
 }
 
-function UserRow({ user, isSelf }) {
+function UserRow({ user, isSelf, lastSeenAt }) {
   const { notify } = useToast();
   const changeRole = useSetUserRole();
   const suspend = useSuspendUser();
@@ -318,7 +427,12 @@ function UserRow({ user, isSelf }) {
                 </span>
               )}
             </h3>
-            <div className="data-row-meta">{user.email}</div>
+            <div className="data-row-meta">
+              {user.email}
+              {/* An account nobody uses looks exactly like one in daily use
+                  without this. */}
+              <span style={{ color: 'var(--text-3)' }}> · last seen {sinceLabel(lastSeenAt)}</span>
+            </div>
           </div>
         </div>
 

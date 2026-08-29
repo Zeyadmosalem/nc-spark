@@ -7,6 +7,9 @@ import QueryError from '../shared/QueryError';
 import PageSkeleton from '../ui/Skeleton';
 import PageHeader from '../ui/PageHeader';
 import CourseTabs from '../shared/CourseTabs';
+import BarChart from '../charts/BarChart';
+import { useCourseStandings } from '../../hooks/useXp';
+import { SERIES } from '../charts/chartTokens';
 import StatCard from '../ui/StatCard';
 import StatusPill from '../ui/StatusPill';
 import Icon from '../ui/Icon';
@@ -49,6 +52,7 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
   const { courseId } = useParams();
   const roster = useCourseRoster(courseId);
   const course = useCourseForEditing(courseId);
+  const standings = useCourseStandings(courseId);
   const [order, setOrder] = useState('behind');
 
   if (roster.isLoading || course.isLoading) {
@@ -93,6 +97,48 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
       />
 
       <CourseTabs base={`${backTo}/${courseId}`} />
+
+      {/* The class as a shape, before the class as a list. A dozen rows of
+          percentages is a table you read one line at a time; the same numbers
+          as bars answer "who is behind" at a glance, which is the question a
+          trainer actually opens this page with. */}
+      {active.length > 0 && (
+        <div className="chart-pair">
+          <section className="card no-hover stack-md">
+            <h2 className="card-title">
+              <Icon name="trend" size={16} />
+              How far each person has got
+            </h2>
+            <BarChart
+              rows={[...active]
+                .sort((a, b) => a.percent - b.percent)
+                .map((p) => ({ id: p.traineeId, label: p.name, value: p.percent }))}
+              max={100}
+              formatValue={(n) => `${n}%`}
+              colorFor={(row) => (row.value === 100 ? SERIES[2] : SERIES[0])}
+              emptyLabel="Nobody has started yet."
+            />
+          </section>
+
+          <section className="card no-hover stack-md">
+            <h2 className="card-title">
+              <Icon name="achievements" size={16} />
+              XP earned on this course
+            </h2>
+            {standings.isLoading ? (
+              <p className="muted-2">Loading…</p>
+            ) : (
+              <BarChart
+                rows={(standings.data ?? []).map((row) => ({
+                  id: row.traineeId, label: row.name, value: row.xp,
+                }))}
+                formatValue={(n) => `${n} XP`}
+                emptyLabel="No XP earned on this course yet."
+              />
+            )}
+          </section>
+        </div>
+      )}
 
       {people.length === 0 ? (
         <EmptyState icon="users" title="Nobody is enrolled yet">
@@ -151,11 +197,14 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
             </select>
           </div>
 
-          <div className="stack">
+          {/* A named region: the class charts above repeat every name, so
+              "the roster" needs to be something a reader — or a test — can
+              address on its own. */}
+          <section className="stack" aria-label="Roster">
             {sorted.map((person) => (
               <PersonRow key={person.id} person={person} activities={activities} />
             ))}
-          </div>
+          </section>
         </>
       )}
     </div>

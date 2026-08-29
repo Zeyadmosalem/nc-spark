@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
+import BarChart from '../../components/charts/BarChart';
+import Icon from '../../components/ui/Icon';
 import StatusPill from '../../components/ui/StatusPill';
 import EmptyState from '../../components/ui/EmptyState';
 import {
@@ -80,6 +82,30 @@ export default function SupervisorCourses() {
         title="Team courses"
         subtitle="How each cohort your trainers run is doing."
       />
+
+      {/* Every cohort on one scale, before the cards that detail each. The
+          question a supervisor opens this page with is "which of my trainers'
+          courses is behind", and that is a comparison, not a list. */}
+      {list.length > 1 && (
+        <section className="card no-hover stack-md">
+          <h2 className="card-title">
+            <Icon name="trend" size={16} />
+            Average progress by course
+          </h2>
+          <BarChart
+            rows={[...list]
+              .map((course) => ({
+                id: course.id,
+                label: course.title,
+                value: mean((enrolledBy.get(course.id) ?? []).map((e) => e.percent)) ?? 0,
+              }))
+              .sort((a, b) => a.value - b.value)}
+            max={100}
+            formatValue={(n) => `${n}%`}
+            emptyLabel="No cohorts have started yet."
+          />
+        </section>
+      )}
 
       {list.length === 0 ? (
         <EmptyState icon="courses" title="Nothing to show">

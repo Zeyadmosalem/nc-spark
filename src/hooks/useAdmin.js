@@ -5,6 +5,7 @@ import {
 } from '../api/admin';
 import { pendingTeachingRequests, decideTeachingRequest } from '../api/teaching';
 import { setUserRole, reviewSignup, suspendUser } from '../api/profiles';
+import { usageSummary, dailyActiveUsers } from '../api/activity';
 
 export const adminKeys = {
   users: ['admin', 'users'],
@@ -114,3 +115,21 @@ export const useAddAllowedDomain = () =>
 
 export const useRemoveAllowedDomain = () =>
   useDomainMutation(({ domain }) => removeAllowedDomain(domain));
+
+/**
+ * Usage: who has been here, and when.
+ *
+ * Read on the admin people screen. The view is security_invoker, so a
+ * non-admin calling it gets their own row rather than an error — the screen is
+ * behind an admin route, but that is not what makes it safe.
+ */
+export function useUsageSummary() {
+  return useQuery({ queryKey: ['admin', 'usage'], queryFn: usageSummary });
+}
+
+export function useDailyActiveUsers(days = 30) {
+  return useQuery({
+    queryKey: ['admin', 'dau', days],
+    queryFn: () => dailyActiveUsers(days),
+  });
+}
