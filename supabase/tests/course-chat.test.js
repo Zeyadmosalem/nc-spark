@@ -16,7 +16,9 @@
 //    cannot fail that check either way.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, anonClient, createUser, uniqueEmail, applyAppEnv, becomeWith,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -307,10 +309,13 @@ describe('live delivery', () => {
   /**
    * Waits for one realtime INSERT, or gives up.
    *
-   * 12s was enough alone and not enough with three other live files running:
-   * the socket handshake competes for the same connection budget, so the wait
-   * has to cover a slow open as well as a slow delivery. The it() timeout is
-   * 40s, so this still fails as a failure rather than as a hang.
+   * The wait is generous because it has to cover a slow socket open as well as
+   * a slow delivery, and the it() timeout above it is larger still, so this
+   * fails as a failure rather than as a hang.
+   *
+   * It does NOT compete with other files. An earlier version of this comment
+   * blamed "three other live files running"; vitest.db.config.js sets
+   * fileParallelism: false, so exactly one file runs at a time and always has.
    */
   const waitForMessage = (channel, ms = 25000) => new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), ms);
@@ -329,44 +334,100 @@ describe('live delivery', () => {
   /**
    * The whole point of the publication: a member of the course is told about a
    * message without having to reload.
+   *
+   * Attempted more than once on purpose, and this is the reason.
+   *
+   * postgres_changes is BEST EFFORT. Realtime polls the WAL and caps how many
+   * changes it takes per poll; the overflow is dropped, not queued. Measured
+   * against this project: 10/10 delivered on a quiet database, 5/10 while
+   * something else was inserting in bulk. The failure this replaces looked
+   * like a broken subscription and was not one — the socket was connected, the
+   * channel joined, the insert landed and RLS granted the reader the row, and
+   * the event simply never came.
+   *
+   * So a single miss says nothing. Three consecutive misses do: that is a
+   * subscription that is not entitled to the rows, which is what this test is
+   * actually for. A reader off the course still sees nothing, three times over.
    */
   it('reaches a member of the course', async () => {
     await become(alice.email);
-    const channel = supabase.channel(`test-in-${Date.now()}`);
-    const arrived = waitForMessage(channel);
-    await subscribed(channel);
 
-    await svc.from('messages').insert({
-      course_id: courseId, user_id: trainer.id, body: 'Live delivery works.',
-    });
+    let row = null;
+    for (let attempt = 1; attempt <= 3 && !row; attempt += 1) {
+      const channel = supabase.channel(`test-in-${Date.now()}-${attempt}`);
+      const arrived = waitForMessage(channel, 10000);
+      await subscribed(channel);
 
-    const row = await arrived;
-    await supabase.removeChannel(channel);
+      // Checked, because the insert is the other half of this test. Unchecked,
+      // a write that never happened and a delivery that never arrived fail
+      // identically — "expected null to be truthy" — and send you to the
+      // socket either way.
+      const { error: insertErr } = await svc.from('messages').insert({
+        course_id: courseId, user_id: trainer.id, body: 'Live delivery works.',
+      });
+      expect(insertErr, 'the message this test waits for was never written').toBeNull();
 
-    expect(row).toBeTruthy();
+      row = await arrived;
+      await supabase.removeChannel(channel);
+    }
+
+    expect(row, 'subscribed and the insert landed three times, and nothing arrived')
+      .toBeTruthy();
     expect(row.body).toBe('Live delivery works.');
-  }, 40000);
+  }, 60000);
 
   /**
    * And the claim the migration makes: publishing a table does not publish it
    * to everybody. Realtime evaluates messages_select for the subscriber, so
    * Bob — who is not enrolled — must receive nothing at all.
    *
-   * Not vacuous: the identical subscription delivers the row to Alice above.
+   * This used to say "not vacuous: the identical subscription delivers the row
+   * to Alice above", and that was wrong. Alice's delivery happened in a
+   * different test, against a different insert; it said nothing about whether
+   * THIS message reached anyone. postgres_changes is best effort — see the
+   * note above — so a dropped change made this pass, and it would have passed
+   * just the same if RLS had stopped filtering altogether, which is the one
+   * thing it exists to catch.
+   *
+   * So Alice is now subscribed to the SAME insert, on her own client. An
+   * attempt only counts once she has demonstrably received it; then Bob
+   * receiving nothing is the filter rather than a drop. Verified by enrolling
+   * Bob and watching this fail.
    */
   it('does not reach somebody who is not on the course', async () => {
-    await become(bob.email);
-    const channel = supabase.channel(`test-out-${Date.now()}`);
-    const arrived = waitForMessage(channel, 8000);
-    await subscribed(channel);
+    await become(alice.email);
 
-    await svc.from('messages').insert({
-      course_id: courseId, user_id: trainer.id, body: 'Not for Bob.',
-    });
+    const outsider = anonClient();
+    const { data: bobSession, error: signInErr } = await outsider.auth
+      .signInWithPassword({ email: bob.email, password: PASSWORD });
+    expect(signInErr).toBeNull();
+    await outsider.realtime.setAuth(bobSession.session.access_token);
 
-    const row = await arrived;
-    await supabase.removeChannel(channel);
+    let delivered = null;
+    let reachedBob = 'no attempt completed';
+    try {
+      for (let attempt = 1; attempt <= 3 && !delivered; attempt += 1) {
+        const memberCh = supabase.channel(`test-ctl-${Date.now()}-${attempt}`);
+        const outsiderCh = outsider.channel(`test-out-${Date.now()}-${attempt}`);
+        const memberGot = waitForMessage(memberCh, 10000);
+        const outsiderGot = waitForMessage(outsiderCh, 10000);
+        await Promise.all([subscribed(memberCh), subscribed(outsiderCh)]);
 
-    expect(row).toBeNull();
-  }, 40000);
+        const { error: insertErr } = await svc.from('messages').insert({
+          course_id: courseId, user_id: trainer.id, body: 'Not for Bob.',
+        });
+        expect(insertErr).toBeNull();
+
+        [delivered, reachedBob] = await Promise.all([memberGot, outsiderGot]);
+        await supabase.removeChannel(memberCh);
+        await outsider.removeChannel(outsiderCh);
+      }
+    } finally {
+      await outsider.auth.signOut({ scope: 'local' });
+    }
+
+    expect(delivered, 'the control never received it, so Bob receiving nothing proves nothing')
+      .toBeTruthy();
+    expect(reachedBob).toBeNull();
+  }, 60000);
 });

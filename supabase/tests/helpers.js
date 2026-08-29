@@ -51,6 +51,31 @@ export function anonClient() {
   return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, clientOpts);
 }
 
+/**
+ * Retries an auth call that failed at the transport layer.
+ *
+ * One run makes a few hundred auth round trips to a hosted service over the
+ * internet, and a single `AuthRetryableFetchError: fetch failed` takes a whole
+ * file's beforeAll with it — 30 tests skipped, with a message that says
+ * nothing about the code under test. supabase-js names the error retryable and
+ * then hands it back for the caller to deal with; this is that.
+ *
+ * Only transport failures are retried. An HTTP refusal — wrong password, rate
+ * limited, user missing — is a real answer and is returned on the first try.
+ */
+async function retryTransport(run, attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    const result = await run();
+    const error = result?.error;
+    const transport = error
+      && (error.name === 'AuthRetryableFetchError'
+        || /fetch failed|network|ECONNRESET|ETIMEDOUT|socket hang up/i.test(error.message ?? ''));
+
+    if (!transport || attempt >= attempts) return result;
+    await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+  }
+}
+
 /** Creates a confirmed auth user, then forces role/status via service role. */
 export async function createUser({
   email,
@@ -60,9 +85,9 @@ export async function createUser({
   name = 'Test User',
 }) {
   const svc = serviceClient();
-  const { data, error } = await svc.auth.admin.createUser({
+  const { data, error } = await retryTransport(() => svc.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { name },
-  });
+  }));
   if (error) throw error;
 
   const { error: upErr } = await svc
@@ -75,7 +100,8 @@ export async function createUser({
 /** Returns a client authenticated as the given user. */
 export async function signIn(email, password = 'Test-Passw0rd!') {
   const client = anonClient();
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  const { error } = await retryTransport(
+    () => client.auth.signInWithPassword({ email, password }));
   if (error) throw error;
   return client;
 }
@@ -113,8 +139,10 @@ export const uniqueEmail = (domain = 'example.com') =>
  * Two things here are not obvious, and are the reason this is shared rather
  * than written out per file:
  *
- * - The session cache. A file with seven people switching between them dozens
- *   of times is dozens of password grants against an endpoint that throttles.
+ * - The session cache, and the absence of a signOut() before each sign-in,
+ *   which is what makes the cache work at all. A file with seven people
+ *   switching between them dozens of times is otherwise dozens of password
+ *   grants against an endpoint that throttles.
  * - realtime.setAuth. The socket keeps the token it was opened with, so one
  *   client signing in as several people leaves a subscription authenticated as
  *   whoever ran first. No browser ever does this, which is why the app has no
@@ -138,8 +166,15 @@ export function becomeWith(client, password = 'Test-Passw0rd!') {
       sessions.delete(email);
     }
 
-    await client.auth.signOut();
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    // No signOut() first, deliberately. signInWithPassword replaces the
+    // session anyway, and signing out INVALIDATES the tokens this cache just
+    // stored: setSession then fails with "Auth session missing!" for anyone
+    // signed out since. Measured over one full run, that made the cache miss
+    // every real identity switch and hit only when becoming whoever was
+    // already signed in — 73 password grants for 80 attempts. Without it, the
+    // same switching pattern costs one grant per person.
+    const { data, error } = await retryTransport(
+      () => client.auth.signInWithPassword({ email, password }));
     if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
 
     sessions.set(email, {
