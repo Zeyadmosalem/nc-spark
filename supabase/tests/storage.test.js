@@ -7,7 +7,14 @@ let trainer, otherTrainer, trainee, stranger;
 let cTrainer, cOther, cTrainee, cStranger;
 let courseId, otherCourseId;
 
-const file = () => new Blob(['hello'], { type: 'text/plain' });
+/**
+ * The bucket now has a type allowlist, so a materials upload has to look
+ * like a real material. submissions deliberately has no such list — what a
+ * trainee may hand in is a decision about the course, not about security — so
+ * the plain-text default still stands there, and says so.
+ */
+const file = (type = 'text/plain') => new Blob(['hello'], { type });
+const material = () => file('application/pdf');
 
 beforeAll(async () => {
   await resetDb();
@@ -39,7 +46,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await svc.storage.from('course-materials').remove([
-    `${courseId}/manual.txt`, `${otherCourseId}/stolen.txt`,
+    `${courseId}/manual.pdf`, `${otherCourseId}/stolen.pdf`,
   ]);
   await svc.storage.from('submissions').remove([
     `${courseId}/${trainee.id}/work.txt`, `${courseId}/${stranger.id}/forged.txt`,
@@ -51,31 +58,31 @@ afterAll(async () => {
 describe('course-materials bucket', () => {
   it('the owning trainer can upload', async () => {
     const { error } = await cTrainer.storage.from('course-materials')
-      .upload(`${courseId}/manual.txt`, file(), { upsert: true });
+      .upload(`${courseId}/manual.pdf`, material(), { upsert: true });
     expect(error).toBeNull();
   });
 
   it('REJECTS an upload from another trainer', async () => {
     const { error } = await cOther.storage.from('course-materials')
-      .upload(`${courseId}/stolen.txt`, file(), { upsert: true });
+      .upload(`${courseId}/stolen.pdf`, material(), { upsert: true });
     expect(error).not.toBeNull();
   });
 
   it('REJECTS an upload from a trainee', async () => {
     const { error } = await cTrainee.storage.from('course-materials')
-      .upload(`${courseId}/cheat.txt`, file(), { upsert: true });
+      .upload(`${courseId}/cheat.pdf`, material(), { upsert: true });
     expect(error).not.toBeNull();
   });
 
   it('an enrolled trainee can download', async () => {
     const { error } = await cTrainee.storage.from('course-materials')
-      .download(`${courseId}/manual.txt`);
+      .download(`${courseId}/manual.pdf`);
     expect(error).toBeNull();
   });
 
   it('an UNENROLLED user cannot download', async () => {
     const { error } = await cStranger.storage.from('course-materials')
-      .download(`${courseId}/manual.txt`);
+      .download(`${courseId}/manual.pdf`);
     expect(error).not.toBeNull();
   });
 
@@ -84,16 +91,16 @@ describe('course-materials bucket', () => {
   // course they do not own, which is an upload they were never allowed to make.
   it('REJECTS moving a material into a course the trainer does not own', async () => {
     const { error } = await cTrainer.storage.from('course-materials')
-      .move(`${courseId}/manual.txt`, `${otherCourseId}/stolen.txt`);
+      .move(`${courseId}/manual.pdf`, `${otherCourseId}/stolen.pdf`);
     expect(error).not.toBeNull();
     const { error: stillThere } = await cTrainer.storage.from('course-materials')
-      .download(`${courseId}/manual.txt`);
+      .download(`${courseId}/manual.pdf`);
     expect(stillThere).toBeNull();
   });
 
   it('rejects a path whose first segment is not a course id', async () => {
     const { error } = await cTrainer.storage.from('course-materials')
-      .upload('not-a-uuid/rogue.txt', file(), { upsert: true });
+      .upload('not-a-uuid/rogue.pdf', material(), { upsert: true });
     expect(error).not.toBeNull();
   });
 });
@@ -170,5 +177,73 @@ describe('submissions bucket', () => {
     expect(error).not.toBeNull();
 
     await svc.storage.from('submissions').remove([from, to]);
+  });
+});
+
+/**
+ * S6. Both buckets had file_size_limit and allowed_mime_types set to null, and
+ * nothing validated in the browser either — the accept=".pdf,.doc,..."
+ * attribute on the materials input is a file-picker filter and changes nothing
+ * about what can be uploaded.
+ *
+ * These drive the real endpoint rather than reading storage.buckets, because
+ * the row saying "50 MB" and the API enforcing it are two different claims.
+ */
+describe('what a bucket will accept', () => {
+  /**
+   * The size cap is pinned from configuration rather than driven, and it is
+   * worth being exact about what that does and does not prove.
+   *
+   * Enforcement was verified against the real endpoint once, by hand: a 51 MB
+   * upload to course-materials returns 413 EntityTooLarge. It took 60 seconds,
+   * because the client streams the whole body before the server rejects it —
+   * so a test that drove it would add a minute per bucket to every run to
+   * re-prove something about Supabase rather than about this codebase.
+   *
+   * What this catches is the regression that actually threatens us: somebody
+   * clearing the limit back to null, which is the state this migration fixed.
+   */
+  it('caps the size of a course material', async () => {
+    const { data } = await svc.storage.getBucket('course-materials');
+    expect(data.file_size_limit).toBe(52428800);
+  });
+
+  it('caps the size of a submission', async () => {
+    const { data } = await svc.storage.getBucket('submissions');
+    expect(data.file_size_limit).toBe(26214400);
+  });
+
+  /**
+   * The bucket now refuses what public.course_materials was always going to
+   * refuse: its `kind` constraint allows exactly pdf / pptx / docx / xlsx. The
+   * object used to land in the bucket first and then be orphaned by the failed
+   * row insert.
+   */
+  it('refuses a course material of a type the schema does not allow', async () => {
+    const { error } = await cTrainer.storage.from('course-materials')
+      .upload(`${courseId}/notes.txt`, file('text/plain'), { upsert: true });
+
+    expect(error).toBeTruthy();
+    expect(String(error.message)).toMatch(/mime|type/i);
+  });
+
+  it('still accepts an ordinary course material', async () => {
+    const { error } = await cTrainer.storage.from('course-materials')
+      .upload(`${courseId}/ok.pdf`, material(), { upsert: true });
+    expect(error).toBeNull();
+    await svc.storage.from('course-materials').remove([`${courseId}/ok.pdf`]);
+  });
+
+  /**
+   * Deliberately unrestricted. What a trainee may hand in is a decision about
+   * the course, not about security, and the submission activity has no accept
+   * list — inventing one here would start silently rejecting real work.
+   */
+  it('accepts any type of submission, which is the intent', async () => {
+    const { error } = await cTrainee.storage.from('submissions')
+      .upload(`${courseId}/${trainee.id}/sketch.png`, file('image/png'), { upsert: true });
+    expect(error).toBeNull();
+    await svc.storage.from('submissions')
+      .remove([`${courseId}/${trainee.id}/sketch.png`]);
   });
 });
