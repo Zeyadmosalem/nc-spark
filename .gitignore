@@ -36,3 +36,4 @@ shots/
 .dev.vars
 .dev.vars.*
 .wrangler/
+scripts/.auth-config.before.json

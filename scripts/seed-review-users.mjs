@@ -18,8 +18,24 @@ const svc = serviceClient();
 //
 // Supply REVIEW_PASSWORD to choose one, otherwise a fresh one is generated and
 // printed once. Either way nothing lands in git.
-const PASSWORD = process.env.REVIEW_PASSWORD
-  ?? `Rv-${randomBytes(12).toString('base64url')}`;
+//
+// The generated one has to satisfy the project's password policy, which now
+// requires a lower, an upper, a digit and a symbol (S3). base64url happens to
+// contain digits most of the time, which is exactly the sort of "usually
+// works" that fails on the day it matters, so one of each is appended rather
+// than hoped for.
+const generated = () => {
+  const pick = (set) => set[randomBytes(1)[0] % set.length];
+  return [
+    randomBytes(12).toString('base64url'),
+    pick('abcdefghijkmnopqrstuvwxyz'),
+    pick('ABCDEFGHJKLMNPQRSTUVWXYZ'),
+    pick('23456789'),
+    pick('!@#$%^&*-_+='),
+  ].join('');
+};
+
+const PASSWORD = process.env.REVIEW_PASSWORD ?? generated();
 
 const PEOPLE = [
   { key: 'admin',      role: 'admin',      name: 'Review Admin' },

@@ -43,6 +43,12 @@ const name = file.split(/[\\/]/).pop();
 const version = name.split('_')[0];
 const label = name.replace(/^\d+_/, '').replace(/\.sql$/, '');
 
+// The version is checked against \d{14} below, but the label is whatever the
+// filename happened to contain and was being interpolated into SQL as-is. A
+// single quote in a filename would have broken the insert; worse than that is
+// available. Postgres' own dollar quoting, with a tag no filename can contain.
+const quoted = (value) => `$mig$${value}$mig$`;
+
 if (/^\d{14}$/.test(version)) {
   const record = await fetch(
     `https://api.supabase.com/v1/projects/${env.SUPABASE_PROJECT_REF}/database/query`,
@@ -54,7 +60,7 @@ if (/^\d{14}$/.test(version)) {
       },
       body: JSON.stringify({
         query: `insert into supabase_migrations.schema_migrations (version, name)
-                values ('${version}', '${label}')
+                values (${quoted(version)}, ${quoted(label)})
                 on conflict (version) do nothing;`,
       }),
     });

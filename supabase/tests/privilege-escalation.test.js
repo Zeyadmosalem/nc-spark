@@ -152,12 +152,15 @@ describe('RED TEAM: a caller with only the public anon key', () => {
 
   /**
    * The signup trigger is SECURITY DEFINER and runs as the owner, so revoking
-   * anon must not have broken account creation. Without this, the revoke
-   * could silently take self-service signup with it.
+   * anon must not have broken account creation. It fires on any insert into
+   * auth.users, which is now always an administrator (S2). Without this, the
+   * revoke could silently take account provisioning with it.
    */
-  it('still gets a profile and stats row when it signs up', async () => {
+  it('still gets a profile and stats row when an admin creates one', async () => {
     const email = uniqueEmail();
-    const { data, error } = await anon.auth.signUp({ email, password: 'Test-Passw0rd!' });
+    const { data, error } = await svc.auth.admin.createUser({
+      email, password: 'Test-Passw0rd!', email_confirm: true,
+    });
     expect(error).toBeNull();
 
     const { data: profile } = await svc.from('profiles')
@@ -167,5 +170,7 @@ describe('RED TEAM: a caller with only the public anon key', () => {
     const { data: stats } = await svc.from('trainee_stats')
       .select('xp').eq('profile_id', data.user.id).single();
     expect(stats.xp).toBe(0);
+
+    await svc.auth.admin.deleteUser(data.user.id);
   });
 });
