@@ -56,8 +56,15 @@ if (gated) {
     isApp
       ? `200 and the app HTML came back — the site is open to anyone with the URL`
       : `200, and the body is not the app either — check ${SITE} by hand`);
+} else if (res.status === 503) {
+  // The Worker is up and refusing to serve: configured() is false, so
+  // SUPABASE_URL does not parse as a URL or SUPABASE_ANON_KEY is empty. This
+  // was a WARN, and the script printed "All checks passed" while the site was
+  // down — the one outcome a verifier must never report as fine.
+  fail('the site is serving',
+    '503 — the Worker has no usable SUPABASE_URL / SUPABASE_ANON_KEY');
 } else {
-  warn('an unauthenticated request is challenged',
+  fail('an unauthenticated request is challenged',
     `unexpected ${res.status}${location ? ` → ${location}` : ''}`);
 }
 
