@@ -100,3 +100,60 @@ export async function resetDb() {
 let n = 0;
 export const uniqueEmail = (domain = 'example.com') =>
   `user${Date.now()}-${n++}@${domain}`;
+
+/**
+ * Builds a `become(email)` for a test file that plays several people in turn.
+ *
+ * Fourteen files each had their own copy of this, in four variants that had
+ * drifted apart — and the fix that matters most, caching the session, had
+ * reached three of them. The other eleven signed in from scratch on every
+ * switch, which is what makes a long file fail against the hosted project's
+ * auth rate limit while presenting as a permissions bug.
+ *
+ * Two things here are not obvious, and are the reason this is shared rather
+ * than written out per file:
+ *
+ * - The session cache. A file with seven people switching between them dozens
+ *   of times is dozens of password grants against an endpoint that throttles.
+ * - realtime.setAuth. The socket keeps the token it was opened with, so one
+ *   client signing in as several people leaves a subscription authenticated as
+ *   whoever ran first. No browser ever does this, which is why the app has no
+ *   equivalent and why it belongs here rather than in production code.
+ *
+ * The cache lives in the closure, so one file cannot hand another a stale
+ * session.
+ */
+export function becomeWith(client, password = 'Test-Passw0rd!') {
+  const sessions = new Map();
+
+  const become = async (email) => {
+    const cached = sessions.get(email);
+    if (cached) {
+      const { data, error } = await client.auth.setSession(cached);
+      if (!error) {
+        await client.realtime.setAuth(data.session.access_token);
+        return;
+      }
+      // A refresh token can expire mid-run; fall through and sign in properly.
+      sessions.delete(email);
+    }
+
+    await client.auth.signOut();
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
+
+    sessions.set(email, {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+    await client.realtime.setAuth(data.session.access_token);
+  };
+
+  /**
+   * Drops the cache, for a test that signs out on purpose and needs the next
+   * become to really sign in rather than restore a session.
+   */
+  become.forget = () => sessions.clear();
+
+  return become;
+}

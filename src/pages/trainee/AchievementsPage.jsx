@@ -16,6 +16,7 @@ import { fadeUp } from '../../lib/motion';
 import StatCard from '../../components/ui/StatCard';
 import StatusPill from '../../components/ui/StatusPill';
 import Icon from '../../components/ui/Icon';
+import { formatDate } from '../../lib/format';
 
 /**
  * What the trainee has actually achieved.
@@ -34,13 +35,6 @@ import Icon from '../../components/ui/Icon';
  * passing a quiz and taking part in a course conversation, so the number is
  * real and this page can lead with it.
  */
-
-const onDate = (iso) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-};
 
 export default function AchievementsPage() {
   const enrollments = useMyEnrollments();
@@ -179,7 +173,7 @@ export default function AchievementsPage() {
                   <div className="student-row-info">
                     <div className="student-row-name">{course?.title ?? 'A course'}</div>
                     {e.completedAt && (
-                      <div className="student-row-meta">Finished {onDate(e.completedAt)}</div>
+                      <div className="student-row-meta">Finished {formatDate(e.completedAt)}</div>
                     )}
                   </div>
                   <span style={{
@@ -210,7 +204,7 @@ export default function AchievementsPage() {
                   <div className="student-row-name">{a.quizTitle}</div>
                   <div className="student-row-meta">
                     {a.courseTitle}
-                    {a.submittedAt ? ` · ${onDate(a.submittedAt)}` : ''}
+                    {a.submittedAt ? ` · ${formatDate(a.submittedAt)}` : ''}
                     {a.attemptNo > 1 ? ` · attempt ${a.attemptNo}` : ''}
                   </div>
                 </div>

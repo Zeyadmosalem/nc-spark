@@ -17,7 +17,7 @@ export const KIND_LABEL = {
   participation: 'Taking part',
 };
 
-export function eventToCamel(row) {
+function eventToCamel(row) {
   return {
     id: row.id,
     traineeId: row.trainee_id,

@@ -45,7 +45,7 @@ export function SkeletonList({ rows = 4, label = 'Loading' }) {
 }
 
 /** A row of stat cards. */
-export function SkeletonStats({ count = 4 }) {
+function SkeletonStats({ count = 4 }) {
   return (
     <div className={`stat-grid stat-grid-${count === 3 ? 3 : 4}`} aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (

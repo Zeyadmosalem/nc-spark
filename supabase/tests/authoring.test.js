@@ -11,7 +11,9 @@
 // mirror of it. A mocked test cannot tell whether the two still agree.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, SUPABASE_URL, applyAppEnv } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, SUPABASE_URL, applyAppEnv, becomeWith,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -26,17 +28,13 @@ const { saveQuiz, saveQuizQuestion } = await import('../../src/api/quizzes.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `auth${Date.now()}`;
 
 let admin, trainee;
 let courseId, moduleId;
 const madeUsers = [];
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });

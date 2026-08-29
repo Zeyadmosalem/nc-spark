@@ -10,7 +10,7 @@
 //    so the test enrols one trainee and not another and reads both.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -19,6 +19,8 @@ const { myLibrary } = await import('../../src/api/library.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `lib${Date.now()}`;
 
 let trainer, alice, bob;
@@ -37,12 +39,6 @@ async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });
   madeUsers.push(u.id);
   return u;
-}
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
 }
 
 beforeAll(async () => {

@@ -15,6 +15,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Button from '../../components/ui/Button';
 import Icon from '../../components/ui/Icon';
 import { SPRING_SOFT, EASE_OUT } from '../../lib/motion';
+import { initialOf } from '../../lib/format';
 
 export default function CoursePage() {
   const { courseId } = useParams();
@@ -323,7 +324,7 @@ export default function CoursePage() {
                     >
                       <span className="leaderboard-position">{row.position}</span>
                       <span className="avatar" aria-hidden="true">
-                        {row.avatar || row.name.charAt(0).toUpperCase()}
+                        {initialOf(row)}
                       </span>
                       <span className="leaderboard-name">
                         {row.traineeId === profile?.id ? 'You' : row.name}

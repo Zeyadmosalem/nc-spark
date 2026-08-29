@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { PRIMARY } from './chartTokens';
+import { formatDate } from '../../lib/format';
 
 /**
  * One measure over time, as an area with its line on top.
@@ -39,8 +40,7 @@ export default function TrendChart({
   const area = `${line} L ${x(data.length - 1)} ${PAD.top + plotH} L ${x(0)} ${PAD.top + plotH} Z`;
 
   const total = data.reduce((sum, d) => sum + d.points, 0);
-  const dayLabel = (iso) =>
-    new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const dayLabel = (iso) => formatDate(iso, { year: false });
 
   return (
     <figure className="chart-figure">

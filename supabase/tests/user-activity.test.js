@@ -6,7 +6,7 @@
 // another. Both are properties of the definer function and the policies.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -15,6 +15,8 @@ const { supabase } = await import('../../src/api/client.js');
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
 
+const become = becomeWith(supabase, PASSWORD);
+
 let alice, bob, admin;
 const madeUsers = [];
 
@@ -22,23 +24,6 @@ async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
   madeUsers.push(u.id);
   return u;
-}
-
-const sessions = new Map();
-async function become(email) {
-  const cached = sessions.get(email);
-  if (cached) {
-    const { error } = await supabase.auth.setSession(cached);
-    if (!error) return;
-    sessions.delete(email);
-  }
-  await supabase.auth.signOut();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-  sessions.set(email, {
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
-  });
 }
 
 const rowFor = async (id) => (await svc
@@ -93,7 +78,7 @@ describe('recording a visit', () => {
 
   it('does nothing for a signed-out caller', async () => {
     await supabase.auth.signOut();
-    sessions.clear();
+    become.forget();
     const before = (await svc.from('user_activity').select('user_id')).data.length;
     await supabase.rpc('touch_activity');
     const after = (await svc.from('user_activity').select('user_id')).data.length;

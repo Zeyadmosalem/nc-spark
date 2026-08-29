@@ -14,6 +14,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import { fadeUp } from '../../lib/motion';
 import StatCard from '../../components/ui/StatCard';
 import EmptyState from '../../components/ui/EmptyState';
+import { initialOf } from '../../lib/format';
 
 /**
  * Supervisor oversight, on real data.
@@ -142,7 +143,7 @@ export function Dashboard() {
           {team.map((t) => (
             <div key={t.id} className="student-row" style={{ cursor: 'default' }}>
               <div className="avatar" style={{ width: '2rem', height: '2rem', fontSize: '0.7rem', flexShrink: 0 }}>
-                {t.avatar || (t.name ?? '?').charAt(0).toUpperCase()}
+                {initialOf(t)}
               </div>
               <div className="student-row-info">
                 <div className="student-row-name">{t.name || 'Unnamed'}</div>

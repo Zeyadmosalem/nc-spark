@@ -37,17 +37,34 @@ async function countOf(table, apply) {
 }
 
 /**
+ * The most rows the directory will fetch in one go.
+ *
+ * Exported so the screen can tell it is looking at a truncated list rather
+ * than comparing against a number written out twice.
+ */
+export const USER_PAGE_LIMIT = 2000;
+
+/**
  * Every user on the platform, newest first.
  *
  * Unfiltered on purpose: the directory has tabs and a search box, and an
  * installation of this size is hundreds of rows, not millions. One query the
- * page can slice beats six round trips that go stale against each other.
+ * page can slice beats six round trips that go stale against each other —
+ * and platformStats derives its tallies from this same list, so the dashboard
+ * cannot disagree with the directory two clicks away.
+ *
+ * That design is kept. What is added is a ceiling, because the query had none
+ * at all: the cost of being wrong about "hundreds, not millions" was an admin
+ * page that fetches the entire user table and hangs. Below the limit nothing
+ * about this screen changes, and above it the screen says so rather than
+ * quietly showing a partial directory as if it were the whole one.
  */
 export async function listUsers() {
   const rows = unwrap(await requireClient()
     .from('profiles')
     .select(PROFILE_COLUMNS)
-    .order('created_at', { ascending: false }));
+    .order('created_at', { ascending: false })
+    .limit(USER_PAGE_LIMIT));
   return (rows ?? []).map(toCamel);
 }
 

@@ -3,7 +3,7 @@ import { unwrap, currentUserId } from './helpers';
 
 const MESSAGE_COLUMNS = 'id, course_id, user_id, body, created_at, public_profiles!messages_user_id_fkey(id, name, avatar, role)';
 
-export function messageToCamel(row) {
+function messageToCamel(row) {
   if (!row) return null;
   return {
     id: row.id,

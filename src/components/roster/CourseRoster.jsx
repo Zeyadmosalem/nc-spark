@@ -14,6 +14,7 @@ import StatCard from '../ui/StatCard';
 import StatusPill from '../ui/StatusPill';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
+import { formatDate, initialOf } from '../../lib/format';
 
 /**
  * Who is on a course, and where each of them has got to.
@@ -36,13 +37,6 @@ const ORDER = {
   behind: { label: 'Least progress first', sort: (a, b) => a.percent - b.percent },
   ahead: { label: 'Most progress first', sort: (a, b) => b.percent - a.percent },
   name: { label: 'By name', sort: (a, b) => a.name.localeCompare(b.name) },
-};
-
-const onDate = (iso) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const mean = (nums) =>
@@ -226,14 +220,14 @@ function PersonRow({ person, activities }) {
         display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap',
       }}>
         <div className="avatar" aria-hidden="true" style={{ flexShrink: 0 }}>
-          {person.avatar || person.name.charAt(0).toUpperCase()}
+          {initialOf(person)}
         </div>
         <div className="grow-field">
           <div className="semibold">{person.name}</div>
           <div className="text-xs muted">
             {doneCount} of {activities.length} activit
             {activities.length === 1 ? 'y' : 'ies'}
-            {person.completedAt && ` · finished ${onDate(person.completedAt)}`}
+            {person.completedAt && ` · finished ${formatDate(person.completedAt)}`}
           </div>
         </div>
 
@@ -289,7 +283,7 @@ function PersonRow({ person, activities }) {
                         <span className="muted"> · {a.moduleTitle}</span>
                       </span>
                       <span style={{ whiteSpace: 'nowrap' }}>
-                        {at ? onDate(at) : 'not done'}
+                        {at ? formatDate(at) : 'not done'}
                       </span>
                       {/* Said in words as well as with a tick: a colour and a
                           glyph alone are not a status to someone reading with
@@ -317,7 +311,7 @@ function PersonRow({ person, activities }) {
                         {a.quizTitle}
                       </div>
                       <div className="data-row-meta">
-                        {a.submittedAt ? onDate(a.submittedAt) : ''}
+                        {a.submittedAt ? formatDate(a.submittedAt) : ''}
                         {a.attemptNo > 1 ? ` · attempt ${a.attemptNo}` : ''}
                       </div>
                     </div>

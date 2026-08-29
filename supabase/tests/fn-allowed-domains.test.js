@@ -7,7 +7,7 @@
 // tell whether the door is locked.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -17,16 +17,12 @@ const { listAllowedDomains, addAllowedDomain, removeAllowedDomain, recentAudit }
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const DOMAIN = `t${Date.now()}.example`;
 
 let admin, trainee;
 const madeUsers = [];
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });

@@ -16,7 +16,7 @@
 //    cannot fail that check either way.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -26,6 +26,8 @@ const { listCourseMessages, sendCourseMessage, MESSAGE_PAGE_SIZE } =
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `chat${Date.now()}`;
 
 let trainer, otherTrainer, admin, supervisor, alice, bob, pending;
@@ -45,18 +47,6 @@ async function mk(role, name, status = 'active') {
     await svc.from('profiles').update({ status }).eq('id', u.id);
   }
   return u;
-}
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-
-  // One client signs in as seven different people over this file, which no
-  // browser ever does. The realtime socket keeps the token it was opened with,
-  // so without this the subscription below authenticates as whoever ran first.
-  // A fresh client needs none of this, which is why the app does not do it.
-  await supabase.realtime.setAuth(data.session.access_token);
 }
 
 beforeAll(async () => {
