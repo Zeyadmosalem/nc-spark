@@ -1,19 +1,54 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MAX_MESSAGE_LENGTH, MESSAGE_PAGE_SIZE } from '../../api/messages';
 import { useSession } from '../../hooks/useSession';
-import { useCourseMessages, useSendCourseMessage } from '../../hooks/useMessages';
+import {
+  useCourseMessages, useSendCourseMessage, useOlderCourseMessages,
+} from '../../hooks/useMessages';
 import QueryError from './QueryError';
 import Button from '../ui/Button';
 
-export default function CourseChat({ courseId }) {
+/**
+ * One course conversation.
+ *
+ * This is the only chat in the product. A second, near-identical copy lived
+ * inline in CoursePage for the trainee's tab, and the two had already drifted:
+ * only one scrolled to the newest message, and a fix to either was a fix to
+ * one of them. The wording that genuinely differed between the two call sites
+ * is the `subtitle` prop; everything else was the same component twice.
+ */
+export default function CourseChat({
+  courseId,
+  subtitle = 'Talk with the people learning and teaching this course.',
+}) {
   const { profile } = useSession();
-  const { data: messages = [], isLoading, error } = useCourseMessages(courseId);
+  const { data: latest = [], isLoading, error } = useCourseMessages(courseId);
   const send = useSendCourseMessage();
+  const older = useOlderCourseMessages(courseId);
+
+  const [earlier, setEarlier] = useState([]);
+  const [exhausted, setExhausted] = useState(false);
   const [draft, setDraft] = useState('');
   const endRef = useRef(null);
 
+  const messages = useMemo(() => [...earlier, ...latest], [earlier, latest]);
+
+  // Only ever scroll for the newest end. Prepending history must not yank the
+  // reader away from the message they just went back to find.
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-  }, [messages.length]);
+  }, [latest.length]);
+
+  // A short first page means the whole conversation is already on screen, so
+  // there is nothing behind it to offer.
+  const mayHaveMore = latest.length >= MESSAGE_PAGE_SIZE && !exhausted;
+
+  async function loadOlder() {
+    const oldest = messages[0];
+    if (!oldest) return;
+    const page = await older.mutateAsync(oldest.createdAt);
+    if ((page ?? []).length < MESSAGE_PAGE_SIZE) setExhausted(true);
+    setEarlier((prev) => [...(page ?? []), ...prev]);
+  }
 
   function submit(event) {
     event.preventDefault();
@@ -26,22 +61,39 @@ export default function CourseChat({ courseId }) {
     <section className="card no-hover stack-md" aria-label="Course chat">
       <div>
         <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>Course chat</h2>
-        <p className="muted-2" style={{ margin: 0 }}>
-          Talk with the people learning and teaching this course.
-        </p>
+        <p className="muted-2" style={{ margin: 0 }}>{subtitle}</p>
       </div>
+
       {error && <QueryError error={error} what="this course chat" />}
-      <div style={{ display: 'grid', gap: '0.75rem', maxHeight: '24rem', overflowY: 'auto' }}>
-        {isLoading ? <p className="muted-2">Loading messages…</p> : messages.length === 0 ? (
+
+      <div className="chat-log">
+        {mayHaveMore && (
+          <div className="cluster" style={{ justifyContent: 'center' }}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={loadOlder}
+              pending={older.isPending}
+            >
+              Load older messages
+            </Button>
+          </div>
+        )}
+
+        {isLoading ? (
+          <p className="muted-2">Loading messages…</p>
+        ) : messages.length === 0 && !error ? (
           <p className="muted-2">No messages yet. Start the conversation.</p>
         ) : messages.map((message) => {
           const own = message.userId === profile?.id;
           return (
-            <div key={message.id} style={{ display: 'flex', justifyContent: own ? 'flex-end' : 'flex-start' }}>
-              <div className={`chat-bubble ${own ? 'me' : 'other'}`} style={{ maxWidth: '80%', padding: '0.75rem 0.9rem' }}>
-                <div style={{ fontSize: '0.72rem', opacity: 0.8, marginBottom: '0.25rem', fontWeight: 700 }}>
-                  {own ? 'You' : message.senderName}
-                </div>
+            <div
+              key={message.id}
+              className="chat-msg"
+              style={{ display: 'flex', justifyContent: own ? 'flex-end' : 'flex-start' }}
+            >
+              <div className={`chat-bubble ${own ? 'me' : 'other'}`}>
+                <div className="chat-author">{own ? 'You' : message.senderName}</div>
                 <div>{message.body}</div>
               </div>
             </div>
@@ -49,11 +101,16 @@ export default function CourseChat({ courseId }) {
         })}
         <div ref={endRef} />
       </div>
+
       <form onSubmit={submit} style={{ display: 'grid', gap: '0.75rem' }}>
         <label className="sr-only" htmlFor={`course-chat-${courseId}`}>Type your message</label>
         <textarea
-          id={`course-chat-${courseId}`} className="input-field" rows={3}
-          value={draft} onChange={(event) => setDraft(event.target.value)}
+          id={`course-chat-${courseId}`}
+          className="input-field"
+          rows={3}
+          maxLength={MAX_MESSAGE_LENGTH}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
           placeholder="Type your message…"
         />
         <div className="cluster">

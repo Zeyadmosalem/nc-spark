@@ -35,6 +35,9 @@ vi.mock('../../hooks/useAuthoring', () => ({
 vi.mock('../../hooks/useMessages', () => ({
   useCourseMessages: () => query(mocks.courseMessages()),
   useSendCourseMessage: () => asMutation(mocks.sendCourseMessage),
+  // CourseChat offers "load older" once a full page comes back. This file is
+  // about modules and activities; CourseChat.test.jsx covers the paging.
+  useOlderCourseMessages: () => asMutation(vi.fn()),
 }));
 
 // Materials have their own tests and their own queries; this file is about

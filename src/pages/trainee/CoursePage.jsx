@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import { useMyCompletions } from '../../hooks/useProgress';
-import { useSession } from '../../hooks/useSession';
-import { useCourseMessages, useSendCourseMessage } from '../../hooks/useMessages';
 import { moduleLockState } from '../../api/progress';
+import CourseChat from '../../components/shared/CourseChat';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
@@ -17,30 +16,12 @@ import { SPRING_SOFT, EASE_OUT } from '../../lib/motion';
 
 export default function CoursePage() {
   const { courseId } = useParams();
-  const { profile } = useSession();
-
   const { data: course, isLoading, error } = useCourseOutline(courseId);
   const {
     data: enrollments, isLoading: loadingEnrollments, error: enrollmentsError,
   } = useMyEnrollments();
 
   const [activeTab, setActiveTab] = useState('path');
-  const [chatDraft, setChatDraft] = useState('');
-  const endRef = useRef(null);
-
-  const { data: chatMessages = [], isLoading: loadingMessages, error: chatError } = useCourseMessages(courseId);
-  const sendMessage = useSendCourseMessage();
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-  }, [chatMessages.length]);
-
-  function submitChat(event) {
-    event.preventDefault();
-    const body = chatDraft.trim();
-    if (!body || !courseId) return;
-    sendMessage.mutate({ courseId, body }, { onSuccess: () => setChatDraft('') });
-  }
 
   // Above the early returns, like every other hook here: this page has
   // already crashed once with "Rendered fewer hooks than expected" because
@@ -312,76 +293,10 @@ export default function CoursePage() {
           {activeTab === 'materials' && <CourseMaterials courseId={courseId} />}
 
           {activeTab === 'chat' && (
-            <div className="card no-hover" style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>Course chat</h2>
-                <p className="muted-2" style={{ margin: 0 }}>
-                  Ask a question about this course and keep the conversation on the same page.
-                </p>
-              </div>
-
-              {chatError && <QueryError error={chatError} what="this course chat" />}
-
-              <div style={{ display: 'grid', gap: '0.75rem', maxHeight: '24rem', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                {loadingMessages ? (
-                  <p className="muted-2">Loading messages…</p>
-                ) : chatMessages.length === 0 ? (
-                  <div className="empty-state" style={{ padding: '1rem' }}>
-                    <p className="muted-2">No messages yet. Start the conversation.</p>
-                  </div>
-                ) : (
-                  chatMessages.map((message) => {
-                    const own = message.userId === profile?.id;
-                    return (
-                      <div
-                        key={message.id}
-                        className="chat-msg"
-                        style={{
-                          display: 'flex',
-                          justifyContent: own ? 'flex-end' : 'flex-start',
-                          alignItems: 'flex-start',
-                          gap: '0.5rem',
-                        }}
-                      >
-                        <div
-                          className={`chat-bubble ${own ? 'me' : 'other'}`}
-                          style={{
-                            maxWidth: '80%',
-                            padding: '0.75rem 0.9rem',
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          <div style={{ fontSize: '0.72rem', opacity: 0.8, marginBottom: '0.25rem', fontWeight: 700 }}>
-                            {own ? 'You' : message.senderName}
-                          </div>
-                          <div>{message.body}</div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={endRef} />
-              </div>
-
-              <form onSubmit={submitChat} style={{ display: 'grid', gap: '0.75rem' }}>
-                <label className="sr-only" htmlFor={`course-chat-${courseId}`}>
-                  Type your message
-                </label>
-                <textarea
-                  id={`course-chat-${courseId}`}
-                  className="input-field"
-                  rows={3}
-                  value={chatDraft}
-                  onChange={(event) => setChatDraft(event.target.value)}
-                  placeholder="Type your message…"
-                />
-                <div className="cluster">
-                  <Button type="submit" variant="primary" disabled={!chatDraft.trim() || sendMessage.isPending}>
-                    {sendMessage.isPending ? 'Sending…' : 'Send'}
-                  </Button>
-                </div>
-              </form>
-            </div>
+            <CourseChat
+              courseId={courseId}
+              subtitle="Ask a question about this course and keep the conversation on the same page."
+            />
           )}
 
         </motion.div>

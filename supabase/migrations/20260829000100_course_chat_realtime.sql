@@ -1,0 +1,13 @@
+-- Live delivery for course chat.
+--
+-- The messages table, its RLS and both sides of the UI have existed since
+-- 20260828000100, but nothing was ever published for Realtime — so a message
+-- arrived only when the reader happened to reload. A conversation where the
+-- reply does not turn up is not a conversation, and the fix is one line rather
+-- than any change to the schema.
+--
+-- RLS still decides who receives what. Realtime evaluates messages_select for
+-- the subscribing user's own JWT, so a trainee who is not on the course gets
+-- no events, exactly as they get no rows from a direct read. Publishing a
+-- table does NOT publish it to everyone.
+alter publication supabase_realtime add table public.messages;

@@ -615,6 +615,30 @@ img { max-width: 100%; display: block; }
 .chat-bubble.other { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-lg) var(--r-lg) var(--r-lg) var(--sp-1); }
 .chat-bubble.me { background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); color: #fff; border-radius: var(--r-lg) var(--r-lg) var(--sp-1) var(--r-lg); }
 
+/* The scrolling transcript, and the small name above each bubble. Both were
+   inline styles duplicated across the two chat implementations that have since
+   been merged into CourseChat. */
+.chat-log {
+  display: grid;
+  gap: var(--sp-3);
+  max-height: 24rem;
+  overflow-y: auto;
+  padding-right: var(--sp-1);
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 0.75rem 0.9rem;
+  line-height: 1.5;
+}
+
+.chat-author {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.8;
+  margin-bottom: var(--sp-1);
+}
+
 /* =============================================
    Teacher — Student Progress View
    ============================================= */
