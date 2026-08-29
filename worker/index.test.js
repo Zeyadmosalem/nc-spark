@@ -11,11 +11,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import gate from './index.js';
 
+// Caching off by default here: the decision cache is module state that
+// outlives one test, so every case that is not about caching checks each
+// request on its own. The caching block below opts back in.
 const ENV = {
   SUPABASE_URL: 'https://project.supabase.co',
   SUPABASE_ANON_KEY: 'anon-key',
+  AUTH_CACHE_TTL_MS: 0,
   ASSETS: { fetch: vi.fn(async () => new Response('the app', { status: 200 })) },
 };
+
+/** The same worker with its usual 60s decision cache. */
+const CACHING = { ...ENV, AUTH_CACHE_TTL_MS: undefined };
 
 const GOOD_TOKEN = 'header.payload.signature';
 
@@ -333,5 +340,101 @@ describe('rate limiting the login form', () => {
 
     expect(res.status).toBe(200);
     expect(rl.limit).not.toHaveBeenCalled();
+  });
+});
+
+describe('how often it asks Supabase', () => {
+  /**
+   * A page load is the document plus its JavaScript, CSS and fonts, and the
+   * gate runs on every one of them. Before the cache that was ten or more
+   * blocking round-trips per visit, and a steady drip against the auth
+   * endpoint's own rate limit.
+   *
+   * Each test uses a token of its own: the cache is module state that outlives
+   * a single test, which is exactly what makes it useful and exactly what
+   * would make these leak into each other.
+   */
+  const load = (token, n) => Promise.all(
+    Array.from({ length: n }, (_, i) =>
+      gate.fetch(withCookie(`https://site.dev/assets/${i}.js`, token), CACHING)));
+
+  const supabaseCalls = () => globalThis.fetch.mock.calls
+    .filter(([u]) => String(u).includes('/auth/v1/user')).length;
+
+  it('asks once for a whole page of assets', async () => {
+    stubSupabase();
+    await load('page-load-token', 10);
+    expect(supabaseCalls()).toBe(1);
+  });
+
+  it('still serves every one of them', async () => {
+    stubSupabase();
+    const all = await load('serve-all-token', 6);
+    expect(all.every((r) => r.status === 200)).toBe(true);
+  });
+
+  it('does not confuse one person with another', async () => {
+    stubSupabase({ user: { ok: true }, profile: [{ status: 'active' }] });
+    await gate.fetch(withCookie('https://site.dev/', 'person-a'), CACHING);
+
+    // A second token has to be checked on its own.
+    await gate.fetch(withCookie('https://site.dev/', 'person-b'), CACHING);
+    expect(supabaseCalls()).toBe(2);
+  });
+
+  /**
+   * The cost of the cache, stated as a test: an account suspended in the
+   * console keeps access until the decision expires, and then does not.
+   */
+  it('lets a suspended account back out again once the decision expires', async () => {
+    vi.useFakeTimers();
+    try {
+      stubSupabase({ user: { ok: true }, profile: [{ status: 'active' }] });
+      const first = await gate.fetch(withCookie('https://site.dev/', 'to-suspend'), CACHING);
+      expect(first.status).toBe(200);
+
+      // Suspended in the console. The cached decision still stands.
+      stubSupabase({ user: { ok: true }, profile: [{ status: 'suspended' }] });
+      const during = await gate.fetch(withCookie('https://site.dev/', 'to-suspend'), CACHING);
+      expect(during.status).toBe(200);
+
+      vi.advanceTimersByTime(61_000);
+      const after = await gate.fetch(withCookie('https://site.dev/', 'to-suspend'), CACHING);
+      expect(after.status).toBe(302);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /** And the other direction, faster, because somebody is waiting to get in. */
+  it('lets a newly activated account in without a long wait', async () => {
+    vi.useFakeTimers();
+    try {
+      stubSupabase({ user: { ok: true }, profile: [{ status: 'pending' }] });
+      const before = await gate.fetch(withCookie('https://site.dev/', 'to-activate'), CACHING);
+      expect(before.status).toBe(302);
+
+      stubSupabase({ user: { ok: true }, profile: [{ status: 'active' }] });
+      vi.advanceTimersByTime(11_000);
+      const after = await gate.fetch(withCookie('https://site.dev/', 'to-activate'), CACHING);
+      expect(after.status).toBe(200);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * A blip is not a decision. Caching it would turn one unreachable moment
+   * into ten seconds of everybody being locked out, including the people who
+   * would otherwise have been served from cache.
+   */
+  it('does not remember a network failure', async () => {
+    stubSupabase({ user: new Error('down') });
+    const failed = await gate.fetch(withCookie('https://site.dev/', 'blip-token'), CACHING);
+    expect(failed.status).toBe(302);
+
+    stubSupabase();
+    const recovered = await gate.fetch(withCookie('https://site.dev/', 'blip-token'), CACHING);
+    expect(recovered.status).toBe(200);
   });
 });

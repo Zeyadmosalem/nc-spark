@@ -79,18 +79,22 @@ function configured(env) {
  * Every failure path returns false. A gate that opens when its backend is
  * unreachable is not a gate.
  */
-async function authorize(request, env) {
-  const token = tokenFromCookie(request);
-  if (!token) return false;
-
+/** Asks Supabase the two questions, and records the answer. */
+async function askSupabase(token, env, ttl) {
   try {
     const session = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
     });
-    if (!session.ok) return false;
+    if (!session.ok) {
+      remember(token, false, ttl);
+      return false;
+    }
 
     const user = await session.json();
-    if (!user?.id) return false;
+    if (!user?.id) {
+      remember(token, false, ttl);
+      return false;
+    }
 
     // Read as the user, with their own token, so RLS applies:
     // profiles_select_self is what permits this and nothing wider.
@@ -98,13 +102,107 @@ async function authorize(request, env) {
       `${env.SUPABASE_URL}/rest/v1/profiles?select=status&id=eq.${encodeURIComponent(user.id)}`,
       { headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
     );
-    if (!profile.ok) return false;
+    if (!profile.ok) {
+      remember(token, false, ttl);
+      return false;
+    }
 
     const rows = await profile.json();
-    return Array.isArray(rows) && rows[0]?.status === 'active';
+    const allowed = Array.isArray(rows) && rows[0]?.status === 'active';
+    remember(token, allowed, ttl);
+    return allowed;
   } catch {
+    // Deliberately NOT remembered. Supabase being briefly unreachable is not a
+    // decision about this account, and caching it would turn a blip into ten
+    // seconds of everybody being locked out.
     return false;
   }
+}
+
+async function authorize(request, env) {
+  const token = tokenFromCookie(request);
+  if (!token) return false;
+
+  const ttl = allowTtl(env);
+  if (ttl <= 0) return askSupabase(token, env, ttl);
+
+  const remembered = rememberedDecision(token);
+  if (remembered !== undefined) return remembered;
+
+  // A browser opens a page by asking for the document and every asset at
+  // once, so on a first visit there is nothing cached yet and all of them
+  // would go to Supabase together — the cache alone only helps the SECOND
+  // navigation. Sharing the in-flight check is what makes the first page load
+  // one round-trip instead of ten.
+  const pending = inFlight.get(token);
+  if (pending) return pending;
+
+  const check = askSupabase(token, env, ttl);
+  inFlight.set(token, check);
+  try {
+    return await check;
+  } finally {
+    inFlight.delete(token);
+  }
+}
+
+/**
+ * How long an authorization decision is reused before it is asked again.
+ *
+ * The gate runs on every request, and a single page load is the document plus
+ * its JavaScript, CSS and fonts — so one visit was ten or more round-trips to
+ * Supabase, each one blocking a file the browser is waiting for. It was also a
+ * steady drip against the auth endpoint's own rate limit.
+ *
+ * The cost of caching is revocation latency, and it is worth naming exactly:
+ * an account suspended or deactivated in the console keeps access for up to
+ * ALLOW_TTL_MS. Sixty seconds is short enough that "remove this person now"
+ * still means now in any practical sense, and long enough that a page load
+ * costs one check rather than ten.
+ *
+ * Denials expire faster, because the person on the other end of a denial is
+ * usually somebody who has just been activated and is waiting to get in.
+ *
+ * Set AUTH_CACHE_TTL_MS to 0 to check every request, at the cost of the
+ * round-trips above — useful while investigating an access problem, when
+ * "wait a minute" is not an acceptable answer.
+ */
+const ALLOW_TTL_MS = 60_000;
+const DENY_TTL_MS = 10_000;
+
+function allowTtl(env) {
+  const configured = Number(env.AUTH_CACHE_TTL_MS);
+  return Number.isFinite(configured) && configured >= 0 ? configured : ALLOW_TTL_MS;
+}
+
+// Isolates are short-lived, but a busy one should not grow without bound.
+const MAX_CACHED = 500;
+
+const decisions = new Map();
+
+// Checks that have been started and not yet answered, so concurrent requests
+// carrying the same cookie wait on one call rather than each making their own.
+const inFlight = new Map();
+
+function rememberedDecision(token) {
+  const hit = decisions.get(token);
+  if (!hit) return undefined;
+  if (hit.expires <= Date.now()) {
+    decisions.delete(token);
+    return undefined;
+  }
+  return hit.allowed;
+}
+
+function remember(token, allowed, ttl) {
+  if (ttl <= 0) return;
+  // Cheaper than tracking least-recently-used, and an isolate that has seen
+  // 500 distinct tokens is one where starting again costs little.
+  if (decisions.size >= MAX_CACHED) decisions.clear();
+  decisions.set(token, {
+    allowed,
+    expires: Date.now() + (allowed ? ttl : Math.min(DENY_TTL_MS, ttl)),
+  });
 }
 
 /**
