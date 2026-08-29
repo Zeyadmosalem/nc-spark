@@ -42,10 +42,34 @@ async function mk(role, name) {
   return u;
 }
 
+/**
+ * Sessions, kept so that switching back to somebody is not a fresh password
+ * grant.
+ *
+ * This file changes identity dozens of times, and every switch used to be a
+ * signOut plus a signInWithPassword. Supabase rate limits auth requests, so
+ * the suite eventually failed with "Request rate limit reached" — which looks
+ * exactly like a broken test and is not one. The password is exchanged once
+ * per person; after that the switch is a local setSession.
+ */
+const sessions = new Map();
+
 async function become(email) {
+  const cached = sessions.get(email);
+  if (cached) {
+    const { error } = await supabase.auth.setSession(cached);
+    if (!error) return;
+    // A refresh token can expire mid-run; fall through and sign in properly.
+    sessions.delete(email);
+  }
+
   await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
   if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
+  sessions.set(email, {
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
 }
 
 beforeAll(async () => {
@@ -211,8 +235,13 @@ describe('replying', () => {
     });
   });
 
-  it('lets the trainer answer, and flips who it is waiting on', async () => {
-    await become(trainer.email);
+  /**
+   * An admin, not the trainer. 20260826000200 made support the platform-wide
+   * channel to administrators; a question about a course belongs in course
+   * chat, which has its own tests.
+   */
+  it('lets an admin answer, and flips who it is waiting on', async () => {
+    await become(admin.email);
     await replyToSupportRequest({ requestId: thread.id, body: 'Finish the quiz in module 1.' });
 
     const seen = (await supportThreads()).find((t) => t.id === thread.id);
@@ -238,18 +267,18 @@ describe('replying', () => {
    * The suite passed before the fix, because every earlier assertion was about
    * the author reading their own name.
    */
-  it('names the trainer who replied, to the trainee reading it', async () => {
+  it('names the admin who replied, to the trainee reading it', async () => {
     await become(alice.email);
     const messages = await supportMessages(thread.id);
-    const fromTrainer = messages.find((m) => m.authorId === trainer.id);
+    const fromAdmin = messages.find((m) => m.authorId === admin.id);
 
-    expect(fromTrainer.authorName).toBe('Tara Trainer');
-    expect(fromTrainer.authorRole).toBe('trainer');
+    expect(fromAdmin.authorName).toBe('Ada Admin');
+    expect(fromAdmin.authorRole).toBe('admin');
   });
 
   /** And the other way: staff see who asked. */
-  it('names the trainee who asked, to the trainer reading it', async () => {
-    await become(trainer.email);
+  it('names the trainee who asked, to the admin reading it', async () => {
+    await become(admin.email);
     const messages = await supportMessages(thread.id);
     expect(messages[0].authorName).toBe('Alice Ahmed');
     expect(messages[0].authorRole).toBe('trainee');
@@ -264,7 +293,7 @@ describe('replying', () => {
     ]);
   });
 
-  /** Not vacuous: the same call succeeds for the trainer above. */
+  /** Not vacuous: the same call succeeds for the admin above. */
   it('refuses a reply from somebody who cannot see the thread', async () => {
     await become(bob.email);
     await expect(replyToSupportRequest({ requestId: thread.id, body: 'Sneaking in' }))
@@ -460,7 +489,7 @@ describe('unread state', () => {
   });
 
   it('counts a reply the reader has not opened', async () => {
-    await become(trainer.email);
+    await become(admin.email);
     await replyToSupportRequest({ requestId: thread.id, body: 'Try this.' });
 
     await become(alice.email);
@@ -479,12 +508,97 @@ describe('unread state', () => {
     await become(alice.email);
     await replyToSupportRequest({ requestId: thread.id, body: 'Did not work.' });
 
-    await become(trainer.email);
-    const forTrainer = (await supportThreads()).find((t) => t.id === thread.id);
-    expect(forTrainer.unreadCount).toBeGreaterThan(0);
+    await become(admin.email);
+    const forAdmin = (await supportThreads()).find((t) => t.id === thread.id);
+    expect(forAdmin.unreadCount).toBeGreaterThan(0);
 
     await become(alice.email);
     const forAlice = (await supportThreads()).find((t) => t.id === thread.id);
     expect(forAlice.unreadCount).toBe(0);
+  });
+});
+
+describe('the trainer of the course a request names', () => {
+  let thread;
+
+  beforeAll(async () => {
+    await become(alice.email);
+    thread = await createSupportRequest({
+      subject: 'About my course', body: 'Something is wrong.', courseId,
+    });
+  });
+
+  /**
+   * The drift this closes. 20260826000200 removed the trainer from the RLS
+   * policy and from app.can_see_support, but not from the Edge Function's own
+   * canSee — so the thread vanished from the trainer's inbox while the
+   * function would still hand over its messages and accept a reply to anyone
+   * holding the id.
+   *
+   * A trainee writing to an administrator about their trainer is precisely the
+   * thread that trainer must not read.
+   *
+   * Not vacuous: the same three calls succeed for the admin in the blocks
+   * above, and for alice who wrote it.
+   */
+  it('cannot find it in their inbox', async () => {
+    await become(trainer.email);
+    expect((await supportThreads()).map((t) => t.id)).not.toContain(thread.id);
+  });
+
+  it('cannot read it through the function either', async () => {
+    await become(trainer.email);
+    await expect(supportMessages(thread.id)).rejects.toThrow(/No such request/);
+  });
+
+  it('cannot reply to it', async () => {
+    await become(trainer.email);
+    await expect(replyToSupportRequest({ requestId: thread.id, body: 'Let me in.' }))
+      .rejects.toThrow(/No such request/);
+  });
+
+  it('still reaches the admin it was addressed to', async () => {
+    await become(admin.email);
+    expect((await supportThreads()).map((t) => t.id)).toContain(thread.id);
+    expect((await supportMessages(thread.id)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('a supervisor', () => {
+  /**
+   * Supervisors are deliberately excluded from can_see_support, so they never
+   * read somebody else's thread — but support_requests_insert allows any
+   * active account, and the policy returns a thread to whoever wrote it. The
+   * role could always file its own request and read the answer; the shell
+   * simply had no link, so the one role whose job is oversight was the only
+   * one with no way to reach an administrator.
+   */
+  it('can file its own request and read the reply', async () => {
+    await become(supervisor.email);
+    const thread = await createSupportRequest({
+      subject: 'Oversight question', body: 'A trainer is missing from my team.',
+    });
+
+    expect((await supportThreads()).map((t) => t.id)).toContain(thread.id);
+
+    await become(admin.email);
+    await replyToSupportRequest({ requestId: thread.id, body: 'Fixed, take a look.' });
+
+    await become(supervisor.email);
+    const messages = await supportMessages(thread.id);
+    expect(messages.map((m) => m.body)).toContain('Fixed, take a look.');
+    expect(messages.find((m) => m.authorId === admin.id).authorName).toBe('Ada Admin');
+  });
+
+  /** Still not a way into anybody else's. */
+  it('cannot see a thread it did not write', async () => {
+    await become(alice.email);
+    const mine = await createSupportRequest({
+      subject: 'Private', body: 'Not for a supervisor.', courseId,
+    });
+
+    await become(supervisor.email);
+    expect((await supportThreads()).map((t) => t.id)).not.toContain(mine.id);
+    await expect(supportMessages(mine.id)).rejects.toThrow(/No such request/);
   });
 });

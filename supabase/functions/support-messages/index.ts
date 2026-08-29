@@ -52,12 +52,16 @@ async function canSee(
   if (request.author_id === actor.id) return request;
   if (actor.role === 'admin') return request;
 
-  if (request.course_id && actor.role === 'trainer') {
-    const { data: course, error: cErr } = await service
-      .from('courses').select('trainer_id').eq('id', request.course_id).maybeSingle();
-    if (cErr) throw new HttpError(500, cErr.message);
-    if (course?.trainer_id === actor.id) return request;
-  }
+  // The course's trainer used to be allowed here. 20260826000200 made support
+  // the platform-wide channel to administrators and moved course questions to
+  // course chat — but it only changed the RLS policy and app.can_see_support,
+  // not this function. The two then disagreed: a trainer could not find the
+  // thread in their inbox, which reads through RLS, yet could still read its
+  // messages and reply to it through here if they had the id.
+  //
+  // A trainee writing to an administrator about their trainer is exactly the
+  // thread that must not be readable by that trainer, so this follows the
+  // policy rather than the other way round.
 
   // 404 rather than 403. Telling somebody that a thread exists but is not
   // theirs is itself a disclosure — it confirms that a given person filed a
