@@ -7,6 +7,8 @@ import {
 } from '../../hooks/useSupervisor';
 import SupervisorCourses from './SupervisorCourses';
 import AccountPage from '../shared/AccountPage';
+import SupportInbox from '../../components/support/SupportInbox';
+import { useSupportUnread } from '../../hooks/useSupport';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
 import { fadeUp } from '../../lib/motion';
@@ -31,6 +33,7 @@ import EmptyState from '../../components/ui/EmptyState';
 const NAV = [
   { to: '/supervisor', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/supervisor/courses', icon: 'courses', label: 'Team Courses' },
+  { to: '/supervisor/support', icon: 'support', label: 'Contact admin' },
   { section: 'Account' },
   { to: '/supervisor/account', icon: 'account', label: 'My Account' },
 ];
@@ -183,11 +186,32 @@ export function Dashboard() {
 }
 
 export default function SupervisorShell() {
+  // Same as the trainer: a count of threads with something unread, so a
+  // reply is noticed without visiting the page to look for it.
+  const asking = useSupportUnread();
+  const nav = NAV.map((item) => (
+    item.to === '/supervisor/support' ? { ...item, badge: asking } : item));
+
   return (
-    <RoleShell navItems={NAV} title="NC Spark Oversight">
+    <RoleShell navItems={nav} title="NC Spark Oversight">
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="courses" element={<SupervisorCourses />} />
+        {/* support_requests_insert allows any active account, and
+            can_see_support returns a thread to whoever wrote it — so a
+            supervisor could always file one and read the answer. There was
+            simply no way in: the only role without a door to the
+            administrators was the one whose job is oversight. */}
+        <Route path="support" element={(
+          <SupportInbox
+            canCreate
+            eyebrow="Support"
+            title="Contact an administrator"
+            subtitle="Ask the administrator team about a platform issue."
+            emptyTitle="Nothing to answer"
+            emptyBody="You have no administrator support requests yet."
+          />
+        )} />
         <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/supervisor" replace />} />
       </Routes>

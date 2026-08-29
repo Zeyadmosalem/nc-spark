@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import QueryError from '../shared/QueryError';
 import CourseMaterials from '../shared/CourseMaterials';
-import CourseChat from '../shared/CourseChat';
+import CourseTabs from '../shared/CourseTabs';
 import PageSkeleton from '../ui/Skeleton';
 import Alert from '../ui/Alert';
 import EmptyState from '../ui/EmptyState';
@@ -184,14 +184,15 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
           {status !== 'published' && totalActivities === 0
             && ' — add at least one activity before this can be published'}
         </p>
-        {/* Content and cohort are the two halves of a course, and the roster
-            lives on the same id. Relative so it works from either role's
-            route without the builder knowing which one mounted it. */}
-        <Link to="people" className="btn btn-ghost btn-sm"
-              style={{ textDecoration: 'none', marginTop: '0.5rem' }}>
-          See who is on this course
-          <Icon name="forward" size={14} />
-        </Link>
+        {/* Content, cohort and conversation are the three views of one
+            course, and they all hang off the same id. The chat used to be
+            further down this very page, which is why nobody found it. */}
+        <div style={{ marginTop: '0.75rem' }}>
+          {/* backTo is the course list this was reached from, so the course
+              itself is always one segment below it: /admin/content/:id for an
+              admin, /trainer/courses/:id for a trainer. */}
+          <CourseTabs base={`${backTo}/${courseId}`} />
+        </div>
       </div>
 
       {modules.length === 0 ? (
@@ -222,8 +223,6 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
             database decides what is allowed. */}
         <CourseMaterials courseId={courseId} canManage />
       </section>
-
-      <CourseChat courseId={courseId} />
 
       <form onSubmit={submitModule} className="card no-hover cluster">
         <div className="grow-field">

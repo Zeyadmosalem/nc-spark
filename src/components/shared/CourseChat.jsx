@@ -19,6 +19,10 @@ import Button from '../ui/Button';
 export default function CourseChat({
   courseId,
   subtitle = 'Talk with the people learning and teaching this course.',
+  // The staff page already carries "Course chat" as its own heading, and the
+  // card repeating it read as a mistake. A tab that supplies its own title
+  // passes null.
+  heading = 'Course chat',
 }) {
   const { profile } = useSession();
   const { data: latest = [], isLoading, error } = useCourseMessages(courseId);
@@ -59,10 +63,12 @@ export default function CourseChat({
 
   return (
     <section className="card no-hover stack-md" aria-label="Course chat">
-      <div>
-        <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>Course chat</h2>
-        <p className="muted-2" style={{ margin: 0 }}>{subtitle}</p>
-      </div>
+      {heading !== null && (
+        <div>
+          <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>{heading}</h2>
+          <p className="muted-2" style={{ margin: 0 }}>{subtitle}</p>
+        </div>
+      )}
 
       {error && <QueryError error={error} what="this course chat" />}
 

@@ -8,6 +8,7 @@ import StatCard from '../../components/ui/StatCard';
 import ContentManager from './ContentManager';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
+import CourseChatPage from '../../components/shared/CourseChatPage';
 import SupportInbox from '../../components/support/SupportInbox';
 import { useSupportUnread } from '../../hooks/useSupport';
 import UserManager from './UserManager';
@@ -249,6 +250,7 @@ export default function AdminShell() {
         <Route path="content" element={<ContentManager />} />
         <Route path="content/:courseId" element={<CourseBuilder backTo="/admin/content" />} />
         <Route path="content/:courseId/people" element={<CourseRoster backTo="/admin/content" />} />
+        <Route path="content/:courseId/chat" element={<CourseChatPage backTo="/admin/content" />} />
         {/* An admin sees every thread, including the ones naming a course. */}
         <Route path="support" element={(
           <SupportInbox

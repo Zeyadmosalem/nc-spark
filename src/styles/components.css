@@ -671,6 +671,19 @@ input[type='radio'] {
   color: var(--heading);
 }
 
+/* The same control as a set of links, for the three views of one course.
+   NavLink marks the current one with aria-current, and there is no framer
+   indicator to slide here, so the active segment paints its own background. */
+.segment-link {
+  text-decoration: none;
+}
+
+.segment-link[aria-current='page'] {
+  color: var(--heading);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
 /* The moving background is a framer layoutId element behind the
    label, so it slides between segments instead of blinking. */
 .segment-indicator {

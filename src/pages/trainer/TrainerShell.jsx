@@ -5,6 +5,7 @@ import TrainerReview from './TrainerReview';
 import TrainerCourses from './TrainerCourses';
 import CourseBuilder from '../../components/authoring/CourseBuilder';
 import CourseRoster from '../../components/roster/CourseRoster';
+import CourseChatPage from '../../components/shared/CourseChatPage';
 import SupportInbox from '../../components/support/SupportInbox';
 import { useSupportUnread } from '../../hooks/useSupport';
 import AccountPage from '../shared/AccountPage';
@@ -49,6 +50,9 @@ export default function TrainerShell() {
         <Route path="courses/:courseId" element={<CourseBuilder backTo="/trainer/courses" />} />
         {/* Who is on the course, as opposed to what is in it. */}
         <Route path="courses/:courseId/people" element={<CourseRoster backTo="/trainer/courses" />} />
+        {/* The conversation with the class. It used to be buried in the
+            builder's body, which is why nobody found it. */}
+        <Route path="courses/:courseId/chat" element={<CourseChatPage backTo="/trainer/courses" />} />
         {/* The prototype's Create Content forms wrote to in-memory context.
         Authoring now happens inside a course, which is the only place it
         can: an activity needs a module to live in. */}

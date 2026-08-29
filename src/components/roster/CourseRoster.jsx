@@ -6,6 +6,7 @@ import { useCourseForEditing } from '../../hooks/useAuthoring';
 import QueryError from '../shared/QueryError';
 import PageSkeleton from '../ui/Skeleton';
 import PageHeader from '../ui/PageHeader';
+import CourseTabs from '../shared/CourseTabs';
 import StatCard from '../ui/StatCard';
 import StatusPill from '../ui/StatusPill';
 import Icon from '../ui/Icon';
@@ -90,6 +91,8 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
         backTo={backTo}
         backLabel="Back to courses"
       />
+
+      <CourseTabs base={`${backTo}/${courseId}`} />
 
       {people.length === 0 ? (
         <EmptyState icon="users" title="Nobody is enrolled yet">
