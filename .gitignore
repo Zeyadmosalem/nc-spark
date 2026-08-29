@@ -35,3 +35,4 @@ shots/
 # Wrangler local secrets (same reasoning as .env* above).
 .dev.vars
 .dev.vars.*
+.wrangler/
