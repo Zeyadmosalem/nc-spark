@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail,
+  mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, ownerTrainer, otherTrainer, trainee, outsider;
@@ -29,11 +32,11 @@ beforeAll(async () => {
   const { data: m } = await svc.from('modules')
     .insert({ course_id: publishedId, title: 'M1', position: 1 }).select().single();
   moduleId = m.id;
-  await svc.from('activities').insert({
+  await mustWrite('insert activities', svc.from('activities').insert({
     module_id: moduleId, type: 'reading', title: 'Read', position: 1, content: { body: 'x' },
-  });
-  await svc.from('enrollments')
-    .insert({ trainee_id: trainee.id, course_id: publishedId, status: 'active' });
+  }));
+  await mustWrite('insert enrollments', svc.from('enrollments')
+    .insert({ trainee_id: trainee.id, course_id: publishedId, status: 'active' }));
 
   [cAdmin, cOwner, cOther, cTrainee, cOutsider] = await Promise.all([
     signIn(admin.email), signIn(ownerTrainer.email), signIn(otherTrainer.email),
@@ -41,7 +44,7 @@ beforeAll(async () => {
   ]);
 });
 afterAll(async () => {
-  await svc.from('courses').delete().in('id', [publishedId, draftId]);
+  await mustWrite('delete courses', svc.from('courses').delete().in('id', [publishedId, draftId]));
   await resetDb();
 });
 
@@ -115,7 +118,7 @@ describe('RED TEAM: course writes', () => {
     await cOther.from('courses').update({ trainer_id: otherTrainer.id }).eq('id', orphan.id);
     const { data } = await svc.from('courses').select('trainer_id').eq('id', orphan.id).single();
     expect(data.trainer_id).toBeNull();
-    await svc.from('courses').delete().eq('id', orphan.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', orphan.id));
   });
 
   it('a trainee cannot delete a course', async () => {
@@ -145,7 +148,7 @@ describe('legitimate catalog authoring', () => {
     expect(error).toBeNull();
     const { data } = await svc.from('courses').select('status').eq('slug', slug).single();
     expect(data.status).toBe('draft');
-    await svc.from('courses').delete().eq('slug', slug);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('slug', slug));
   });
 });
 

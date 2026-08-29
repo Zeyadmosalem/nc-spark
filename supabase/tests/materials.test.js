@@ -7,7 +7,10 @@
 // constraint that permits a stored file or an external link but never both.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -26,7 +29,8 @@ let trainer, enrolled, outsider, courseId;
 let uploaded, linked;
 const madeUsers = [];
 
-const must = ({ error }, what) => {
+/** Local: takes the awaited result first, and only has an error to check. */
+const mustOk = ({ error }, what) => {
   if (error) throw new Error(`fixture: could not ${what} - ${error.message}`);
 };
 
@@ -49,10 +53,10 @@ beforeAll(async () => {
     slug: `${PREFIX}-course`, title: 'Materials Course', status: 'published',
     trainer_id: trainer.id, created_by: trainer.id,
   }).select().single();
-  must({ error }, 'create the course');
+  mustOk({ error }, 'create the course');
   courseId = c.id;
 
-  must(await svc.from('enrollments')
+  mustOk(await svc.from('enrollments')
     .insert({ trainee_id: enrolled.id, course_id: courseId, status: 'active' }),
   'enrol the trainee');
 }, 90000);
@@ -64,7 +68,7 @@ afterAll(async () => {
       await svc.storage.from('course-materials').remove([m.storagePath]).catch(() => null);
     }
   }
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

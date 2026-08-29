@@ -18,6 +18,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, anonClient, createUser, uniqueEmail, applyAppEnv, becomeWith,
+  must, mustWrite,
 } from './helpers.js';
 
 applyAppEnv();
@@ -36,17 +37,11 @@ let trainer, otherTrainer, admin, supervisor, alice, bob, pending;
 const madeUsers = [];
 let courseId, otherCourseId;
 
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
-
 async function mk(role, name, status = 'active') {
   const u = await createUser({ email: uniqueEmail(), role, name });
   madeUsers.push(u.id);
   if (status !== 'active') {
-    await svc.from('profiles').update({ status }).eq('id', u.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ status }).eq('id', u.id));
   }
   return u;
 }
@@ -87,7 +82,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

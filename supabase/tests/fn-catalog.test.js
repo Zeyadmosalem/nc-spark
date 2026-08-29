@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction, must,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -27,20 +28,6 @@ async function callOk(fn, client, body) {
 
 const auditFor = async (entityId, action) =>
   (await svc.from('audit_log').select('*').eq('entity_id', entityId).eq('action', action)).data ?? [];
-
-/**
- * Fails with its own name and the database's message.
- *
- * These inserts used to discard the error and return null, so a fixture that
- * could not build a course surfaced three lines later as
- * "Cannot read properties of null (reading 'id')" — which reads like a bug in
- * the code under test rather than in the setup.
- */
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
 
 let seq = 0;
 async function makeCourse(status = 'published', withActivity = true) {
@@ -78,7 +65,7 @@ beforeAll(async () => {
   courseId = await makeCourse();
 });
 afterAll(async () => {
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -91,7 +78,7 @@ describe('approve-enrollment', () => {
     const { data } = await svc.from('enrollments').select('status,decided_by').eq('id', e.id).single();
     expect(data.status).toBe('active');
     expect(data.decided_by).toBe(ownerTrainer.id);
-    await svc.from('enrollments').delete().eq('id', e.id);
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', e.id));
   });
 
   it('writes an audit entry', async () => {
@@ -148,7 +135,7 @@ describe('approve-enrollment', () => {
 describe('approve-teaching-request', () => {
   it('assigns the trainer on approval', async () => {
     const id = await makeCourse('draft');
-    await svc.from('courses').update({ trainer_id: null }).eq('id', id);
+    await mustWrite('update courses', svc.from('courses').update({ trainer_id: null }).eq('id', id));
     const { data: req } = await svc.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: id }).select().single();
     const res = await call('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'approve' });
@@ -169,7 +156,7 @@ describe('approve-teaching-request', () => {
 
   it('leaves the trainer unassigned on denial', async () => {
     const id = await makeCourse('draft');
-    await svc.from('courses').update({ trainer_id: null }).eq('id', id);
+    await mustWrite('update courses', svc.from('courses').update({ trainer_id: null }).eq('id', id));
     const { data: req } = await svc.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: id }).select().single();
     await callOk('approve-teaching-request', cAdmin, { requestId: req.id, decision: 'deny' });
@@ -206,7 +193,7 @@ describe('publish-course', () => {
 
   it('REJECTS a trainer publishing a course they do not own', async () => {
     const id = await makeCourse('draft', true);
-    await svc.from('courses').update({ trainer_id: admin.id }).eq('id', id);
+    await mustWrite('update courses', svc.from('courses').update({ trainer_id: admin.id }).eq('id', id));
     const res = await call('publish-course', cOther, { courseId: id, publish: true });
     expect(res.status).toBe(403);
   });

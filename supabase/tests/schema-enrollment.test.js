@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, resetDb, uniqueEmail } from './helpers.js';
+import { serviceClient, createUser, resetDb, uniqueEmail, mustWrite } from './helpers.js';
 
 const svc = serviceClient();
 let trainer, trainee, courseId, activityId;
@@ -20,7 +20,7 @@ beforeAll(async () => {
   activityId = a.id;
 });
 afterAll(async () => {
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   await resetDb();
 });
 
@@ -29,7 +29,7 @@ describe('enrollment schema', () => {
     const { data } = await svc.from('enrollments')
       .insert({ trainee_id: trainee.id, course_id: courseId }).select().single();
     expect(data.status).toBe('pending');
-    await svc.from('enrollments').delete().eq('id', data.id);
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', data.id));
   });
 
   it('rejects a duplicate enrollment for the same trainee and course', async () => {
@@ -38,7 +38,7 @@ describe('enrollment schema', () => {
     const { error } = await svc.from('enrollments')
       .insert({ trainee_id: trainee.id, course_id: courseId });
     expect(error).not.toBeNull();
-    await svc.from('enrollments').delete().eq('id', first.id);
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', first.id));
   });
 
   it('records a completion against an enrollment', async () => {
@@ -47,24 +47,24 @@ describe('enrollment schema', () => {
     const { error } = await svc.from('activity_completions')
       .insert({ enrollment_id: e.id, activity_id: activityId, payload: { score: 1 } });
     expect(error).toBeNull();
-    await svc.from('enrollments').delete().eq('id', e.id);
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', e.id));
   });
 
   it('rejects completing the same activity twice in one enrollment', async () => {
     const { data: e } = await svc.from('enrollments')
       .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }).select().single();
-    await svc.from('activity_completions').insert({ enrollment_id: e.id, activity_id: activityId });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: e.id, activity_id: activityId }));
     const { error } = await svc.from('activity_completions')
       .insert({ enrollment_id: e.id, activity_id: activityId });
     expect(error).not.toBeNull();
-    await svc.from('enrollments').delete().eq('id', e.id);
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', e.id));
   });
 
   it('cascades completions when the enrollment is deleted', async () => {
     const { data: e } = await svc.from('enrollments')
       .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }).select().single();
-    await svc.from('activity_completions').insert({ enrollment_id: e.id, activity_id: activityId });
-    await svc.from('enrollments').delete().eq('id', e.id);
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: e.id, activity_id: activityId }));
+    await mustWrite('delete enrollments', svc.from('enrollments').delete().eq('id', e.id));
     const { data } = await svc.from('activity_completions').select('id').eq('enrollment_id', e.id);
     expect(data ?? []).toHaveLength(0);
   });
@@ -73,7 +73,7 @@ describe('enrollment schema', () => {
     const { data } = await svc.from('teaching_requests')
       .insert({ trainer_id: trainer.id, course_id: courseId }).select().single();
     expect(data.status).toBe('pending');
-    await svc.from('teaching_requests').delete().eq('id', data.id);
+    await mustWrite('delete teaching_requests', svc.from('teaching_requests').delete().eq('id', data.id));
   });
 
   it('rejects two PENDING teaching requests for the same pair', async () => {
@@ -82,16 +82,16 @@ describe('enrollment schema', () => {
     const { error } = await svc.from('teaching_requests')
       .insert({ trainer_id: trainer.id, course_id: courseId });
     expect(error).not.toBeNull();
-    await svc.from('teaching_requests').delete().eq('id', first.id);
+    await mustWrite('delete teaching_requests', svc.from('teaching_requests').delete().eq('id', first.id));
   });
 
   it('allows a second teaching request once the first is decided', async () => {
     const { data: first } = await svc.from('teaching_requests')
       .insert({ trainer_id: trainer.id, course_id: courseId }).select().single();
-    await svc.from('teaching_requests').update({ status: 'denied' }).eq('id', first.id);
+    await mustWrite('update teaching_requests', svc.from('teaching_requests').update({ status: 'denied' }).eq('id', first.id));
     const { error } = await svc.from('teaching_requests')
       .insert({ trainer_id: trainer.id, course_id: courseId });
     expect(error).toBeNull();
-    await svc.from('teaching_requests').delete().eq('course_id', courseId);
+    await mustWrite('delete teaching_requests', svc.from('teaching_requests').delete().eq('course_id', courseId));
   });
 });

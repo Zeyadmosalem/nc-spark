@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, resetDb, uniqueEmail } from './helpers.js';
+import { serviceClient, createUser, resetDb, uniqueEmail, mustWrite } from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `qs${Date.now()}`;
@@ -20,7 +20,7 @@ beforeAll(async () => {
   activityId = a.id;
 });
 afterAll(async () => {
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -132,8 +132,8 @@ describe('quiz_answer_keys', () => {
     const { data: q } = await svc.from('quiz_questions').insert({
       quiz_id: quizId, type: 'truefalse', position: 50, prompt: 'Temp',
     }).select().single();
-    await svc.from('quiz_answer_keys').insert({ question_id: q.id, answer: { value: true } });
-    await svc.from('quiz_questions').delete().eq('id', q.id);
+    await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({ question_id: q.id, answer: { value: true } }));
+    await mustWrite('delete quiz_questions', svc.from('quiz_questions').delete().eq('id', q.id));
     const { data } = await svc.from('quiz_answer_keys').select('question_id').eq('question_id', q.id);
     expect(data ?? []).toHaveLength(0);
   });
@@ -146,9 +146,9 @@ describe('quiz_answer_keys', () => {
       .insert({ course_id: c.id, title: 'Doomed' }).select().single();
     const { data: qq } = await svc.from('quiz_questions')
       .insert({ quiz_id: qz.id, type: 'truefalse', position: 1, prompt: 'T?' }).select().single();
-    await svc.from('quiz_answer_keys').insert({ question_id: qq.id, answer: { value: true } });
+    await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({ question_id: qq.id, answer: { value: true } }));
 
-    await svc.from('courses').delete().eq('id', c.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c.id));
 
     const { data: keys } = await svc.from('quiz_answer_keys')
       .select('question_id').eq('question_id', qq.id);

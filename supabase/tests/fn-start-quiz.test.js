@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -62,10 +63,10 @@ beforeAll(async () => {
       quiz_id: data.id, type: 'mcq', position: 1,
       prompt: 'Which loop runs at least once?', options: ['for', 'while', 'do...while'],
     }).select().single();
-    await svc.from('quiz_answer_keys').insert({
+    await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({
       question_id: q.id, answer: { index: 2 },
       explanation: 'do...while checks its condition AFTER the first run.',
-    });
+    }));
     return data.id;
   };
 
@@ -81,21 +82,21 @@ beforeAll(async () => {
   const { data: tq } = await svc.from('quizzes')
     .insert({ course_id: c2.id, title: 'Timed', time_limit_seconds: 600 }).select().single();
   timedQuizId = tq.id;
-  await svc.from('quiz_questions')
-    .insert({ quiz_id: timedQuizId, type: 'truefalse', position: 1, prompt: 'True?' });
-  await svc.from('enrollments')
-    .insert({ trainee_id: trainee.id, course_id: c2.id, status: 'active' });
+  await mustWrite('insert quiz_questions', svc.from('quiz_questions')
+    .insert({ quiz_id: timedQuizId, type: 'truefalse', position: 1, prompt: 'True?' }));
+  await mustWrite('insert enrollments', svc.from('enrollments')
+    .insert({ trainee_id: trainee.id, course_id: c2.id, status: 'active' }));
 
   // The trainee must be enrolled for start-quiz to allow anything; the
   // enrollment id itself is never referenced.
-  await svc.from('enrollments')
-    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' });
+  await mustWrite('insert enrollments', svc.from('enrollments')
+    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }));
 
   [cTrainee, cStranger] = await Promise.all([signIn(trainee.email), signIn(stranger.email)]);
 });
 afterAll(async () => {
-  await svc.from('quiz_retake_grants').delete().in('quiz_id', [modQuizId, finalQuizId, lockedQuizId]);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete quiz_retake_grants', svc.from('quiz_retake_grants').delete().in('quiz_id', [modQuizId, finalQuizId, lockedQuizId]));
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -177,16 +178,16 @@ describe('start-quiz', () => {
 
 describe('start-quiz retakes', () => {
   it('REFUSES a second attempt once the first is finished', async () => {
-    await svc.from('quiz_attempts')
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts')
       .update({ status: 'failed', passed: false, submitted_at: new Date().toISOString() })
-      .eq('quiz_id', modQuizId).eq('trainee_id', trainee.id);
+      .eq('quiz_id', modQuizId).eq('trainee_id', trainee.id));
     const res = await call(cTrainee, { quizId: modQuizId });
     expect(res.status).toBe(409);
   });
 
   it('allows attempt 2 once a trainer grants a retake, and consumes the grant', async () => {
-    await svc.from('quiz_retake_grants')
-      .insert({ quiz_id: modQuizId, trainee_id: trainee.id, granted_by: trainer.id });
+    await mustWrite('insert quiz_retake_grants', svc.from('quiz_retake_grants')
+      .insert({ quiz_id: modQuizId, trainee_id: trainee.id, granted_by: trainer.id }));
 
     const res = await call(cTrainee, { quizId: modQuizId });
     expect(res.status).toBe(200);
@@ -198,9 +199,9 @@ describe('start-quiz retakes', () => {
   });
 
   it('REFUSES a third attempt, because the grant is spent', async () => {
-    await svc.from('quiz_attempts')
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts')
       .update({ status: 'failed', passed: false })
-      .eq('quiz_id', modQuizId).eq('trainee_id', trainee.id).eq('attempt_no', 2);
+      .eq('quiz_id', modQuizId).eq('trainee_id', trainee.id).eq('attempt_no', 2));
     const res = await call(cTrainee, { quizId: modQuizId });
     expect(res.status).toBe(409);
   });

@@ -7,7 +7,10 @@
 // clause. These tests are what stop that clause quietly widening.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, must,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -23,12 +26,6 @@ let trainer, otherTrainer, supervisor, admin, alice, bob, outsider;
 const madeUsers = [];
 let courseId, otherCourseId, aliceEnrolment;
 const acts = [];
-
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
 
 async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
@@ -49,8 +46,8 @@ beforeAll(async () => {
   bob = await mk('trainee', 'Bob Brown');
   outsider = await mk('trainee', 'Olive Outside');
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id }));
 
   courseId = must('course', await svc.from('courses').insert({
     slug: `${PREFIX}-course`, title: 'Badge Course', status: 'published',
@@ -87,7 +84,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }
@@ -99,15 +96,15 @@ describe('earning a badge', () => {
   });
 
   it('awards first steps on the first activity', async () => {
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: aliceEnrolment, activity_id: acts[0] });
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: aliceEnrolment, activity_id: acts[0] }));
 
     expect(await badgesOf(alice.id)).toEqual(['first_steps']);
   });
 
   it('awards contributor for joining the conversation', async () => {
-    await svc.from('messages')
-      .insert({ course_id: courseId, user_id: alice.id, body: 'A question.' });
+    await mustWrite('insert messages', svc.from('messages')
+      .insert({ course_id: courseId, user_id: alice.id, body: 'A question.' }));
 
     expect(await badgesOf(alice.id)).toContain('contributor');
   });
@@ -117,8 +114,8 @@ describe('earning a badge', () => {
     expect(await badgesOf(alice.id)).not.toContain('century');
 
     for (let i = 1; i < 10; i += 1) {
-      await svc.from('activity_completions')
-        .insert({ enrollment_id: aliceEnrolment, activity_id: acts[i] });
+      await mustWrite('insert activity_completions', svc.from('activity_completions')
+        .insert({ enrollment_id: aliceEnrolment, activity_id: acts[i] }));
     }
 
     expect(await badgesOf(alice.id)).toContain('century');
@@ -152,8 +149,8 @@ describe('earning a badge', () => {
   });
 
   it('awards a badge once, however often it is re-earned', async () => {
-    await svc.from('messages')
-      .insert({ course_id: courseId, user_id: alice.id, body: 'Another.' });
+    await mustWrite('insert messages', svc.from('messages')
+      .insert({ course_id: courseId, user_id: alice.id, body: 'Another.' }));
 
     const codes = await badgesOf(alice.id);
     expect(codes.filter((c) => c === 'contributor')).toHaveLength(1);

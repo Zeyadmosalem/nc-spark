@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -48,7 +49,7 @@ beforeAll(async () => {
   [cTrainee, cStranger] = await Promise.all([signIn(trainee.email), signIn(stranger.email)]);
 });
 afterAll(async () => {
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -84,7 +85,7 @@ describe('complete-activity', () => {
 
   it('REJECTS an activity in a locked module', async () => {
     // Reset module A so B is locked again.
-    await svc.from('activity_completions').delete().eq('enrollment_id', enrolId);
+    await mustWrite('delete activity_completions', svc.from('activity_completions').delete().eq('enrollment_id', enrolId));
     const res = await call(cTrainee, { activityId: actB1 });
     expect(res.status).toBe(423);
     expect((await completions()).map((c) => c.activity_id)).not.toContain(actB1);
@@ -132,7 +133,7 @@ describe('complete-activity', () => {
     const { data: a } = await svc.from('activities').insert({
       module_id: m.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
     }).select().single();
-    await svc.from('quizzes').insert({ course_id: c.id, activity_id: null, title: 'Final' });
+    await mustWrite('insert quizzes', svc.from('quizzes').insert({ course_id: c.id, activity_id: null, title: 'Final' }));
     const { data: e } = await svc.from('enrollments')
       .insert({ trainee_id: trainee.id, course_id: c.id, status: 'active' }).select().single();
 

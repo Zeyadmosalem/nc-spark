@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `qh${Date.now()}`;
@@ -49,8 +51,8 @@ beforeAll(async () => {
   cTrainee = await signIn(trainee.email);
 });
 afterAll(async () => {
-  await svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete quiz_retake_grants', svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId));
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -69,12 +71,12 @@ describe('all_modules_complete', () => {
   });
 
   it('is still false when only some are done', async () => {
-    await svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA }));
     expect(await allComplete(enrolId)).toBe(false);
   });
 
   it('is true once every activity in every module has a completion', async () => {
-    await svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actB });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actB }));
     expect(await allComplete(enrolId)).toBe(true);
   });
 
@@ -100,15 +102,15 @@ describe('has_unconsumed_retake', () => {
   });
 
   it('is true once a grant exists', async () => {
-    await svc.from('quiz_retake_grants')
-      .insert({ quiz_id: quizId, trainee_id: trainee.id, granted_by: trainer.id });
+    await mustWrite('insert quiz_retake_grants', svc.from('quiz_retake_grants')
+      .insert({ quiz_id: quizId, trainee_id: trainee.id, granted_by: trainer.id }));
     expect(await hasRetake()).toBe(true);
   });
 
   it('is false again once the grant is consumed', async () => {
-    await svc.from('quiz_retake_grants')
+    await mustWrite('update quiz_retake_grants', svc.from('quiz_retake_grants')
       .update({ consumed_at: new Date().toISOString() })
-      .eq('quiz_id', quizId).eq('trainee_id', trainee.id);
+      .eq('quiz_id', quizId).eq('trainee_id', trainee.id));
     expect(await hasRetake()).toBe(false);
   });
 

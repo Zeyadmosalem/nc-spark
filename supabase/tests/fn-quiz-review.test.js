@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -35,7 +36,7 @@ async function scenario({ questions, passMark = 0.7 }) {
     }).select().single();
     ids.push(row.id);
     if (q.answer !== undefined) {
-      await svc.from('quiz_answer_keys').insert({ question_id: row.id, answer: q.answer });
+      await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({ question_id: row.id, answer: q.answer }));
     }
   }
   const { data: enrollment } = await svc.from('enrollments')
@@ -60,8 +61,8 @@ beforeAll(async () => {
   ]);
 });
 afterAll(async () => {
-  await svc.from('quiz_retake_grants').delete().eq('granted_by', trainer.id);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete quiz_retake_grants', svc.from('quiz_retake_grants').delete().eq('granted_by', trainer.id));
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 

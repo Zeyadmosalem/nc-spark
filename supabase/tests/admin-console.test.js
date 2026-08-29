@@ -14,7 +14,9 @@
 // A frontend mock cannot fail either way, which is exactly why these are here.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -60,8 +62,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('teaching_requests').delete().eq('id', requestId);
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete teaching_requests', svc.from('teaching_requests').delete().eq('id', requestId));
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }
@@ -116,9 +118,9 @@ describe('an admin, through the real api layer', () => {
 
     const { data: m } = await svc.from('modules')
       .insert({ course_id: courseId, title: 'M1', position: 1 }).select().single();
-    await svc.from('activities').insert({
+    await mustWrite('insert activities', svc.from('activities').insert({
       module_id: m.id, type: 'reading', title: 'A1', position: 1, content: { body: 'x' },
-    });
+    }));
 
     const after = await courseContentCounts();
     expect(after[courseId]).toEqual({ modules: 1, activities: 1 });
@@ -163,7 +165,7 @@ describe('an admin, through the real api layer', () => {
  */
 describe('a trainee calling the admin reads', () => {
   beforeAll(async () => {
-    await svc.from('profiles').update({ role: 'trainee', status: 'active' }).eq('id', trainee.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ role: 'trainee', status: 'active' }).eq('id', trainee.id));
     await become(trainee.email);
   });
 
@@ -221,7 +223,7 @@ describe('a course changing hands', () => {
   });
 
   afterAll(async () => {
-    await svc.from('courses').delete().eq('id', secondCourse);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', secondCourse));
   });
 
   it('starts with no trainer', async () => {

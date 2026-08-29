@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail,
+  mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, trainee, cAdmin, cTrainee, entryId;
@@ -98,10 +101,10 @@ describe('audit_log integrity', () => {
     // Scope the lookup to an action unique to this run.
     const action = `test.ghost.${Date.now()}`;
     const ghost = await createUser({ email: uniqueEmail(), role: 'admin', name: 'Ghost' });
-    await svc.from('audit_log').insert({
+    await mustWrite('insert audit_log', svc.from('audit_log').insert({
       actor_id: ghost.id, actor_email: ghost.email,
       action, entity_type: 'profile', entity_id: ghost.id,
-    });
+    }));
 
     const { error } = await svc.auth.admin.deleteUser(ghost.id);
     expect(error).toBeNull();

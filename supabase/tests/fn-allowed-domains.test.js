@@ -7,7 +7,9 @@
 // tell whether the door is locked.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -37,7 +39,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('allowed_domains').delete().like('domain', 't%.example');
+  await mustWrite('delete allowed_domains', svc.from('allowed_domains').delete().like('domain', 't%.example'));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

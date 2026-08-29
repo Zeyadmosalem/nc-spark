@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, supervisor, trainer, otherTrainer, trainee;
@@ -15,8 +17,8 @@ beforeAll(async () => {
   otherTrainer = await createUser({ email: uniqueEmail(), role: 'trainer' });
   trainee      = await createUser({ email: uniqueEmail(), role: 'trainee' });
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id }));
 
   [cAdmin, cSupervisor, cTrainer, cTrainee] = await Promise.all([
     signIn(admin.email), signIn(supervisor.email),
@@ -63,7 +65,7 @@ describe('app.is_admin', () => {
   it('is false for a SUSPENDED admin', async () => {
     const victim = await createUser({ email: uniqueEmail(), role: 'admin' });
     const c = await signIn(victim.email);
-    await svc.from('profiles').update({ status: 'suspended' }).eq('id', victim.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ status: 'suspended' }).eq('id', victim.id));
     const { data } = await c.rpc('is_admin_probe');
     expect(data).toBe(false);
   });

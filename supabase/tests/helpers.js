@@ -114,6 +114,35 @@ export async function callFunction(name, client, body, attempts = 3) {
   }
 }
 
+/**
+ * Asserts that a fixture read or write actually produced a row.
+ *
+ * Nine test files had their own copy of this and 176 other writes had nothing
+ * at all — the result was awaited and dropped. That is the failure mode behind
+ * B19: a fixture that never wrote is indistinguishable from the refusal the
+ * test is asserting, so the test passes for the wrong reason and the next
+ * person debugs the wrong component. It is what made the realtime failure take
+ * a day to find, and the same silence that let anon keep every privilege on
+ * `profiles` without a single test noticing.
+ */
+export function must(what, { data, error }) {
+  if (error) throw new Error(`fixture ${what}: ${error.message}`);
+  if (!data) throw new Error(`fixture ${what}: no row returned`);
+  return data;
+}
+
+/**
+ * The same, for a write whose row nobody needs back.
+ *
+ * PostgREST returns no data for an insert without .select(), so `must` cannot
+ * be used: there is nothing to check but the error, and the error is exactly
+ * the thing that was being thrown away.
+ */
+export async function mustWrite(what, query) {
+  const { error } = await query;
+  if (error) throw new Error(`fixture ${what}: ${error.message}`);
+}
+
 /** Creates a confirmed auth user, then forces role/status via service role. */
 export async function createUser({
   email,

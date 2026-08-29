@@ -12,7 +12,10 @@
 //    anything the component remembered to filter.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, must,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -33,12 +36,6 @@ async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
   madeUsers.push(u.id);
   return u;
-}
-
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
 }
 
 const enrol = async (trainee, status = 'active') => must('enrollment',
@@ -80,14 +77,14 @@ beforeAll(async () => {
   await enrol(bob);
   const carolE = await enrol(carol, 'completed');
 
-  await svc.from('activity_completions').insert([
+  await mustWrite('insert activity_completions', svc.from('activity_completions').insert([
     { enrollment_id: aliceE.id, activity_id: readingId },
     { enrollment_id: carolE.id, activity_id: readingId },
     { enrollment_id: carolE.id, activity_id: quizActivityId },
-  ]);
+  ]));
 
   // One graded attempt and one still waiting on a human.
-  await svc.from('quiz_attempts').insert([
+  await mustWrite('insert quiz_attempts', svc.from('quiz_attempts').insert([
     {
       quiz_id: quizId, trainee_id: carol.id, enrollment_id: carolE.id, attempt_no: 1,
       status: 'passed', submitted_at: new Date(Date.now() - 60000).toISOString(),
@@ -98,12 +95,12 @@ beforeAll(async () => {
       status: 'pending_review', submitted_at: new Date().toISOString(),
       auto_score: 40, final_score: null, passed: null,
     },
-  ]);
+  ]));
 }, 90000);
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

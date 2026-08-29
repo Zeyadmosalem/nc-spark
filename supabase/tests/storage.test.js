@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `sto${Date.now()}`;
@@ -36,8 +38,8 @@ beforeAll(async () => {
   }).select().single();
   otherCourseId = c2.id;
 
-  await svc.from('enrollments')
-    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' });
+  await mustWrite('insert enrollments', svc.from('enrollments')
+    .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }));
 
   [cTrainer, cOther, cTrainee, cStranger] = await Promise.all([
     signIn(trainer.email), signIn(otherTrainer.email),
@@ -51,7 +53,7 @@ afterAll(async () => {
   await svc.storage.from('submissions').remove([
     `${courseId}/${trainee.id}/work.txt`, `${courseId}/${stranger.id}/forged.txt`,
   ]);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -171,7 +173,7 @@ describe('submissions bucket', () => {
     const first = await cLeaver.storage.from('submissions').upload(from, file(), { upsert: true });
     expect(first.error).toBeNull();
 
-    await svc.from('enrollments').update({ status: 'withdrawn' }).eq('id', e.id);
+    await mustWrite('update enrollments', svc.from('enrollments').update({ status: 'withdrawn' }).eq('id', e.id));
 
     const { error } = await cLeaver.storage.from('submissions').move(from, to);
     expect(error).not.toBeNull();

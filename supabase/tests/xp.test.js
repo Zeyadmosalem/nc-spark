@@ -11,7 +11,10 @@
 // role, and the last block here proves it from a real signed-in session.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, must,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -26,12 +29,6 @@ const PREFIX = `xp${Date.now()}`;
 let trainer, otherTrainer, supervisor, admin, alice, bob;
 const madeUsers = [];
 let courseId, enrollmentId, readingId, quizActivityId, quizId;
-
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
 
 async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
@@ -54,8 +51,8 @@ beforeAll(async () => {
   alice = await mk('trainee', 'Alice Ahmed');
   bob = await mk('trainee', 'Bob Brown');
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id }));
 
   const course = must('course', await svc.from('courses').insert({
     slug: `${PREFIX}-course`, title: 'XP Course', status: 'published',
@@ -87,7 +84,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }
@@ -95,8 +92,8 @@ afterAll(async () => {
 
 describe('finishing an activity', () => {
   it('pays what the trainer put on it', async () => {
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: enrollmentId, activity_id: readingId });
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: enrollmentId, activity_id: readingId }));
 
     const events = await eventsOf(alice.id);
     const earned = events.find((e) => e.kind === 'activity');
@@ -111,10 +108,10 @@ describe('finishing an activity', () => {
    * again — and the leaderboard would measure persistence at clicking.
    */
   it('does not pay twice for the same activity', async () => {
-    await svc.from('activity_completions').delete()
-      .eq('enrollment_id', enrollmentId).eq('activity_id', readingId);
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: enrollmentId, activity_id: readingId });
+    await mustWrite('delete activity_completions', svc.from('activity_completions').delete()
+      .eq('enrollment_id', enrollmentId).eq('activity_id', readingId));
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: enrollmentId, activity_id: readingId }));
 
     expect((await eventsOf(alice.id)).filter((e) => e.kind === 'activity')).toHaveLength(1);
     expect((await statsOf(alice.id)).xp).toBe(15);
@@ -129,10 +126,10 @@ describe('passing a quiz', () => {
     }).select().single());
 
     // 75% of a 40-point quiz.
-    await svc.from('quiz_attempts').update({
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts').update({
       status: 'passed', submitted_at: new Date().toISOString(),
       auto_score: 75, final_score: 75, passed: true,
-    }).eq('id', attempt.id);
+    }).eq('id', attempt.id));
 
     const earned = (await eventsOf(alice.id)).find((e) => e.kind === 'quiz');
     expect(earned).toMatchObject({ points: 30, source_id: quizId });
@@ -146,10 +143,10 @@ describe('passing a quiz', () => {
       attempt_no: 2, status: 'in_progress',
     }).select().single());
 
-    await svc.from('quiz_attempts').update({
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts').update({
       status: 'passed', submitted_at: new Date().toISOString(),
       auto_score: 100, final_score: 100, passed: true,
-    }).eq('id', attempt.id);
+    }).eq('id', attempt.id));
 
     expect((await eventsOf(alice.id)).filter((e) => e.kind === 'quiz')).toHaveLength(1);
     expect((await statsOf(alice.id)).xp).toBe(45);
@@ -165,10 +162,10 @@ describe('passing a quiz', () => {
       attempt_no: 1, status: 'in_progress',
     }).select().single());
 
-    await svc.from('quiz_attempts').update({
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts').update({
       status: 'failed', submitted_at: new Date().toISOString(),
       auto_score: 20, final_score: 20, passed: false,
-    }).eq('id', attempt.id);
+    }).eq('id', attempt.id));
 
     expect((await statsOf(bob.id)).xp).toBe(before);
   });
@@ -176,8 +173,8 @@ describe('passing a quiz', () => {
 
 describe('taking part in the course conversation', () => {
   it('pays a trainee for joining in', async () => {
-    await svc.from('messages')
-      .insert({ course_id: courseId, user_id: alice.id, body: 'Is the drill on Friday?' });
+    await mustWrite('insert messages', svc.from('messages')
+      .insert({ course_id: courseId, user_id: alice.id, body: 'Is the drill on Friday?' }));
 
     const earned = (await eventsOf(alice.id)).find((e) => e.kind === 'participation');
     expect(earned?.points).toBe(2);
@@ -191,8 +188,8 @@ describe('taking part in the course conversation', () => {
    */
   it('pays once a day however much is said', async () => {
     for (let i = 0; i < 5; i += 1) {
-      await svc.from('messages')
-        .insert({ course_id: courseId, user_id: alice.id, body: `chatter ${i}` });
+      await mustWrite('insert messages', svc.from('messages')
+        .insert({ course_id: courseId, user_id: alice.id, body: `chatter ${i}` }));
     }
 
     expect((await eventsOf(alice.id)).filter((e) => e.kind === 'participation')).toHaveLength(1);
@@ -204,8 +201,8 @@ describe('taking part in the course conversation', () => {
    * on it is not a leaderboard.
    */
   it('pays staff nothing', async () => {
-    await svc.from('messages')
-      .insert({ course_id: courseId, user_id: trainer.id, body: 'Yes, 10am.' });
+    await mustWrite('insert messages', svc.from('messages')
+      .insert({ course_id: courseId, user_id: trainer.id, body: 'Yes, 10am.' }));
 
     expect(await eventsOf(trainer.id)).toHaveLength(0);
   });
@@ -225,26 +222,26 @@ describe('the streak', () => {
 
   it('continues when yesterday was active', async () => {
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    await svc.from('trainee_stats')
-      .update({ last_active_on: yesterday, streak: 4 }).eq('profile_id', bob.id);
+    await mustWrite('update trainee_stats', svc.from('trainee_stats')
+      .update({ last_active_on: yesterday, streak: 4 }).eq('profile_id', bob.id));
 
     const enrolment = (await svc.from('enrollments')
       .select('id').eq('trainee_id', bob.id).eq('course_id', courseId).single()).data;
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: enrolment.id, activity_id: readingId });
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: enrolment.id, activity_id: readingId }));
 
     expect((await statsOf(bob.id)).streak).toBe(5);
   });
 
   it('restarts after a gap', async () => {
     const longAgo = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
-    await svc.from('trainee_stats')
-      .update({ last_active_on: longAgo, streak: 9 }).eq('profile_id', bob.id);
+    await mustWrite('update trainee_stats', svc.from('trainee_stats')
+      .update({ last_active_on: longAgo, streak: 9 }).eq('profile_id', bob.id));
 
     const enrolment = (await svc.from('enrollments')
       .select('id').eq('trainee_id', bob.id).eq('course_id', courseId).single()).data;
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: enrolment.id, activity_id: quizActivityId });
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: enrolment.id, activity_id: quizActivityId }));
 
     expect((await statsOf(bob.id)).streak).toBe(1);
   });

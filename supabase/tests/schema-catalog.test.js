@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, resetDb, uniqueEmail } from './helpers.js';
+import { serviceClient, createUser, resetDb, uniqueEmail, mustWrite } from './helpers.js';
 
 const svc = serviceClient();
 let trainer, courseId, moduleId;
@@ -17,7 +17,7 @@ beforeAll(async () => {
   moduleId = m.id;
 });
 afterAll(async () => {
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   await resetDb();
 });
 
@@ -81,10 +81,10 @@ describe('catalog schema', () => {
       .insert({ slug: `tmp-${Date.now()}`, title: 'Temp', created_by: trainer.id }).select().single();
     const { data: m } = await svc.from('modules')
       .insert({ course_id: c.id, title: 'M', position: 1 }).select().single();
-    await svc.from('activities').insert({
+    await mustWrite('insert activities', svc.from('activities').insert({
       module_id: m.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
-    });
-    await svc.from('courses').delete().eq('id', c.id);
+    }));
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c.id));
     const { data: mods } = await svc.from('modules').select('id').eq('course_id', c.id);
     expect(mods ?? []).toHaveLength(0);
   });

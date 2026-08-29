@@ -13,7 +13,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, signIn, uniqueEmail, applyAppEnv, becomeWith, callFunction,
+  serviceClient, createUser, signIn, uniqueEmail, applyAppEnv, becomeWith,
+  callFunction, must, mustWrite,
 } from './helpers.js';
 
 applyAppEnv();
@@ -39,13 +40,6 @@ async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });
   madeUsers.push(u.id);
   return u;
-}
-
-/** Fails loudly with its own name rather than leaving a null to trip over. */
-function must(what, { data, error }) {
-  if (error) throw new Error(`${what}: ${error.message}`);
-  if (!data) throw new Error(`${what}: no row returned`);
-  return data;
 }
 
 /** A draft course owned by `trainer`, one module, one empty quiz activity. */
@@ -74,7 +68,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }
@@ -323,8 +317,8 @@ describe('a trainee', () => {
       quizId: ctx.quizId, type: 'mcq', prompt: 'Which one?',
       options: ['right', 'wrong'], answer: { index: 0 }, explanation: 'Because.',
     });
-    await svc.from('enrollments')
-      .insert({ trainee_id: trainee.id, course_id: ctx.courseId, status: 'active' });
+    await mustWrite('insert enrollments', svc.from('enrollments')
+      .insert({ trainee_id: trainee.id, course_id: ctx.courseId, status: 'active' }));
     await become(trainee.email);
   });
 
@@ -426,8 +420,8 @@ describe('a quiz authored here, taken by a trainee', () => {
     });
 
     await publishCourse(ctx.courseId, true);
-    await svc.from('enrollments')
-      .insert({ trainee_id: trainee.id, course_id: ctx.courseId, status: 'active' });
+    await mustWrite('insert enrollments', svc.from('enrollments')
+      .insert({ trainee_id: trainee.id, course_id: ctx.courseId, status: 'active' }));
 
     const { questions } = await quizForAuthoring(ctx.activityId);
     ids = questions.map((q) => q.id);
@@ -454,7 +448,7 @@ describe('a quiz authored here, taken by a trainee', () => {
   });
 
   it('grades a fully correct attempt as a pass', async () => {
-    await svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId);
+    await mustWrite('delete quiz_attempts', svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId));
     const { status, body } = await take((q) => [
       { questionId: q[0], response: { index: 1 } },
       { questionId: q[1], response: { value: false } },
@@ -466,7 +460,7 @@ describe('a quiz authored here, taken by a trainee', () => {
 
   /** 2 points of 3 is 67%, over the 50% pass mark this quiz was authored with. */
   it('weights by the points the trainer set, not by question count', async () => {
-    await svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId);
+    await mustWrite('delete quiz_attempts', svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId));
     const { body } = await take((q) => [
       { questionId: q[0], response: { index: 1 } },
       { questionId: q[1], response: { value: true } },
@@ -476,7 +470,7 @@ describe('a quiz authored here, taken by a trainee', () => {
   });
 
   it('fails an attempt that gets the two-point question wrong', async () => {
-    await svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId);
+    await mustWrite('delete quiz_attempts', svc.from('quiz_attempts').delete().eq('quiz_id', ctx.quizId));
     const { body } = await take((q) => [
       { questionId: q[0], response: { index: 0 } },
       { questionId: q[1], response: { value: false } },

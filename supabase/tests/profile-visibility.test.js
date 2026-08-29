@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail,
+  mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, supervisor, trainer, otherTrainer, traineeA, traineeB;
@@ -14,8 +17,8 @@ beforeAll(async () => {
   traineeA     = await createUser({ email: uniqueEmail(), role: 'trainee',    name: 'Amira' });
   traineeB     = await createUser({ email: uniqueEmail(), role: 'trainee',    name: 'Marcus' });
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: trainer.id }));
 
   [cAdmin, cSupervisor, cTraineeA] = await Promise.all([
     signIn(admin.email), signIn(supervisor.email), signIn(traineeA.email),

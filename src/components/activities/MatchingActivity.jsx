@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { shuffleDefinitions } from '../../lib/shuffle';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MatchingActivity({ activity }) {
@@ -6,12 +7,11 @@ export default function MatchingActivity({ activity }) {
   const [selectedDef, setSelectedDef] = useState(null);
   const [matches, setMatches] = useState([]);
 
+  const shuffledPairs = useMemo(() => shuffleDefinitions(activity?.pairs), [activity?.pairs]);
+
   if (!activity?.pairs) return <div>No matching pairs provided.</div>;
 
   const totalPairs = activity.pairs.length;
-
-  // Render shuffled in real app, but ordered for demo simplicity unless we shuffle on mount
-  // For demo, we'll just list them out.
   
   function handleTermClick(term) {
     if (matches.includes(term)) return;
@@ -60,9 +60,12 @@ export default function MatchingActivity({ activity }) {
             const isMatched = matches.includes(p.term);
             const isSelected = selectedTerm === p.term;
             return (
-              <motion.div 
+              <motion.button
+                type="button"
                 key={`term-${p.term}`}
                 onClick={() => handleTermClick(p.term)}
+                disabled={isMatched}
+                aria-pressed={isSelected}
                 animate={{ opacity: isMatched ? 0.3 : 1, scale: isSelected ? 1.02 : 1 }}
                 style={{
                   padding: '1rem',
@@ -76,21 +79,23 @@ export default function MatchingActivity({ activity }) {
                 }}
               >
                 {p.term}
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
 
         {/* Definitions */}
         <div className="stack">
-          {/* We'll reverse the array just to mix them up a little bit for the demo without full random shuffle */}
-          {[...activity.pairs].reverse().map(p => {
+          {shuffledPairs.map(p => {
             const isMatched = matches.includes(p.term);
             const isSelected = selectedDef === p.definition;
             return (
-              <motion.div 
+              <motion.button
+                type="button"
                 key={`def-${p.term}`}
                 onClick={() => handleDefClick(p.definition)}
+                disabled={isMatched}
+                aria-pressed={isSelected}
                 animate={{ opacity: isMatched ? 0.3 : 1, scale: isSelected ? 1.02 : 1 }}
                 style={{
                   padding: '1rem',
@@ -103,7 +108,7 @@ export default function MatchingActivity({ activity }) {
                 }}
               >
                 {p.definition}
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>

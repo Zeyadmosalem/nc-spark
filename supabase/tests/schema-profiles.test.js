@@ -15,16 +15,23 @@ describe('profiles schema', () => {
     expect(error).toBeNull();
   });
 
-  // The handle_new_user trigger arrives in the next migration, so these
-  // tests create the rows themselves rather than relying on it.
+  /**
+   * Creating the auth user is the whole fixture: handle_new_user inserts both
+   * the profile and the trainee_stats row.
+   *
+   * This used to insert them by hand, under a comment saying the trigger
+   * "arrives in the next migration". It arrived. From that day the two inserts
+   * were duplicate keys that failed every time — and the failures went
+   * nowhere, because the results were discarded. The tests still passed,
+   * because the trigger had already done the work. Found by making fixture
+   * writes assert (B19), which is precisely the class of thing it was for.
+   */
   async function seedProfile() {
     const email = `probe${Date.now()}-${Math.round(performance.now())}@example.com`;
     const { data: u, error } = await svc.auth.admin.createUser({
       email, password: 'Test-Passw0rd!', email_confirm: true,
     });
     if (error) throw error;
-    await svc.from('profiles').insert({ id: u.user.id, email, name: 'Probe' });
-    await svc.from('trainee_stats').insert({ profile_id: u.user.id });
     return u.user.id;
   }
 

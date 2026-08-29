@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail,
+  mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `rq${Date.now()}`;
@@ -16,8 +19,8 @@ beforeAll(async () => {
   trainee      = await createUser({ email: uniqueEmail(), role: 'trainee' });
   otherTrainee = await createUser({ email: uniqueEmail(), role: 'trainee' });
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: ownerTrainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: ownerTrainer.id }));
 
   const { data: c } = await svc.from('courses').insert({
     slug: `${PREFIX}-1`, title: 'RLS Quiz Course', status: 'published',
@@ -34,9 +37,9 @@ beforeAll(async () => {
     prompt: 'Which loop runs at least once?', options: ['for', 'while', 'do...while'],
   }).select().single();
   mcqId = q1.id;
-  await svc.from('quiz_answer_keys').insert({
+  await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({
     question_id: mcqId, answer: { index: 2 }, explanation: 'do...while checks its condition AFTER.',
-  });
+  }));
 
   const { data: e } = await svc.from('enrollments')
     .insert({ trainee_id: trainee.id, course_id: courseId, status: 'active' }).select().single();
@@ -45,8 +48,8 @@ beforeAll(async () => {
     .insert({ quiz_id: quizId, trainee_id: trainee.id, enrollment_id: enrolId })
     .select().single();
   attemptId = a.id;
-  await svc.from('quiz_answers')
-    .insert({ attempt_id: attemptId, question_id: mcqId, response: { index: 1 } });
+  await mustWrite('insert quiz_answers', svc.from('quiz_answers')
+    .insert({ attempt_id: attemptId, question_id: mcqId, response: { index: 1 } }));
 
   const { data: e2 } = await svc.from('enrollments')
     .insert({ trainee_id: otherTrainee.id, course_id: courseId, status: 'active' })
@@ -62,8 +65,8 @@ beforeAll(async () => {
   ]);
 });
 afterAll(async () => {
-  await svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete quiz_retake_grants', svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId));
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -247,8 +250,8 @@ describe('legitimate quiz access', () => {
   });
 
   it('the owning trainer sees a retake grant on their course', async () => {
-    await svc.from('quiz_retake_grants')
-      .insert({ quiz_id: quizId, trainee_id: trainee.id, granted_by: ownerTrainer.id });
+    await mustWrite('insert quiz_retake_grants', svc.from('quiz_retake_grants')
+      .insert({ quiz_id: quizId, trainee_id: trainee.id, granted_by: ownerTrainer.id }));
     const { data } = await cOwner.from('quiz_retake_grants').select('id').eq('quiz_id', quizId);
     expect(data.length).toBeGreaterThan(0);
   });

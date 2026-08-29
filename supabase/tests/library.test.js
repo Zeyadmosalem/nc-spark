@@ -10,7 +10,10 @@
 //    so the test enrols one trainee and not another and reads both.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, must,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -28,12 +31,6 @@ const madeUsers = [];
 let fireId, foodId;
 let readingId, videoId, quizId, gatedId;
 let aliceEnrollment;
-
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
 
 async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });
@@ -93,7 +90,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }
@@ -139,10 +136,10 @@ describe('a trainee on one course', () => {
   });
 
   it('follows completions through to ticks and to the lock', async () => {
-    await svc.from('activity_completions').insert([
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert([
       { enrollment_id: aliceEnrollment, activity_id: readingId },
       { enrollment_id: aliceEnrollment, activity_id: videoId },
-    ]);
+    ]));
 
     const items = await myLibrary();
     expect(items.find((i) => i.id === readingId).completed).toBe(true);

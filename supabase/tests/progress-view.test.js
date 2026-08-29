@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let trainer, traineeA, traineeB, courseId, enrolA, enrolB;
@@ -31,13 +33,13 @@ beforeAll(async () => {
   enrolA = eA.id; enrolB = eB.id;
 
   // A completes two of four; B completes none.
-  await svc.from('activity_completions').insert([
+  await mustWrite('insert activity_completions', svc.from('activity_completions').insert([
     { enrollment_id: enrolA, activity_id: activityIds[0] },
     { enrollment_id: enrolA, activity_id: activityIds[1] },
-  ]);
+  ]));
 });
 afterAll(async () => {
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   await resetDb();
 });
 
@@ -57,8 +59,8 @@ describe('enrollment_progress view', () => {
   });
 
   it('updates immediately when a completion is added', async () => {
-    await svc.from('activity_completions')
-      .insert({ enrollment_id: enrolB, activity_id: activityIds[0] });
+    await mustWrite('insert activity_completions', svc.from('activity_completions')
+      .insert({ enrollment_id: enrolB, activity_id: activityIds[0] }));
     const { data } = await svc.from('enrollment_progress')
       .select('percent').eq('enrollment_id', enrolB).single();
     expect(data.percent).toBe(25);
@@ -73,7 +75,7 @@ describe('enrollment_progress view', () => {
       .select('percent,total_activities').eq('enrollment_id', e.id).single();
     expect(data.total_activities).toBe(0);
     expect(data.percent).toBe(0);
-    await svc.from('courses').delete().eq('id', c.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c.id));
   });
 });
 
@@ -99,8 +101,8 @@ describe('catalog helper functions', () => {
 
   it('is_enrolled is FALSE for a merely pending enrollment', async () => {
     const pendingTrainee = await createUser({ email: uniqueEmail(), role: 'trainee' });
-    await svc.from('enrollments')
-      .insert({ trainee_id: pendingTrainee.id, course_id: courseId, status: 'pending' });
+    await mustWrite('insert enrollments', svc.from('enrollments')
+      .insert({ trainee_id: pendingTrainee.id, course_id: courseId, status: 'pending' }));
     const c = await signIn(pendingTrainee.email);
     const { data } = await c.rpc('is_enrolled_probe', { course: courseId });
     expect(data).toBe(false);

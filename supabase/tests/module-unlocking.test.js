@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `unl${Date.now()}`;
@@ -45,7 +47,7 @@ beforeAll(async () => {
   cTrainee = await signIn(trainee.email);
 });
 afterAll(async () => {
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -73,12 +75,12 @@ describe('app.is_module_unlocked', () => {
   });
 
   it('stays locked when the prerequisite is only PARTLY complete', async () => {
-    await svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA1 });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA1 }));
     expect(await unlocked(modB)).toBe(false);
   });
 
   it('unlocks once every activity in the prerequisite is complete', async () => {
-    await svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA2 });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actA2 }));
     expect(await unlocked(modB)).toBe(true);
   });
 
@@ -87,7 +89,7 @@ describe('app.is_module_unlocked', () => {
   });
 
   it('unlocks C once B is finished too', async () => {
-    await svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actB1 });
+    await mustWrite('insert activity_completions', svc.from('activity_completions').insert({ enrollment_id: enrolId, activity_id: actB1 }));
     expect(await unlocked(modC)).toBe(true);
   });
 
@@ -134,9 +136,9 @@ describe('is_module_unlocked_for (service-role entry point)', () => {
   it('reports a locked module as locked', async () => {
     const { data: locked } = await svc.from('modules')
       .insert({ course_id: courseId, title: 'Svc Locked', position: 20 }).select().single();
-    await svc.from('activities').insert({
+    await mustWrite('insert activities', svc.from('activities').insert({
       module_id: locked.id, type: 'reading', title: 'R', position: 1, content: { body: 'x' },
-    });
+    }));
     const { data: after } = await svc.from('modules')
       .insert({ course_id: courseId, title: 'Svc After', position: 21, unlock_after_module_id: locked.id })
       .select().single();

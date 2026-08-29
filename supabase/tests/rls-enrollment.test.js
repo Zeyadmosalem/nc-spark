@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, mustWrite,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, ownerTrainer, otherTrainer, supervisor, traineeA, traineeB;
@@ -15,8 +17,8 @@ beforeAll(async () => {
   traineeA     = await createUser({ email: uniqueEmail(), role: 'trainee' });
   traineeB     = await createUser({ email: uniqueEmail(), role: 'trainee' });
 
-  await svc.from('supervisor_trainers')
-    .insert({ supervisor_id: supervisor.id, trainer_id: ownerTrainer.id });
+  await mustWrite('insert supervisor_trainers', svc.from('supervisor_trainers')
+    .insert({ supervisor_id: supervisor.id, trainer_id: ownerTrainer.id }));
 
   const { data: c } = await svc.from('courses').insert({
     slug: `enr-${Date.now()}`, title: 'Enrolment Course', status: 'published',
@@ -27,8 +29,8 @@ beforeAll(async () => {
   const { data: e } = await svc.from('enrollments')
     .insert({ trainee_id: traineeA.id, course_id: courseId, status: 'active' }).select().single();
   enrolA = e.id;
-  await svc.from('enrollments')
-    .insert({ trainee_id: traineeB.id, course_id: courseId, status: 'active' });
+  await mustWrite('insert enrollments', svc.from('enrollments')
+    .insert({ trainee_id: traineeB.id, course_id: courseId, status: 'active' }));
 
   [cAdmin, cOwner, cOther, cSupervisor, cTraineeA] = await Promise.all([
     signIn(admin.email), signIn(ownerTrainer.email), signIn(otherTrainer.email),
@@ -36,7 +38,7 @@ beforeAll(async () => {
   ]);
 });
 afterAll(async () => {
-  await svc.from('courses').delete().eq('id', courseId);
+  await mustWrite('delete courses', svc.from('courses').delete().eq('id', courseId));
   await resetDb();
 });
 
@@ -51,7 +53,7 @@ describe('RED TEAM: enrollment', () => {
     const { data } = await svc.from('enrollments')
       .select('status').eq('trainee_id', traineeA.id).eq('course_id', c2.id).single();
     expect(data.status).toBe('pending');
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 
   it('a trainee cannot enrol somebody else', async () => {
@@ -69,7 +71,7 @@ describe('RED TEAM: enrollment', () => {
     const { error } = await cTraineeA.from('enrollments')
       .insert({ trainee_id: traineeA.id, course_id: c2.id, status: 'active' });
     expect(error).not.toBeNull();
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 
   it('a trainee cannot apply to a DRAFT course', async () => {
@@ -79,7 +81,7 @@ describe('RED TEAM: enrollment', () => {
     const { error } = await cTraineeA.from('enrollments')
       .insert({ trainee_id: traineeA.id, course_id: c2.id });
     expect(error).not.toBeNull();
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 
   it('a trainee cannot read another trainee enrollment', async () => {
@@ -109,7 +111,7 @@ describe('RED TEAM: enrollment', () => {
     await cOther.from('teaching_requests').update({ status: 'approved' }).eq('id', req.id);
     const { data } = await svc.from('teaching_requests').select('status').eq('id', req.id).single();
     expect(data.status).toBe('pending');
-    await svc.from('teaching_requests').delete().eq('id', req.id);
+    await mustWrite('delete teaching_requests', svc.from('teaching_requests').delete().eq('id', req.id));
   });
 
   it('a trainer cannot open a teaching request already marked approved', async () => {
@@ -119,7 +121,7 @@ describe('RED TEAM: enrollment', () => {
     const { error } = await cOther.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: c2.id, status: 'approved' });
     expect(error).not.toBeNull();
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 });
 
@@ -134,7 +136,7 @@ describe('legitimate enrollment access', () => {
     const { data } = await svc.from('enrollments')
       .select('status').eq('trainee_id', traineeA.id).eq('course_id', c2.id).single();
     expect(data.status).toBe('pending');
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 
   it('a trainee reads their own enrollment', async () => {
@@ -181,6 +183,6 @@ describe('legitimate enrollment access', () => {
     const { error } = await cOther.from('teaching_requests')
       .insert({ trainer_id: otherTrainer.id, course_id: c2.id });
     expect(error).toBeNull();
-    await svc.from('courses').delete().eq('id', c2.id);
+    await mustWrite('delete courses', svc.from('courses').delete().eq('id', c2.id));
   });
 });

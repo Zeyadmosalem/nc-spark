@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -41,9 +42,9 @@ async function scenario({ questions, passMark = 0.7, timeLimit = null, final = f
     activityId = a.id;
   }
   if (extraActivity) {
-    await svc.from('activities').insert({
+    await mustWrite('insert activities', svc.from('activities').insert({
       module_id: mod.id, type: 'reading', title: 'Extra', position: 2, content: { body: 'x' },
-    });
+    }));
   }
 
   const { data: quiz } = await svc.from('quizzes').insert({
@@ -59,9 +60,9 @@ async function scenario({ questions, passMark = 0.7, timeLimit = null, final = f
     }).select().single();
     ids.push(row.id);
     if (q.answer !== undefined) {
-      await svc.from('quiz_answer_keys').insert({
+      await mustWrite('insert quiz_answer_keys', svc.from('quiz_answer_keys').insert({
         question_id: row.id, answer: q.answer, explanation: q.explanation ?? 'Because reasons.',
-      });
+      }));
     }
   }
 
@@ -82,7 +83,7 @@ beforeAll(async () => {
   [cTrainee, cStranger] = await Promise.all([signIn(trainee.email), signIn(stranger.email)]);
 });
 afterAll(async () => {
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -257,9 +258,9 @@ describe('submit-quiz refusals', () => {
     const s = await scenario({ questions: [MCQ, TF], timeLimit: 60 });
     const { body: started } = await start(s.quizId);
     // Backdate the start so the deadline has already passed.
-    await svc.from('quiz_attempts')
+    await mustWrite('update quiz_attempts', svc.from('quiz_attempts')
       .update({ started_at: new Date(Date.now() - 3600_000).toISOString() })
-      .eq('id', started.attempt.id);
+      .eq('id', started.attempt.id));
     const res = await submit(started.attempt.id, [
       { questionId: s.questionIds[0], response: { index: 2 } },
       { questionId: s.questionIds[1], response: { value: true } },
@@ -280,8 +281,8 @@ describe('submit-quiz and the course final', () => {
     const { data: acts } = await svc.from('activities')
       .select('id, modules!inner(course_id)').eq('modules.course_id', s.courseId);
     for (const a of acts) {
-      await svc.from('activity_completions')
-        .insert({ enrollment_id: s.enrollment.id, activity_id: a.id });
+      await mustWrite('insert activity_completions', svc.from('activity_completions')
+        .insert({ enrollment_id: s.enrollment.id, activity_id: a.id }));
     }
 
     const before = await svc.from('enrollments').select('status').eq('id', s.enrollment.id).single();

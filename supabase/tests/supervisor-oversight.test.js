@@ -12,7 +12,10 @@
 // attempts must stay invisible.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -30,7 +33,8 @@ let supervisor, mine, theirs, alice, bob;
 let myPublished, myDraft, theirCourse, myQuiz, theirQuiz;
 const madeUsers = [];
 
-const must = ({ error }, what) => {
+/** Local: takes the awaited result first, and only has an error to check. */
+const mustOk = ({ error }, what) => {
   if (error) throw new Error(`fixture: could not ${what} - ${error.message}`);
 };
 
@@ -44,7 +48,7 @@ async function makeCourse(trainerId, slug, title, status) {
   const { data, error } = await svc.from('courses').insert({
     slug, title, status, trainer_id: trainerId, created_by: trainerId,
   }).select().single();
-  must({ error }, `create course ${slug}`);
+  mustOk({ error }, `create course ${slug}`);
   return data.id;
 }
 
@@ -52,27 +56,27 @@ async function makeCourse(trainerId, slug, title, status) {
 async function fill(courseId, quizTitle, traineeId) {
   const { data: m, error: mErr } = await svc.from('modules')
     .insert({ course_id: courseId, title: 'M1', position: 1 }).select().single();
-  must({ error: mErr }, 'create module');
+  mustOk({ error: mErr }, 'create module');
   const { data: act, error: aErr } = await svc.from('activities').insert({
     module_id: m.id, type: 'reading', title: 'Read', position: 1, content: { body: 'x' },
   }).select().single();
-  must({ error: aErr }, 'create activity');
+  mustOk({ error: aErr }, 'create activity');
 
   const { data: q, error: qErr } = await svc.from('quizzes')
     .insert({ course_id: courseId, title: quizTitle, pass_mark: 0.7 }).select().single();
-  must({ error: qErr }, 'create quiz');
+  mustOk({ error: qErr }, 'create quiz');
 
   const { data: e, error: eErr } = await svc.from('enrollments')
     .insert({ trainee_id: traineeId, course_id: courseId, status: 'active' })
     .select().single();
-  must({ error: eErr }, 'enrol a trainee');
+  mustOk({ error: eErr }, 'enrol a trainee');
 
   // One of the course's one activity finished, so progress is 100% and a
   // supervisor reading 0% is a visible failure rather than an ambiguous zero.
-  must(await svc.from('activity_completions')
+  mustOk(await svc.from('activity_completions')
     .insert({ enrollment_id: e.id, activity_id: act.id }), 'record a completion');
 
-  must(await svc.from('quiz_attempts').insert({
+  mustOk(await svc.from('quiz_attempts').insert({
     quiz_id: q.id, trainee_id: traineeId, enrollment_id: e.id, attempt_no: 1,
     status: 'passed', submitted_at: new Date().toISOString(),
     auto_score: 90, final_score: 90, passed: true,
@@ -88,7 +92,7 @@ beforeAll(async () => {
   alice      = await mk('trainee');
   bob        = await mk('trainee');
 
-  must(await svc.from('supervisor_trainers')
+  mustOk(await svc.from('supervisor_trainers')
     .insert({ supervisor_id: supervisor.id, trainer_id: mine.id }), 'link the trainer');
 
   myPublished = await makeCourse(mine.id,   `${PREFIX}-mine-pub`,   'Managed Published', 'published');
@@ -101,7 +105,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

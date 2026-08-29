@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL, callFunction,
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL,
+  callFunction, mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -75,7 +76,7 @@ describe('admin-set-role', () => {
   it('rejects a SUSPENDED admin, proving the JWT claim is not trusted', async () => {
     const ghost = await createUser({ email: uniqueEmail(), role: 'admin' });
     const c = await signIn(ghost.email);
-    await svc.from('profiles').update({ status: 'suspended' }).eq('id', ghost.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ status: 'suspended' }).eq('id', ghost.id));
     const res = await call('admin-set-role', c, { userId: trainee.id, role: 'trainer' });
     expect(res.status).toBe(403);
     expect((await stateOf(trainee.id)).role).toBe('trainee');
@@ -210,13 +211,13 @@ describe('last-admin protection', () => {
       .select('id').eq('role', 'admin').eq('status', 'active').neq('id', keepId);
     const ids = (others ?? []).map((o) => o.id);
     if (ids.length) {
-      await svc.from('profiles').update({ status: 'suspended' }).in('id', ids);
+      await mustWrite('update profiles', svc.from('profiles').update({ status: 'suspended' }).in('id', ids));
     }
     try {
       return await body();
     } finally {
       if (ids.length) {
-        await svc.from('profiles').update({ status: 'active' }).in('id', ids);
+        await mustWrite('update profiles', svc.from('profiles').update({ status: 'active' }).in('id', ids));
       }
     }
   }

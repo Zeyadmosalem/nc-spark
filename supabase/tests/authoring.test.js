@@ -12,7 +12,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, callFunction,
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith,
+  callFunction, mustWrite,
 } from './helpers.js';
 
 applyAppEnv();
@@ -50,7 +51,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await supabase.auth.signOut();
   if (courseId) await svc.from('courses').delete().eq('id', courseId);
-  await svc.from('courses').delete().like('slug', `${PREFIX}%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

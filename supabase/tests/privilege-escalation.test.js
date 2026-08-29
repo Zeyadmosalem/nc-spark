@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   serviceClient, anonClient, createUser, signIn, resetDb, uniqueEmail,
+  mustWrite,
 } from './helpers.js';
 
 const svc = serviceClient();
@@ -88,9 +89,9 @@ describe('legitimate self-service still works', () => {
 
 describe('service role retains full control', () => {
   it('can promote a user', async () => {
-    await svc.from('profiles').update({ role: 'trainer' }).eq('id', victim.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ role: 'trainer' }).eq('id', victim.id));
     expect((await stateOf(victim.id)).role).toBe('trainer');
-    await svc.from('profiles').update({ role: 'trainee' }).eq('id', victim.id);
+    await mustWrite('update profiles', svc.from('profiles').update({ role: 'trainee' }).eq('id', victim.id));
   });
 });
 

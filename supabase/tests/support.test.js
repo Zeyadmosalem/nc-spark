@@ -12,7 +12,10 @@
 //    be checked by a mocked test.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
+import {
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, must,
+  mustWrite,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -31,12 +34,6 @@ const PREFIX = `sup${Date.now()}`;
 let trainer, otherTrainer, admin, supervisor, alice, bob;
 const madeUsers = [];
 let courseId, otherCourseId;
-
-function must(what, { data, error }) {
-  if (error) throw new Error(`fixture ${what}: ${error.message}`);
-  if (!data) throw new Error(`fixture ${what}: no row returned`);
-  return data;
-}
 
 async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
@@ -76,7 +73,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await supabase.auth.signOut();
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   for (const id of madeUsers) {
     await svc.auth.admin.deleteUser(id).catch(() => null);
   }

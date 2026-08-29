@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, resetDb, uniqueEmail } from './helpers.js';
+import { serviceClient, createUser, resetDb, uniqueEmail, mustWrite } from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `qa${Date.now()}`;
@@ -26,8 +26,8 @@ beforeAll(async () => {
   enrollmentId = e.id;
 });
 afterAll(async () => {
-  await svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId);
-  await svc.from('courses').delete().like('slug', `${PREFIX}-%`);
+  await mustWrite('delete quiz_retake_grants', svc.from('quiz_retake_grants').delete().eq('quiz_id', quizId));
+  await mustWrite('delete courses', svc.from('courses').delete().like('slug', `${PREFIX}-%`));
   await resetDb();
 });
 
@@ -56,7 +56,7 @@ describe('quiz_attempts', () => {
   it('allows attempt 2, which is where a granted retake lives', async () => {
     const { error } = await svc.from('quiz_attempts').insert(attempt({ attempt_no: 2 }));
     expect(error).toBeNull();
-    await svc.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('attempt_no', 2);
+    await mustWrite('delete quiz_attempts', svc.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('attempt_no', 2));
   });
 
   it('rejects attempt number zero', async () => {
@@ -89,7 +89,7 @@ describe('quiz_attempts', () => {
   });
 
   it('cascades answers when the attempt is deleted', async () => {
-    await svc.from('quiz_attempts').delete().eq('id', firstId);
+    await mustWrite('delete quiz_attempts', svc.from('quiz_attempts').delete().eq('id', firstId));
     const { data } = await svc.from('quiz_answers').select('id').eq('attempt_id', firstId);
     expect(data ?? []).toHaveLength(0);
   });
