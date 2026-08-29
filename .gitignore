@@ -31,3 +31,9 @@ dist-ssr
 supabase/.temp/
 supabase/.branches/
 shots/
+
+# Wrangler local secrets (same reasoning as .env* above).
+.dev.vars
+.dev.vars.*
+.wrangler/
+scripts/.auth-config.before.json

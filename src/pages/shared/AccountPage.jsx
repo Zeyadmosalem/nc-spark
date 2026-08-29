@@ -8,6 +8,7 @@ import StatusPill from '../../components/ui/StatusPill';
 import PageSkeleton from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toast-context';
 import { fadeUp } from '../../lib/motion';
+import { formatDate, initialOf } from '../../lib/format';
 
 /**
  * Your own account. One page, mounted by all four role shells.
@@ -141,7 +142,7 @@ function IdentityCard({ profile }) {
           <label className="input-label" htmlFor="account-avatar">Badge</label>
           <input
             id="account-avatar" className="input-field" maxLength={AVATAR_MAX}
-            placeholder={(trimmedName || '?').charAt(0).toUpperCase()}
+            placeholder={initialOf({ name: trimmedName })}
             value={avatar}
             onChange={(e) => setAvatar(e.target.value)}
           />
@@ -151,7 +152,7 @@ function IdentityCard({ profile }) {
             is visible before it is saved rather than after. */}
         <div className="text-center">
           <div className="avatar" aria-hidden="true">
-            {trimmedAvatar || (trimmedName || '?').charAt(0).toUpperCase()}
+            {initialOf({ avatar: trimmedAvatar, name: trimmedName })}
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
             Preview
@@ -203,9 +204,7 @@ function AccessCard({ profile }) {
       {profile.createdAt && (
         <Row
           label="Joined"
-          value={new Date(profile.createdAt).toLocaleDateString(undefined, {
-            day: 'numeric', month: 'long', year: 'numeric',
-          })}
+          value={formatDate(profile.createdAt, { month: 'long' })}
         />
       )}
     </div>

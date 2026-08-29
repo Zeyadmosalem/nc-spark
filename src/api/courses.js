@@ -33,11 +33,6 @@ export async function listCourses() {
   return (rows ?? []).map(courseToCamel);
 }
 
-export async function getCourse(id) {
-  return courseToCamel(unwrap(await requireClient()
-    .from('courses').select(COURSE_COLUMNS).eq('id', id).maybeSingle()));
-}
-
 /** Course with its modules and their activities, ordered for display. */
 export async function getCourseOutline(id) {
   const data = unwrap(await requireClient()

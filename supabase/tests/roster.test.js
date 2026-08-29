@@ -12,7 +12,7 @@
 //    anything the component remembered to filter.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -21,17 +21,13 @@ const { courseRoster } = await import('../../src/api/roster.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `ros${Date.now()}`;
 
 let trainer, other, admin, alice, bob, carol;
 const madeUsers = [];
 let courseId, readingId, quizActivityId, quizId;
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });

@@ -7,7 +7,7 @@
 // clause. These tests are what stop that clause quietly widening.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -15,6 +15,8 @@ const { supabase } = await import('../../src/api/client.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `bdg${Date.now()}`;
 
 let trainer, otherTrainer, supervisor, admin, alice, bob, outsider;
@@ -32,23 +34,6 @@ async function mk(role, name) {
   const u = await createUser({ email: uniqueEmail(), role, name });
   madeUsers.push(u.id);
   return u;
-}
-
-const sessions = new Map();
-async function become(email) {
-  const cached = sessions.get(email);
-  if (cached) {
-    const { error } = await supabase.auth.setSession(cached);
-    if (!error) return;
-    sessions.delete(email);
-  }
-  await supabase.auth.signOut();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-  sessions.set(email, {
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
-  });
 }
 
 const badgesOf = async (id) => ((await svc

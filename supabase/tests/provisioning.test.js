@@ -3,11 +3,32 @@ import { serviceClient, anonClient, resetDb, uniqueEmail } from './helpers.js';
 
 const svc = serviceClient();
 
+/**
+ * Creates an auth user the way an administrator now does.
+ *
+ * These are tests of handle_new_user, which is an AFTER INSERT trigger on
+ * auth.users — so it fires for an admin-created account exactly as it did for
+ * a public signup. Public signup was disabled in the audit (S2) because the
+ * endpoint sits outside the Worker gate and let anyone with the public anon
+ * key write into the database. The route changed; the trigger, the domain
+ * allowlist and the metadata it must ignore did not, and that is what these
+ * assert.
+ */
 async function signUp(email, extraMetadata = {}) {
-  const { data, error } = await anonClient().auth.signUp({
+  const { data, error } = await svc.auth.admin.createUser({
     email,
     password: 'Test-Passw0rd!',
-    options: { data: { name: 'New Person', ...extraMetadata } },
+    email_confirm: true,
+    user_metadata: { name: 'New Person', ...extraMetadata },
+  });
+  if (error) throw error;
+  return data.user;
+}
+
+/** The same, with no metadata at all, for the name fallback. */
+async function signUpBare(email) {
+  const { data, error } = await svc.auth.admin.createUser({
+    email, password: 'Test-Passw0rd!', email_confirm: true,
   });
   if (error) throw error;
   return data.user;
@@ -71,8 +92,8 @@ describe('signup provisioning', () => {
 
   it('falls back to the email local-part when no name is given', async () => {
     const email = uniqueEmail('speedpro-logis.com');
-    const { data } = await anonClient().auth.signUp({ email, password: 'Test-Passw0rd!' });
-    expect((await profileOf(data.user.id)).name).toBe(email.split('@')[0]);
+    const user = await signUpBare(email);
+    expect((await profileOf(user.id)).name).toBe(email.split('@')[0]);
   });
 
   it('creates a trainee_stats row alongside the profile', async () => {
@@ -84,8 +105,8 @@ describe('signup provisioning', () => {
 
   it('records the email on the profile', async () => {
     const email = uniqueEmail('speedpro-logis.com');
-    const { data } = await anonClient().auth.signUp({ email, password: 'Test-Passw0rd!' });
-    expect((await profileOf(data.user.id)).email).toBe(email);
+    const user = await signUpBare(email);
+    expect((await profileOf(user.id)).email).toBe(email);
   });
 });
 
@@ -93,5 +114,28 @@ describe('allowed_domains is not client-readable', () => {
   it('rejects an anonymous read', async () => {
     const { data } = await anonClient().from('allowed_domains').select('domain');
     expect(data ?? []).toHaveLength(0);
+  });
+});
+
+/**
+ * S2. Supabase Auth is a different origin from the Worker gate, so the gate
+ * never covered it: with only the public anon key — which ships in the client
+ * bundle and is public by design — anyone could create a real row in
+ * auth.users, profiles and trainee_stats. They landed pending and the gate
+ * denied them, so it was never app access; it was an unauthenticated write
+ * into the database and a review queue anyone could flood.
+ *
+ * Accounts here are provisioned by an admin, so the endpoint has no job.
+ */
+describe('public signup', () => {
+  it('is closed, so the anon key cannot create accounts', async () => {
+    const { data, error } = await anonClient().auth.signUp({
+      email: uniqueEmail('outside.com'),
+      password: 'Test-Passw0rd!',
+    });
+
+    expect(error).toBeTruthy();
+    expect(error.code ?? error.message).toMatch(/signup_disabled|not allowed/i);
+    expect(data?.user).toBeFalsy();
   });
 });

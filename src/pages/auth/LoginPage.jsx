@@ -33,10 +33,11 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Sign in to continue your training."
       footer={(
-        <>
-          <Link to="/reset-password">Forgot your password?</Link>
-          <Link to="/signup">Create an account</Link>
-        </>
+        // No "Create an account" link beside it any more: public signup is
+        // closed (audit S2), so it led to a form that could only fail. The
+        // route and the page are left in place, so re-opening it is one
+        // setting and one link.
+        <Link to="/reset-password">Forgot your password?</Link>
       )}
     >
       <form onSubmit={handleSubmit} className="auth-form">

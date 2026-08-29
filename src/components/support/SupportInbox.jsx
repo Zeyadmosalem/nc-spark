@@ -15,6 +15,7 @@ import Icon from '../ui/Icon';
 import Alert from '../ui/Alert';
 import { useToast } from '../ui/toast-context';
 import { item, stagger, SPRING_SOFT, EASE_OUT } from '../../lib/motion';
+import { formatDate } from '../../lib/format';
 
 /**
  * Support, as an inbox.
@@ -54,7 +55,7 @@ const when = (iso) => {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return formatDate(iso, { year: false });
 };
 
 export default function SupportInbox({

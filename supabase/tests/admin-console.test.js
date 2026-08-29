@@ -14,7 +14,7 @@
 // A frontend mock cannot fail either way, which is exactly why these are here.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -29,16 +29,12 @@ const { setUserRole, reviewSignup, suspendUser } = await import('../../src/api/p
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `adm${Date.now()}`;
 
 let admin, trainer, trainee, pending, courseId, requestId;
 const madeUsers = [];
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role, status = 'active') {
   const u = await createUser({ email: uniqueEmail(), role, status });

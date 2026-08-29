@@ -66,6 +66,31 @@ function stubSupabase({ user = { ok: true }, profile = [{ status: 'active' }] } 
   return calls;
 }
 
+/**
+ * A login POST carrying a matching CSRF token, as the real form sends it.
+ *
+ * The token is a double-submit: the same value in a cookie the browser holds
+ * and in a field only our own page can render. Every test that posts the form
+ * has to carry one now — otherwise they would all be testing the CSRF refusal
+ * instead of what they are named for. Pass `csrf: null` or a different
+ * `cookie` to test the refusal deliberately.
+ */
+const CSRF = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+
+function loginPost(fields = {}, { headers = {}, csrf = CSRF, cookie = CSRF } = {}) {
+  const body = new FormData();
+  body.set('email', 'a@b.com');
+  body.set('password', 'pw');
+  for (const [key, value] of Object.entries(fields)) body.set(key, value);
+  if (csrf !== null) body.set('csrf', csrf);
+
+  return new Request('https://site.dev/__auth/login', {
+    method: 'POST',
+    body,
+    headers: { ...(cookie === null ? {} : { Cookie: `nc_spark_csrf=${cookie}` }), ...headers },
+  });
+}
+
 beforeEach(() => { ENV.ASSETS.fetch.mockClear(); });
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -149,12 +174,7 @@ describe('when Supabase is unreachable', () => {
 describe('the next parameter', () => {
   const loginWith = async (next) => {
     stubSupabase();
-    const body = new FormData();
-    body.set('email', 'a@b.com');
-    body.set('password', 'pw');
-    body.set('next', next);
-    const res = await gate.fetch(
-      new Request('https://site.dev/__auth/login', { method: 'POST', body }), ENV);
+    const res = await gate.fetch(loginPost({ next }), ENV);
     return res.headers.get('Location');
   };
 
@@ -187,11 +207,7 @@ describe('the next parameter', () => {
 describe('signing in', () => {
   it('sets an HttpOnly, Secure, SameSite cookie on success', async () => {
     stubSupabase();
-    const body = new FormData();
-    body.set('email', 'a@b.com');
-    body.set('password', 'pw');
-    const res = await gate.fetch(
-      new Request('https://site.dev/__auth/login', { method: 'POST', body }), ENV);
+    const res = await gate.fetch(loginPost(), ENV);
 
     expect(res.status).toBe(303);
     const cookie = res.headers.get('Set-Cookie');
@@ -202,11 +218,7 @@ describe('signing in', () => {
 
   it('reports a rejected password without saying which half was wrong', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('no', { status: 400 })));
-    const body = new FormData();
-    body.set('email', 'a@b.com');
-    body.set('password', 'wrong');
-    const res = await gate.fetch(
-      new Request('https://site.dev/__auth/login', { method: 'POST', body }), ENV);
+    const res = await gate.fetch(loginPost({ password: 'wrong' }), ENV);
 
     expect(res.status).toBe(401);
     const html = await res.text();
@@ -224,7 +236,73 @@ describe('signing in', () => {
   });
 });
 
+/**
+ * S7. The gate forwards a password to Supabase, so a POST from another site
+ * would sign the victim's browser in as whoever submitted it. The cookie is
+ * SameSite=Lax and therefore absent on a cross-site POST, which is what makes
+ * the matching field impossible to forge.
+ */
+describe('a sign-in that cannot prove it came from our form', () => {
+  it('refuses a POST with no token at all', async () => {
+    const calls = stubSupabase();
+    const res = await gate.fetch(loginPost({}, { csrf: null, cookie: null }), ENV);
+
+    expect(res.status).toBe(403);
+    // The point of checking first: the password never reached Supabase.
+    expect(calls.filter((u) => u.includes('/auth/v1/token'))).toHaveLength(0);
+  });
+
+  it('refuses a token that does not match the cookie', async () => {
+    stubSupabase();
+    const res = await gate.fetch(
+      loginPost({}, { csrf: CSRF, cookie: 'b'.repeat(32) }), ENV);
+    expect(res.status).toBe(403);
+  });
+
+  it('refuses a field with no cookie behind it', async () => {
+    stubSupabase();
+    const res = await gate.fetch(loginPost({}, { cookie: null }), ENV);
+    expect(res.status).toBe(403);
+  });
+
+  it('offers a usable form again rather than a dead end', async () => {
+    stubSupabase();
+    const res = await gate.fetch(loginPost({}, { csrf: null, cookie: null }), ENV);
+    const html = await res.text();
+
+    expect(html).toContain('name="csrf"');
+    expect(res.headers.get('Set-Cookie')).toContain('nc_spark_csrf=');
+  });
+
+  it('spends the token, so one capture cannot be replayed', async () => {
+    stubSupabase();
+    const res = await gate.fetch(loginPost(), ENV);
+    const cleared = res.headers.getSetCookie()
+      .find((c) => c.startsWith('nc_spark_csrf='));
+
+    expect(res.status).toBe(303);
+    expect(cleared).toContain('Max-Age=0');
+  });
+});
+
 describe('the login page', () => {
+  it('issues a csrf cookie matching the field it renders', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    const html = await res.text();
+
+    const field = html.match(/name="csrf" value="([a-f0-9]{32})"/)?.[1];
+    expect(field).toBeTruthy();
+    expect(res.headers.get('Set-Cookie')).toContain(`nc_spark_csrf=${field}`);
+  });
+
+  /** Two tabs open on the form: the first must still work after the second. */
+  it('keeps an existing token rather than rotating it', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login', {
+      headers: { Cookie: `nc_spark_csrf=${CSRF}` },
+    }), ENV);
+    expect(await res.text()).toContain(`value="${CSRF}"`);
+  });
+
   it('escapes the next value into the form', async () => {
     const res = await gate.fetch(
       new Request('https://site.dev/__auth/login?next=%2F%22%3E%3Cscript%3E'), ENV);
@@ -243,6 +321,83 @@ describe('the login page', () => {
     const res = await gate.fetch(new Request('https://site.dev/__auth/logout'), ENV);
     expect(res.status).toBe(303);
     expect(res.headers.get('Set-Cookie')).toContain('Max-Age=0');
+  });
+});
+
+/**
+ * S5. The gate is the only thing in front of the app, so it is the only place
+ * these can be set — and nothing was setting them, including on the page that
+ * asks for a password.
+ */
+describe('security headers', () => {
+  const REQUIRED = [
+    'Content-Security-Policy',
+    'X-Content-Type-Options',
+    'X-Frame-Options',
+    'Referrer-Policy',
+    'Strict-Transport-Security',
+  ];
+
+  it('sets them on the app itself, not just the gate pages', async () => {
+    stubSupabase();
+    const res = await gate.fetch(withCookie('https://site.dev/trainee', GOOD_TOKEN), ENV);
+
+    expect(await res.text()).toBe('the app');
+    for (const header of REQUIRED) expect(res.headers.get(header)).toBeTruthy();
+  });
+
+  it('sets them on the sign-in page', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    for (const header of REQUIRED) expect(res.headers.get(header)).toBeTruthy();
+  });
+
+  it('sets them on the redirect that turns a visitor away', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/trainee'), ENV);
+    expect(res.status).toBe(302);
+    for (const header of REQUIRED) expect(res.headers.get(header)).toBeTruthy();
+  });
+
+  it('refuses to be framed, which is what the password page needs', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    expect(res.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
+    expect(res.headers.get('X-Frame-Options')).toBe('DENY');
+  });
+
+  /** The second line behind DOMPurify for trainer-authored course content. */
+  it('allows no script source but our own origin', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    const csp = res.headers.get('Content-Security-Policy');
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("base-uri 'self'");
+  });
+
+  /**
+   * The app cannot work if the policy forbids reaching Supabase, and writing
+   * the origin out by hand is how that gets missed when the project changes.
+   */
+  it('lets the app reach its own Supabase project over https and wss', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    const csp = res.headers.get('Content-Security-Policy');
+    expect(csp).toContain('https://project.supabase.co');
+    expect(csp).toContain('wss://project.supabase.co');
+  });
+
+  /**
+   * Caught by loading the real thing in a browser, not by reading the policy:
+   * the build inlines the smaller font subsets as data: URIs, and 'self'
+   * alone blocked every one of them. The app still rendered — in a system
+   * font — which is the kind of break nothing fails on.
+   */
+  it('still allows the inlined font subsets the build produces', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    expect(res.headers.get('Content-Security-Policy')).toContain("font-src 'self' data:");
+  });
+
+  it('does not leave ids in the referer sent to another site', async () => {
+    const res = await gate.fetch(new Request('https://site.dev/__auth/login'), ENV);
+    expect(res.headers.get('Referrer-Policy')).toBe('same-origin');
   });
 });
 
@@ -285,14 +440,8 @@ describe('rate limiting the login form', () => {
   /** The binding's shape: limit({ key }) -> { success }. */
   const limiter = (allow) => ({ limit: vi.fn(async () => ({ success: allow })) });
 
-  const post = async (env, ip = '203.0.113.9') => {
-    const body = new FormData();
-    body.set('email', 'a@b.com');
-    body.set('password', 'guess');
-    return gate.fetch(new Request('https://site.dev/__auth/login', {
-      method: 'POST', body, headers: { 'CF-Connecting-IP': ip },
-    }), env);
-  };
+  const post = async (env, ip = '203.0.113.9') =>
+    gate.fetch(loginPost({ password: 'guess' }, { headers: { 'CF-Connecting-IP': ip } }), env);
 
   it('lets an ordinary attempt through', async () => {
     stubSupabase();

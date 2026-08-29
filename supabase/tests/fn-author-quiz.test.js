@@ -12,7 +12,9 @@
 // pass is the failure mode this whole milestone exists to avoid.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, uniqueEmail, SUPABASE_URL, applyAppEnv } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, uniqueEmail, SUPABASE_URL, applyAppEnv, becomeWith,
+} from './helpers.js';
 
 applyAppEnv();
 
@@ -25,17 +27,13 @@ const { publishCourse } = await import('../../src/api/courses.js');
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `aq${Date.now()}`;
 
 let trainer, other, trainee;
 const madeUsers = [];
 let seq = 0;
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });

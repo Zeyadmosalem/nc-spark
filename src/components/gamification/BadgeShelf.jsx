@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import Icon from '../ui/Icon';
+import { formatDate } from '../../lib/format';
 
 /**
  * Every badge, earned and unearned together.
@@ -11,10 +12,6 @@ import Icon from '../ui/Icon';
  */
 export default function BadgeShelf({ catalog, earned }) {
   if (!catalog || catalog.length === 0) return null;
-
-  const onDate = (iso) => new Date(iso).toLocaleDateString(undefined, {
-    day: 'numeric', month: 'short', year: 'numeric',
-  });
 
   return (
     <ul className="badge-shelf">
@@ -36,7 +33,7 @@ export default function BadgeShelf({ catalog, earned }) {
             <span className="badge-tile-desc">{badge.description}</span>
             {/* Status in words, not colour alone. */}
             <span className="badge-tile-state">
-              {has ? `Earned ${onDate(at)}` : 'Not yet'}
+              {has ? `Earned ${formatDate(at)}` : 'Not yet'}
             </span>
           </motion.li>
         );

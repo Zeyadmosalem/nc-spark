@@ -12,7 +12,7 @@
 // attempts must stay invisible.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -22,6 +22,8 @@ const { myTrainers, teamCourses, teamEnrollments, teamQuizAttempts } =
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `sup${Date.now()}`;
 
 let supervisor, mine, theirs, alice, bob;
@@ -31,12 +33,6 @@ const madeUsers = [];
 const must = ({ error }, what) => {
   if (error) throw new Error(`fixture: could not ${what} - ${error.message}`);
 };
-
-async function become(email) {
-  await supabase.auth.signOut();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-}
 
 async function mk(role) {
   const u = await createUser({ email: uniqueEmail(), role });

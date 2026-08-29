@@ -1,8 +1,80 @@
 const COOKIE = 'nc_spark_gate';
+const CSRF_COOKIE = 'nc_spark_csrf';
 
 // A login page or a 503 that gets cached outlives the fix meant to clear it.
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', ...NO_STORE };
+
+/**
+ * The origins the app itself must reach: PostgREST and Auth over https, and
+ * Realtime over wss. Derived from the configured URL rather than written out,
+ * so pointing the gate at another project cannot leave the policy behind.
+ */
+function supabaseOrigins(env) {
+  try {
+    const { origin } = new URL(env.SUPABASE_URL);
+    return `${origin} ${origin.replace(/^https:/, 'wss:')}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Headers every response gets, the app's own assets included.
+ *
+ * The gate is the only thing in front of the app, so it is the only place
+ * these can be set. Until now nothing set them at all — including on the
+ * sign-in page, which asks for a password and could be framed.
+ *
+ * `script-src 'self'` is the one that matters: it is the second line behind
+ * DOMPurify for trainer-authored course content, and the built page has no
+ * inline script for it to break. `style-src` has to allow inline because the
+ * app styles a few hundred elements with the style attribute; that is a known
+ * cost, and it does not weaken the script rule.
+ */
+function securityHeaders(env) {
+  return {
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "img-src 'self' data: blob:",
+      // data: is not optional here. The build inlines the smaller Inter and
+      // Plus Jakarta subsets as data: URIs, so 'self' alone blocks them and
+      // the whole app silently falls back to a system font.
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self'",
+      `connect-src 'self' ${supabaseOrigins(env)}`.trim(),
+    ].join('; '),
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    // Course and roster paths carry ids. The sanitizer deliberately opens
+    // authored links in a new tab, so without this those ids travel to
+    // whatever a trainer linked to.
+    'Referrer-Policy': 'same-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  };
+}
+
+/**
+ * Copies a response and adds the headers above.
+ *
+ * The asset responses come back from the binding already built, so they have
+ * to be rebuilt rather than mutated — a Response from fetch has immutable
+ * headers.
+ */
+function harden(response, env) {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(securityHeaders(env))) headers.set(key, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -24,7 +96,55 @@ function safeNext(value) {
   return normalised.startsWith('/') && !normalised.startsWith('//') ? normalised : '/';
 }
 
-function loginPage(request, message = '') {
+/**
+ * A per-visitor token that a cross-site form cannot read.
+ *
+ * The gate proxies a password, and a POST from another site would otherwise be
+ * honoured — signing the victim's browser in as whoever submitted it. The
+ * cookie is SameSite=Lax and so is not sent on a cross-site POST, which means
+ * the attacker cannot produce a form field that matches it.
+ */
+function csrfFromCookie(request) {
+  const header = request.headers.get('Cookie');
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const raw = part.trim();
+    const eq = raw.indexOf('=');
+    if (eq > 0 && raw.slice(0, eq) === CSRF_COOKIE) return raw.slice(eq + 1);
+  }
+  return null;
+}
+
+const newCsrf = () => crypto.randomUUID().replace(/-/g, '');
+
+/** Length-safe, and does not stop early on the first differing character. */
+function sameToken(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length || !a) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * The login page, with a token bound to the visitor's cookie.
+ *
+ * An existing token is reused rather than rotated, so opening the form in a
+ * second tab does not silently invalidate the first.
+ */
+function loginResponse(request, env, { message = '', status = 200 } = {}) {
+  const existing = csrfFromCookie(request);
+  const token = existing && /^[a-f0-9]{32}$/.test(existing) ? existing : newCsrf();
+
+  return harden(new Response(loginPage(request, message, token), {
+    status,
+    headers: {
+      ...HTML,
+      'Set-Cookie': `${CSRF_COOKIE}=${token}; Path=/__auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`,
+    },
+  }), env);
+}
+
+function loginPage(request, message = '', csrf = '') {
   const next = safeNext(new URL(request.url).searchParams.get('next'));
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -36,6 +156,7 @@ h1{margin-top:0;font-size:1.5rem}label{display:block;margin:1rem 0 .35rem;font-w
 </style></head><body><main><h1>NC Spark</h1><p class="muted">Sign in with your assigned account.</p>
 ${message ? `<p class="error" role="alert">${escapeHtml(message)}</p>` : ''}
 <form method="post" action="/__auth/login"><input type="hidden" name="next" value="${escapeHtml(next)}">
+<input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
 <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="username" required>
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
 <button type="submit">Sign in</button></form></main></body></html>`;
@@ -227,17 +348,28 @@ async function rateLimited(request, env) {
 
 async function authenticate(request, env) {
   if (await rateLimited(request, env)) {
-    return new Response(
-      loginPage(request, 'Too many sign-in attempts. Wait a minute and try again.'),
-      { status: 429, headers: { ...HTML, 'Retry-After': '60' } });
+    const tooMany = loginResponse(request, env, {
+      message: 'Too many sign-in attempts. Wait a minute and try again.',
+      status: 429,
+    });
+    tooMany.headers.set('Retry-After', '60');
+    return tooMany;
   }
 
   let form;
   try {
     form = await request.formData();
   } catch {
-    return new Response(loginPage(request, 'That sign-in could not be read.'), {
-      status: 400, headers: HTML,
+    return loginResponse(request, env, {
+      message: 'That sign-in could not be read.', status: 400,
+    });
+  }
+
+  // Before the password is read, let alone forwarded: a request that cannot
+  // prove it came from our own form has no business reaching Supabase.
+  if (!sameToken(String(form.get('csrf') || ''), csrfFromCookie(request) ?? '')) {
+    return loginResponse(request, env, {
+      message: 'That sign-in form had expired. Please try again.', status: 403,
     });
   }
 
@@ -245,9 +377,9 @@ async function authenticate(request, env) {
   const password = String(form.get('password') || '');
   const next = safeNext(String(form.get('next') || '/'));
 
-  const rejected = () => new Response(
-    loginPage(request, 'The email or password was not accepted.'),
-    { status: 401, headers: HTML });
+  const rejected = () => loginResponse(request, env, {
+    message: 'The email or password was not accepted.', status: 401,
+  });
 
   if (!email || !password) return rejected();
 
@@ -262,18 +394,21 @@ async function authenticate(request, env) {
     const data = await response.json();
     if (!data?.access_token) return rejected();
 
-    return new Response(null, {
-      status: 303,
-      headers: {
-        Location: next,
-        ...NO_STORE,
-        'Set-Cookie': `${COOKIE}=${data.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${data.expires_in || 3600}`,
-      },
-    });
+    const headers = new Headers({ Location: next, ...NO_STORE });
+    headers.append(
+      'Set-Cookie',
+      `${COOKIE}=${data.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${data.expires_in || 3600}`);
+    // The token is spent. Leaving it set would let one stolen form field be
+    // replayed for the rest of the hour.
+    headers.append(
+      'Set-Cookie',
+      `${CSRF_COOKIE}=; Path=/__auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+
+    return harden(new Response(null, { status: 303, headers }), env);
   } catch {
     // Supabase unreachable. Say so as a failed sign-in rather than a 500.
-    return new Response(loginPage(request, 'Sign-in is temporarily unavailable.'), {
-      status: 503, headers: HTML,
+    return loginResponse(request, env, {
+      message: 'Sign-in is temporarily unavailable.', status: 503,
     });
   }
 }
@@ -292,30 +427,30 @@ export default {
       }
 
       if (url.pathname === '/__auth/logout') {
-        return new Response(null, {
+        return harden(new Response(null, {
           status: 303,
           headers: {
             Location: '/__auth/login',
             ...NO_STORE,
             'Set-Cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
           },
-        });
+        }), env);
       }
 
       if (url.pathname === '/__auth/login') {
         if (request.method === 'POST') return authenticate(request, env);
-        return new Response(loginPage(request), { headers: HTML });
+        return loginResponse(request, env);
       }
 
       if (!(await authorize(request, env))) {
         const next = encodeURIComponent(url.pathname + url.search);
-        return new Response(null, {
+        return harden(new Response(null, {
           status: 302,
           headers: { Location: `/__auth/login?next=${next}`, ...NO_STORE },
-        });
+        }), env);
       }
 
-      return env.ASSETS.fetch(request);
+      return harden(await env.ASSETS.fetch(request), env);
     } catch {
       return new Response('Worker authentication is not configured.', {
         status: 503, headers: NO_STORE,

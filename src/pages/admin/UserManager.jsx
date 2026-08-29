@@ -14,8 +14,10 @@ import AllowedDomains from '../../components/admin/AllowedDomains';
 import StatCard from '../../components/ui/StatCard';
 import TrendChart from '../../components/charts/TrendChart';
 import BarChart from '../../components/charts/BarChart';
+import { USER_PAGE_LIMIT } from '../../api/admin';
 import { sinceLabel } from '../../api/activity';
 import { useToast } from '../../components/ui/toast-context';
+import { initialOf } from '../../lib/format';
 
 /**
  * The admin console's reason to exist.
@@ -57,7 +59,6 @@ function waitedFor(iso) {
 }
 
 const displayName = (user) => user.name || 'Unnamed';
-const initial = (user) => user.avatar || (user.name ?? '?').charAt(0).toUpperCase();
 
 export default function UserManager() {
   const { profile } = useSession();
@@ -136,6 +137,15 @@ export default function UserManager() {
         <p className="section-sub">
           {all.length} account{all.length === 1 ? '' : 's'} on the platform.
         </p>
+        {/* The directory fetches one bounded page. Saying so beats showing a
+            partial list as though it were everybody — which is what an
+            unbounded query would eventually have done on its own. */}
+        {all.length >= USER_PAGE_LIMIT && (
+          <Alert tone="info">
+            Showing the {USER_PAGE_LIMIT} most recent accounts. Search covers
+            only these.
+          </Alert>
+        )}
       </div>
 
       {/* Usage, which nothing recorded until now. audit_log answers "what was
@@ -324,7 +334,7 @@ function SignupCard({ user }) {
       }}>
         <div className="cluster grow">
           <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
-            {initial(user)}
+            {initialOf(user)}
           </div>
           <div className="grow">
             <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>
@@ -417,7 +427,7 @@ function UserRow({ user, isSelf, lastSeenAt }) {
       <div className="cluster-between">
         <div className="cluster grow">
           <div className="avatar" style={{ width: 40, height: 40, flexShrink: 0 }} aria-hidden="true">
-            {initial(user)}
+            {initialOf(user)}
           </div>
           <div className="grow">
             <h3 className="data-row-title" style={{ fontSize: '1rem', margin: 0 }}>

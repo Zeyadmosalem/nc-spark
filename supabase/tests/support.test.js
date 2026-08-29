@@ -12,7 +12,7 @@
 //    be checked by a mocked test.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith } from './helpers.js';
 
 applyAppEnv();
 
@@ -24,6 +24,8 @@ const {
 
 const svc = serviceClient();
 const PASSWORD = 'Test-Passw0rd!';
+
+const become = becomeWith(supabase, PASSWORD);
 const PREFIX = `sup${Date.now()}`;
 
 let trainer, otherTrainer, admin, supervisor, alice, bob;
@@ -52,25 +54,6 @@ async function mk(role, name) {
  * exactly like a broken test and is not one. The password is exchanged once
  * per person; after that the switch is a local setSession.
  */
-const sessions = new Map();
-
-async function become(email) {
-  const cached = sessions.get(email);
-  if (cached) {
-    const { error } = await supabase.auth.setSession(cached);
-    if (!error) return;
-    // A refresh token can expire mid-run; fall through and sign in properly.
-    sessions.delete(email);
-  }
-
-  await supabase.auth.signOut();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw new Error(`could not sign in as ${email}: ${error.message}`);
-  sessions.set(email, {
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
-  });
-}
 
 beforeAll(async () => {
   trainer = await mk('trainer', 'Tara Trainer');
