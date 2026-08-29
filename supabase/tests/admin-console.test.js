@@ -14,24 +14,9 @@
 // A frontend mock cannot fail either way, which is exactly why these are here.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
-import { serviceClient, createUser, uniqueEmail } from './helpers.js';
+import { serviceClient, createUser, uniqueEmail, applyAppEnv } from './helpers.js';
 
-const localPath = new URL('../../.env.test.local', import.meta.url);
-const hostedPath = new URL('../../.env.test', import.meta.url);
-const env = Object.fromEntries(
-  readFileSync(existsSync(localPath) ? localPath : hostedPath, 'utf8')
-    .split('\n')
-    .filter((l) => l.trim() && !l.trim().startsWith('#'))
-    .map((l) => {
-      const i = l.indexOf('=');
-      return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
-    }));
-
-// src/api/client.js reads import.meta.env at module scope, so this has to land
-// before the dynamic imports below.
-process.env.VITE_SUPABASE_URL = env.SUPABASE_URL;
-process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+applyAppEnv();
 
 const { supabase } = await import('../../src/api/client.js');
 const { listUsers, pendingSignups, platformStats, recentAudit } =

@@ -20,6 +20,21 @@ const env = Object.fromEntries(
     })
 );
 
+/**
+ * Publishes the project's credentials as the VITE_ names src/api/client.js
+ * reads, so a test can exercise the real api layer.
+ *
+ * Call this BEFORE the dynamic import of anything under src/api/: client.js
+ * reads import.meta.env at module scope, so a static import would evaluate it
+ * first and get an unconfigured client.
+ *
+ * This block used to be copy-pasted into twelve test files verbatim.
+ */
+export function applyAppEnv() {
+  process.env.VITE_SUPABASE_URL = env.SUPABASE_URL;
+  process.env.VITE_SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+}
+
 export const SUPABASE_URL = env.SUPABASE_URL;
 export const DB_URL = env.SUPABASE_DB_URL;
 export const PROJECT_REF = env.SUPABASE_PROJECT_REF;
