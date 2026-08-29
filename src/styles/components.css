@@ -2468,3 +2468,25 @@ input[type='radio'] {
   color: var(--heading);
   margin: 0;
 }
+
+/* The file submission drop zone. The panel is a label pointing at a
+   visually-hidden file input, so it is reachable with a keyboard; the dashed
+   border and hover live here rather than in inline style handlers. */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-alt);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.dropzone:hover,
+.dropzone:focus-within {
+  border-color: var(--brand-primary);
+}
+
+.dropzone-label {
+  display: block;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+}

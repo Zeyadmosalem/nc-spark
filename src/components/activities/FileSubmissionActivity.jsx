@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { safeHtml } from '../../lib/sanitizeHtml';
 import Icon from '../ui/Icon';
 import { uploadSubmission } from '../../api/storage';
 
@@ -11,6 +10,8 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
+  // Stable per activity so two submissions on one page cannot share an id.
+  const inputId = `submission-file-${activity?.id ?? 'activity'}`;
 
   if (!activity) return <div>No activity provided.</div>;
 
@@ -55,11 +56,9 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
 
   return (
     <div className="stack-lg">
-      <div
-        style={{ fontSize: '1.05rem', lineHeight: 1.6, color: 'var(--text)' }}
-        {...safeHtml(activity.description || 'Please upload your assignment below.')}
-      />
-
+      {/* The description is NOT rendered here. ActivityWrapper, which every
+          activity is mounted inside, already prints it under the title — so
+          this printed the same sentence twice on every submission page. */}
       <AnimatePresence mode="wait">
         {!isSubmitted ? (
           <motion.div
@@ -68,37 +67,41 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
           >
-            <div 
+            {/* The drop zone was a <div onClick> wrapping an input hidden
+                with display:none. Neither is focusable, so there was no
+                keyboard route to the file picker at all — a trainee using a
+                keyboard or a screen reader could not hand in an assignment,
+                on an activity that gates the rest of the course.
+
+                A label pointing at a visually-hidden-but-focusable input is
+                the ordinary way to do this: the input keeps its own keyboard
+                behaviour and accessible name, and the label makes the whole
+                panel clickable without inventing a control. */}
+            <div
+              className="dropzone"
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                border: '2px dashed var(--border)',
-                borderRadius: 'var(--r-lg)',
-                padding: '3rem 2rem',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: 'var(--surface-alt)',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand-primary)'}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
             >
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect} 
-                style={{ display: 'none' }} 
+              <input
+                id={inputId}
+                type="file"
+                className="sr-only"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
               />
-              <div className="empty-state-icon" style={{ margin: '0 auto 1rem' }}>
-            <Icon name="file" size={22} />
-          </div>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
-                {file ? file.name : 'Drag & drop your file here'}
-              </h3>
-              <p className="text-sm muted-2">
-                {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'or click to browse from your computer'}
-              </p>
+              <label htmlFor={inputId} className="dropzone-label">
+                <span className="empty-state-icon" style={{ margin: '0 auto 1rem' }}>
+                  <Icon name="file" size={22} />
+                </span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 650, display: 'block', marginBottom: '0.5rem' }}>
+                  {file ? file.name : 'Choose a file, or drop one here'}
+                </span>
+                <span className="text-sm muted-2">
+                  {file
+                    ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                    : 'PDF, image or document from your computer'}
+                </span>
+              </label>
             </div>
 
             {uploadError && (
