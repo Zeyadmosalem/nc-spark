@@ -57,9 +57,10 @@ async function fill(courseId, quizTitle, traineeId) {
   const { data: m, error: mErr } = await svc.from('modules')
     .insert({ course_id: courseId, title: 'M1', position: 1 }).select().single();
   must({ error: mErr }, 'create module');
-  must(await svc.from('activities').insert({
+  const { data: act, error: aErr } = await svc.from('activities').insert({
     module_id: m.id, type: 'reading', title: 'Read', position: 1, content: { body: 'x' },
-  }), 'create activity');
+  }).select().single();
+  must({ error: aErr }, 'create activity');
 
   const { data: q, error: qErr } = await svc.from('quizzes')
     .insert({ course_id: courseId, title: quizTitle, pass_mark: 0.7 }).select().single();
@@ -69,6 +70,11 @@ async function fill(courseId, quizTitle, traineeId) {
     .insert({ trainee_id: traineeId, course_id: courseId, status: 'active' })
     .select().single();
   must({ error: eErr }, 'enrol a trainee');
+
+  // One of the course's one activity finished, so progress is 100% and a
+  // supervisor reading 0% is a visible failure rather than an ambiguous zero.
+  must(await svc.from('activity_completions')
+    .insert({ enrollment_id: e.id, activity_id: act.id }), 'record a completion');
 
   must(await svc.from('quiz_attempts').insert({
     quiz_id: q.id, trainee_id: traineeId, enrollment_id: e.id, attempt_no: 1,
@@ -125,6 +131,37 @@ describe('a supervisor', () => {
     expect(ids).toContain(myPublished);
     expect(ids).toContain(myDraft);
     expect(ids).not.toContain(theirCourse);
+  });
+
+  /**
+   * enrollment_progress is security_invoker and counts by joining activities
+   * and activity_completions. A supervisor could read NEITHER — activities
+   * wanted admin, the trainer, or an enrolment, and completions wanted the
+   * owner, an admin or the trainer — so both counts came back 0 and every
+   * cohort on the oversight screen read "0% avg progress" while the same
+   * cohort read 20-100% on the trainer's.
+   *
+   * The numbers were not missing, which would have been noticed. They were
+   * confidently wrong, and had been since the screens shipped.
+   */
+  it('sees real progress, not zeroes', async () => {
+    const { data, error } = await supabase
+      .from('enrollment_progress')
+      .select('percent, total_activities, completed_activities')
+      .eq('course_id', myPublished);
+
+    expect(error).toBeNull();
+    expect(data.length).toBeGreaterThan(0);
+    expect(data[0].total_activities).toBeGreaterThan(0);
+    expect(data[0].completed_activities).toBeGreaterThan(0);
+    expect(data[0].percent).toBe(100);
+  });
+
+  /** And still nothing about a course they do not oversee. */
+  it('sees no progress on a course outside their team', async () => {
+    const { data } = await supabase
+      .from('enrollment_progress').select('percent').eq('course_id', theirCourse);
+    expect(data).toEqual([]);
   });
 
   it('sees enrolments on managed courses only', async () => {

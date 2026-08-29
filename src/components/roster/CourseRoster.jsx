@@ -129,9 +129,12 @@ export default function CourseRoster({ backTo = '/trainer/courses' }) {
               <p className="muted-2">Loading…</p>
             ) : (
               <BarChart
-                rows={(standings.data ?? []).map((row) => ({
-                  id: row.traineeId, label: row.name, value: row.xp,
-                }))}
+                rows={[...(standings.data ?? [])]
+                  // Ascending, like the progress chart beside it. Sorted the
+                  // other way the same five names appeared mirrored, which
+                  // invites reading the top row of each as the same person.
+                  .sort((a, b) => a.xp - b.xp)
+                  .map((row) => ({ id: row.traineeId, label: row.name, value: row.xp }))}
                 formatValue={(n) => `${n} XP`}
                 emptyLabel="No XP earned on this course yet."
               />

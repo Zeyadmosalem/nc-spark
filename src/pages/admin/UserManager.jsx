@@ -91,11 +91,12 @@ export default function UserManager() {
         (r) => r.lastSeenAt && now - new Date(r.lastSeenAt).getTime() < 7 * 86400000).length,
       neverSeen: list.filter((r) => !r.lastSeenAt).length,
       totalVisits: list.reduce((n, r) => n + (r.visits30 ?? 0), 0),
-      // Who has been away longest, so the list answers "who has stopped using
-      // it". A never-seen account sorts above everybody on a sentinel rather
-      // than being dropped: those are the ones most worth chasing.
+      // Who has stopped using it. Accounts never signed into are EXCLUDED:
+      // they have no elapsed time to compare, so every one of them rendered a
+      // full-width bar reading "Never" and the chart said nothing the tile
+      // beside it did not already say. Their count is that tile.
       leastActive: [...list]
-        .filter((r) => r.status === 'active')
+        .filter((r) => r.status === 'active' && r.lastSeenAt)
         .sort((a, b) => daysAway(b) - daysAway(a))
         .slice(0, 6)
         .map((r) => ({ id: r.userId, label: r.name || r.email, value: daysAway(r) })),
@@ -183,11 +184,11 @@ export default function UserManager() {
             {leastActive.length > 0 && (
               <div>
                 <h3 className="text-sm" style={{ margin: '0 0 0.5rem' }}>
-                  Longest without signing in
+                  Longest since signing in
                 </h3>
                 <BarChart
                   rows={leastActive}
-                  formatValue={(n) => (n >= 9999 ? 'Never' : `${n}d`)}
+                  formatValue={(n) => (n === 0 ? 'Today' : `${n}d ago`)}
                   emptyLabel="Everybody has been in recently."
                 />
               </div>
