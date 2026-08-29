@@ -21,12 +21,6 @@ import QuizSettings from './QuizSettings';
  * this screen that talks to the table directly.
  */
 
-
-/* question_type, which is a different vocabulary from activity_type. */
-
-
-/** The answer shape each type stores. Changing type has to change the key too. */
-
 export default function QuizEditor({ activityId, activityTitle, courseId }) {
   const { notify } = useToast();
   const editor = useQuizForAuthoring(activityId);

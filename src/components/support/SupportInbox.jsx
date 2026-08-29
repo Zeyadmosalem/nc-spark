@@ -29,14 +29,12 @@ import Thread from './Thread';
  * RLS, not here.
  */
 
-
 const FILTERS = {
   all: { label: 'All', match: () => true },
   unread: { label: 'Unread', match: (t) => t.unreadCount > 0 },
   open: { label: 'Open', match: (t) => t.status === 'open' },
   closed: { label: 'Closed', match: (t) => t.status === 'closed' },
 };
-
 
 export default function SupportInbox({
   canCreate = false,
@@ -182,10 +180,4 @@ export default function SupportInbox({
     </div>
   );
 }
-
-/* ------------------------------------------------------------------- list */
-
-/* ----------------------------------------------------------- new request */
-
-/* ----------------------------------------------------------- one thread */
 
