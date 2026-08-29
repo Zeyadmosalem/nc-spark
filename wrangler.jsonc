@@ -14,6 +14,9 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "run_worker_first": true,
-    "not_found_handling": "none"
+    // The app is a single-page router: /trainee/achievements is not a file in
+    // dist, so with "none" the assets binding 404s and every deep link and
+    // every page refresh breaks for a signed-in user. Only "/" worked.
+    "not_found_handling": "single-page-application"
   }
 }
