@@ -195,10 +195,16 @@ describe('ToastProvider', () => {
    * about whether it ever actually leaves the DOM — which is the thing worth
    * asserting, since a toast that never unmounts is a memory leak that also
    * stacks up over a session.
+   *
+   * The lifetime was 40ms, which under full-suite CPU contention could elapse
+   * during the click itself: the toast was already gone before getByText ran,
+   * and the test failed saying it could not find a toast rather than that the
+   * toast never left. Long enough to be caught, still far shorter than the
+   * 4000ms real one.
    */
   it('shows a confirmation, then clears itself', async () => {
     render(
-      <ToastProvider lifetime={40}>
+      <ToastProvider lifetime={500}>
         <Trigger message="Grace approved as trainer." />
       </ToastProvider>,
     );
