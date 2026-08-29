@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, uniqueEmail, SUPABASE_URL, applyAppEnv, becomeWith,
+  serviceClient, createUser, uniqueEmail, applyAppEnv, becomeWith, callFunction,
 } from './helpers.js';
 
 applyAppEnv();
@@ -274,15 +274,7 @@ describe('a trainee', () => {
   });
 
   it('is refused by publish-course', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/publish-course`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ courseId, publish: false }),
-    });
+    const res = await callFunction('publish-course', supabase, { courseId, publish: false });
     expect(res.status).toBe(403);
   });
 });

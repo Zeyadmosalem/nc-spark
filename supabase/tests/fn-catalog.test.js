@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, ownerTrainer, otherTrainer, trainee;
@@ -10,15 +12,7 @@ let courseId;
 // exactly what it made and nothing else.
 const PREFIX = `fnc${Date.now()}`;
 
-async function call(fn, client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const call = (fn, client, body) => callFunction(fn, client, body);
 
 // Calls that are SUPPOSED to succeed assert it. Without this, a transient
 // non-2xx from the platform surfaces as a confusing downstream assertion

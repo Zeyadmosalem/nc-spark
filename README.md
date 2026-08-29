@@ -92,9 +92,8 @@ written there while the browser gets a 400.
 ## Deferred work
 
 [docs/BACKLOG.md](docs/BACKLOG.md) lists everything postponed on purpose, with
-the reasoning — including the access gate for the live site, the accepted
-client-side grading in scenario activities, and the two intermittent test
-failures that were never reproduced.
+the reasoning — including the access gate for the live site and the accepted
+client-side grading in scenario activities.
 
 ## Architecture notes
 

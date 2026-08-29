@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
-  serviceClient, createUser, signIn, uniqueEmail, SUPABASE_URL, applyAppEnv, becomeWith,
+  serviceClient, createUser, signIn, uniqueEmail, applyAppEnv, becomeWith, callFunction,
 } from './helpers.js';
 
 applyAppEnv();
@@ -436,18 +436,7 @@ describe('a quiz authored here, taken by a trainee', () => {
   async function take(responses) {
     await become(trainee.email);
     const client = await signIn(trainee.email);
-    const { data: { session } } = await client.auth.getSession();
-    const call = async (name, body) => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      return { status: res.status, body: await res.json().catch(() => null) };
-    };
+    const call = (name, body) => callFunction(name, client, body);
     const started = await call('start-quiz', { quizId: ctx.quizId });
     if (started.status !== 200) {
       throw new Error(`start-quiz failed: ${JSON.stringify(started.body)}`);

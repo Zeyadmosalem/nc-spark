@@ -1,19 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `sub${Date.now()}`;
 let trainer, trainee, stranger, cTrainee, cStranger;
 
-async function fn(name, client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const fn = (name, client, body) => callFunction(name, client, body);
 
 function allKeys(value, found = new Set()) {
   if (Array.isArray(value)) value.forEach((v) => allKeys(v, found));

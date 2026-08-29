@@ -1,22 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 let admin, trainer, trainee, pending;
 let cAdmin, cTrainer, cTrainee;
 
-async function call(fn, client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const call = (fn, client, body) => callFunction(fn, client, body);
 
 const stateOf = async (id) =>
   (await svc.from('profiles').select('role,status').eq('id', id).single()).data;

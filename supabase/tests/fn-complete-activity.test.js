@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `cmp${Date.now()}`;
@@ -7,15 +9,7 @@ let trainer, trainee, stranger;
 let cTrainee, cStranger;
 let courseId, modA, modB, actA1, actA2, actB1, enrolId;
 
-async function call(client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/complete-activity`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const call = (client, body) => callFunction('complete-activity', client, body);
 
 beforeAll(async () => {
   await resetDb();

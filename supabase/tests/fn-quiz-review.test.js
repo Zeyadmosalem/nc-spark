@@ -1,20 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `qrv${Date.now()}`;
 let admin, trainer, otherTrainer, trainee;
 let cAdmin, cTrainer, cOther, cTrainee;
 
-async function fn(name, client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const fn = (name, client, body) => callFunction(name, client, body);
 
 let seq = 0;
 /** A course with one quiz activity, the questions asked for, and an enrollment. */

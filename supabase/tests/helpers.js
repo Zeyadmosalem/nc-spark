@@ -76,6 +76,44 @@ async function retryTransport(run, attempts = 3) {
   }
 }
 
+/**
+ * Calls an Edge Function as a signed-in user.
+ *
+ * Six test files had their own copy of this, in three signature shapes, and
+ * not one of them retried. A transport blip — the same `fetch failed` class
+ * that took rls-quizzes' beforeAll with it — came out of a bare fetch() as an
+ * unhandled rejection naming neither the function nor the cause. B12 records
+ * fn-catalog failing exactly once that way and never being reproduced.
+ *
+ * ONLY the transport is retried. A 4xx or 5xx from the function is its answer,
+ * and these tests assert on those statuses, so a status is returned untouched.
+ * Retrying a 5xx would hide the bug the test exists to find.
+ *
+ * When it does give up it names the function, which is what turns the next
+ * occurrence into a report instead of another unreproducible ticket.
+ */
+export async function callFunction(name, client, body, attempts = 3) {
+  const { data } = await client.auth.getSession();
+  const token = data?.session?.access_token;
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return { status: res.status, body: await res.json().catch(() => null) };
+    } catch (cause) {
+      if (attempt >= attempts) {
+        throw new Error(
+          `${name} could not be reached after ${attempts} attempts: ${cause.message}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
+  }
+}
+
 /** Creates a confirmed auth user, then forces role/status via service role. */
 export async function createUser({
   email,

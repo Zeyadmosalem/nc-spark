@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { serviceClient, createUser, signIn, resetDb, uniqueEmail, SUPABASE_URL } from './helpers.js';
+import {
+  serviceClient, createUser, signIn, resetDb, uniqueEmail, callFunction,
+} from './helpers.js';
 
 const svc = serviceClient();
 const PREFIX = `sq${Date.now()}`;
@@ -8,15 +10,7 @@ let courseId;
 let modA, modB, actB1;
 let modQuizId, finalQuizId, timedQuizId, lockedQuizId;
 
-async function call(client, body) {
-  const { data: { session } } = await client.auth.getSession();
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/start-quiz`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json().catch(() => null) };
-}
+const call = (client, body) => callFunction('start-quiz', client, body);
 
 /** Every string key anywhere in a payload, however deeply nested. */
 function allKeys(value, found = new Set()) {
