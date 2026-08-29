@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 const mocks = vi.hoisted(() => ({
   useMyEnrollments: vi.fn(), useCourses: vi.fn(),
   useMyQuizResults: vi.fn(), useCompletedActivityCount: vi.fn(),
+  useMyXp: vi.fn(), useMyXpEvents: vi.fn(),
 }));
 vi.mock('../../hooks/useCourses', () => ({
   useMyEnrollments: mocks.useMyEnrollments, useCourses: mocks.useCourses,
@@ -13,10 +14,18 @@ vi.mock('../../hooks/useProgress', () => ({
   useMyQuizResults: mocks.useMyQuizResults,
   useCompletedActivityCount: mocks.useCompletedActivityCount,
 }));
+vi.mock('../../hooks/useXp', () => ({
+  useMyXp: mocks.useMyXp, useMyXpEvents: mocks.useMyXpEvents,
+}));
 
 const AchievementsPage = (await import('./AchievementsPage')).default;
 
 const query = (data, over) => ({ data, isLoading: false, error: null, ...over });
+
+/** The value shown on the stat tile with this label. */
+const tileValue = (label) =>
+  within(screen.getByText(label).closest('.stat-card')).getByText(
+    (_, el) => el?.className === 'stat-card-value').textContent;
 const show = () => render(<MemoryRouter><AchievementsPage /></MemoryRouter>);
 
 const COURSES = [
@@ -35,6 +44,8 @@ beforeEach(() => {
   mocks.useMyEnrollments.mockReturnValue(query([]));
   mocks.useMyQuizResults.mockReturnValue(query([]));
   mocks.useCompletedActivityCount.mockReturnValue(query(0));
+  mocks.useMyXp.mockReturnValue(query({ xp: 0, streak: 0, lastActiveOn: null }));
+  mocks.useMyXpEvents.mockReturnValue(query([]));
 });
 
 describe('the headline numbers', () => {
@@ -115,25 +126,40 @@ describe('what replaced the prototype', () => {
    * every figure of it from dummyData. For a real trainee that is a fabricated
    * ranking against fabricated peers.
    */
-  it('states no rank, XP or streak', () => {
-    mocks.useMyEnrollments.mockReturnValue(query([
-      { id: 'e1', courseId: 'c1', status: 'completed' },
-    ]));
+  /**
+   * This used to assert the opposite — that no XP figure appeared anywhere —
+   * because nothing awarded any and a number would have been invented. The
+   * triggers now pay for real work, so the figure is the honest thing to show.
+   */
+  it('leads with the XP that has actually been earned', () => {
+    mocks.useMyXp.mockReturnValue(query({ xp: 240, streak: 3, lastActiveOn: '2026-08-29' }));
     show();
-    // The page may SAY the word XP — it explains why there is none. What it
-    // must never do is state a figure, a rank or a streak as if it were real.
+    expect(tileValue('Total XP')).toBe('240');
+    expect(tileValue('Day streak')).toBe('3');
+  });
+
+  it('works out the level and what is left of it', () => {
+    mocks.useMyXp.mockReturnValue(query({ xp: 240, streak: 1, lastActiveOn: null }));
+    show();
+    // 240 XP at 100 to a level is level 3, 60 short of level 4.
+    expect(tileValue('Level')).toBe('3');
+    expect(screen.getByText(/60 XP to level 4/)).toBeInTheDocument();
+  });
+
+  /** A rank against peers was the prototype's invention and is still absent. */
+  it('still claims no rank against other trainees', () => {
+    mocks.useMyXp.mockReturnValue(query({ xp: 240, streak: 3, lastActiveOn: null }));
+    show();
     expect(screen.queryByText(/of \d+ trainees/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\d+\s*XP/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\d+-day streak/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^#\d+$/)).not.toBeInTheDocument();
   });
 
   // A blank where the badges were invites the question. Answer it in the page.
-  it('says why the badges are missing and that the work still counts', () => {
+  it('says which parts are still not built', () => {
     show();
     expect(screen.getByText(/not switched on yet/)).toBeInTheDocument();
-    expect(screen.getByText(/nothing you have already done will be lost/))
-      .toBeInTheDocument();
+    // ...and no longer claims XP is one of them.
+    expect(screen.getByText(/XP counts from/)).toBeInTheDocument();
   });
 });
 

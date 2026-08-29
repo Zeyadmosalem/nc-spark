@@ -10,6 +10,11 @@
   --brand-accent: #00A3E0;
   --brand-secondary: #003E7E;
   --brand-primary-light: #1A4F8B;
+  /* Inline links. Kept separate from --brand-primary because that colour is
+     also a gradient stop and a filled background, where a deep navy is
+     correct — as link text on the dark surface it measured 1.32:1, which is
+     invisible rather than merely low. */
+  --link: var(--brand-primary);
   --brand-accent-light: #33B5E8;
 
   /* Legacy aliases (for any remaining refs) */
@@ -84,6 +89,7 @@
 
 [data-theme="dark"] {
   /* Apple iOS/macOS Dark Mode */
+  --link: var(--brand-accent);   /* 5.9:1 on --surface; the navy is 1.3:1 */
   --bg: #000000;
   --bg-subtle: #0a0a0a;
   --surface: #1c1c1e;

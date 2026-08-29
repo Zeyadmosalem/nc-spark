@@ -2,6 +2,11 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useMyEnrollments, useCourses } from '../../hooks/useCourses';
 import { useMyQuizResults, useCompletedActivityCount } from '../../hooks/useProgress';
+import { useMyXp, useMyXpEvents } from '../../hooks/useXp';
+import { levelOf, pointsByDay, pointsByKind } from '../../api/xp';
+import TrendChart from '../../components/charts/TrendChart';
+import BarChart from '../../components/charts/BarChart';
+import { KIND_COLOR } from '../../components/charts/chartTokens';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
@@ -18,9 +23,14 @@ import Icon from '../../components/ui/Icon';
  * fabricated ranking against fabricated peers — the single most misleading
  * screen in the product.
  *
- * XP, badges, levels and the leaderboard are backlog B7: nothing awards them,
- * so there is nothing honest to render. What IS real, and has been unread
- * since M3 and M4, is completions and quiz results. That is what this shows.
+ * XP was display-only for four milestones: trainee_stats and activities.xp
+ * both existed, every activity page advertised "+10 XP", and nothing anywhere
+ * awarded a point — so this page deliberately showed completions and quiz
+ * results instead of inventing a score.
+ *
+ * The triggers in 20260829000200_xp.sql now pay for finishing an activity,
+ * passing a quiz and taking part in a course conversation, so the number is
+ * real and this page can lead with it.
  */
 
 const onDate = (iso) => {
@@ -36,12 +46,14 @@ export default function AchievementsPage() {
   const results = useMyQuizResults();
   const completions = useCompletedActivityCount(
     enrollments.data?.map((e) => e.id));
+  const stats = useMyXp();
+  const events = useMyXpEvents(200);
 
-  if (enrollments.isLoading || courses.isLoading || results.isLoading) {
+  if (enrollments.isLoading || courses.isLoading || results.isLoading || stats.isLoading) {
     return <PageSkeleton label="Loading your record" />;
   }
 
-  const failure = enrollments.error ?? courses.error ?? results.error;
+  const failure = enrollments.error ?? courses.error ?? results.error ?? stats.error;
   if (failure) {
     return (
       <div className="page-body">
@@ -63,6 +75,12 @@ export default function AchievementsPage() {
     ? Math.round(scored.reduce((sum, a) => sum + a.score, 0) / scored.length)
     : null;
 
+  const xp = stats.data ?? { xp: 0, streak: 0 };
+  const level = levelOf(xp.xp);
+  const history = pointsByDay(events.data ?? [], 30);
+  const sources = pointsByKind(events.data ?? []);
+  const earnedRecently = history.some((d) => d.points > 0);
+
   return (
     <motion.div
       className="page-body"
@@ -76,7 +94,27 @@ export default function AchievementsPage() {
         subtitle="Everything you have finished so far."
       />
 
-      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-4">
+      {/* Two groups rather than seven tiles in one grid, which wrapped 5 and
+          2 and read as an accident. Standing first, then the record. */}
+      <motion.div variants={fadeUp} custom={1} className="stat-grid stat-grid-3">
+        <StatCard label="Total XP" value={xp.xp} icon="achievements" color="var(--brand-primary)" />
+        <StatCard
+          label="Level"
+          value={level.level}
+          sub={`${level.toNext} XP to level ${level.level + 1}`}
+          icon="trend"
+          color="var(--brand-accent)"
+        />
+        <StatCard
+          label="Day streak"
+          value={xp.streak}
+          sub={xp.streak > 0 ? 'Keep it going' : 'Finish something today'}
+          icon="spark"
+          color="var(--warn)"
+        />
+      </motion.div>
+
+      <motion.div variants={fadeUp} custom={2} className="stat-grid stat-grid-4">
         <StatCard label="Courses completed" value={finished.length} icon="complete" color="#1a7f37" />
         <StatCard
           label="Activities completed"
@@ -93,7 +131,31 @@ export default function AchievementsPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} custom={2} className="card no-hover">
+      {earnedRecently && (
+        <motion.div variants={fadeUp} custom={2} className="card no-hover">
+          <h2 className="card-title"><Icon name="trend" size={16} />XP over the last 30 days</h2>
+          <TrendChart
+            data={history}
+            label="XP earned"
+            formatValue={(n) => `${n} XP`}
+          />
+        </motion.div>
+      )}
+
+      {sources.length > 0 && (
+        <motion.div variants={fadeUp} custom={3} className="card no-hover">
+          <h2 className="card-title"><Icon name="achievements" size={16} />Where your XP came from</h2>
+          <BarChart
+            rows={sources.map((slice) => ({
+              id: slice.kind, label: slice.label, value: slice.points,
+            }))}
+            formatValue={(n) => `${n} XP`}
+            colorFor={(row) => KIND_COLOR[row.id]}
+          />
+        </motion.div>
+      )}
+
+      <motion.div variants={fadeUp} custom={4} className="card no-hover">
         <h2 className="card-title"><Icon name="complete" size={16} />Courses you have finished</h2>
         {finished.length === 0 ? (
           <p className="text-sm muted-2 m-0">
@@ -161,12 +223,14 @@ export default function AchievementsPage() {
         )}
       </motion.div>
 
-      {/* Said out loud rather than left as a blank space, so nobody wonders
-          where the badges went. */}
-      <motion.div variants={fadeUp} custom={4} className="card no-hover">
+      {/* Badges and a leaderboard are still not built. Said out loud rather
+          than left as a blank space, and no longer claiming XP is missing:
+          XP is now real and leads this page. */}
+      <motion.div variants={fadeUp} custom={5} className="card no-hover">
         <p style={{ color: 'var(--text-3)', margin: 0, fontSize: '0.85rem' }}>
-          Badges, XP and the leaderboard are not switched on yet. When they are,
-          they will count the work above — nothing you have already done will be lost.
+          Badges and the leaderboard are not switched on yet. XP counts from
+          every activity you finish, every quiz you pass, and taking part in a
+          course conversation.
         </p>
       </motion.div>
     </motion.div>

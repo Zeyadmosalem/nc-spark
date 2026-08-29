@@ -2447,7 +2447,7 @@ input[type='radio'] {
 
 .semibold { font-weight: 600; }
 .bold { font-weight: 700; }
-.brand { color: var(--brand-primary); }
+.brand { color: var(--link); }
 .accent { color: var(--brand-accent); }
 .text-center { text-align: center; }
 .text-end { text-align: end; }
@@ -2489,4 +2489,104 @@ input[type='radio'] {
   padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
+}
+
+/* =============================================
+   Charts
+   -------------------------------------------
+   Grid and axes are recessive: they are a reference for the marks, not
+   content competing with them. Every text element wears a text token rather
+   than the series colour, so identity is carried by the mark beside it.
+   ============================================= */
+.chart-figure {
+  margin: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.chart-svg {
+  width: 100%;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-opacity: 0.5;
+}
+
+.chart-crosshair {
+  stroke: var(--text-3);
+  stroke-opacity: 0.45;
+  stroke-dasharray: 3 3;
+}
+
+.chart-axis-label,
+.chart-caption {
+  font-size: var(--text-xs);
+  fill: var(--text-3);
+  color: var(--text-3);
+}
+
+.chart-caption {
+  min-height: 1.2em;
+}
+
+.bar-chart {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.bar-label {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  position: relative;
+  height: 0.6rem;
+  background: var(--surface-alt);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+/* 4px rounded data-end, anchored flat to the baseline it grows from. */
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  transition: opacity var(--dur-fast) var(--ease), width var(--dur) var(--ease);
+}
+
+.bar-value {
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A name needs room before a bar is worth reading. */
+@media (max-width: 34rem) {
+  .bar-row {
+    grid-template-columns: 1fr auto;
+    row-gap: var(--sp-1);
+  }
+  .bar-label { grid-column: 1 / -1; }
+  .bar-track { grid-column: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill { transition: none; }
 }
