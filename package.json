@@ -23,32 +23,35 @@
     "db:seed-quizzes": "node ./scripts/seed-quizzes.mjs",
     "verify:m4": "node ./scripts/verify-m4.mjs",
     "db:seed-review": "node ./scripts/seed-review-users.mjs",
-    "verify:gate": "node ./scripts/verify-access-gate.mjs"
+    "verify:gate": "node ./scripts/verify-access-gate.mjs",
+    "deploy": "wrangler deploy",
+    "worker:dev": "wrangler dev"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@supabase/supabase-js": "^2.112.4",
-    "@tanstack/react-query": "^5.102.5",
+    "@tanstack/react-query": "^5.102.8",
     "dompurify": "^3.4.14",
     "framer-motion": "^12.43.0",
-    "lucide-react": "^1.34.0",
+    "lucide-react": "^1.35.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.1"
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.2",
+    "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
-    "@vitejs/plugin-react": "^6.1.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^29.1.1",
     "oxlint": "^1.80.0",
     "playwright": "^1.62.1",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.127.1"
   }
 }
