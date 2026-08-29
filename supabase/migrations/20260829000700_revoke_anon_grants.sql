@@ -1,0 +1,34 @@
+-- anon held every privilege on profiles and trainee_stats.
+--
+-- Not a policy problem — a grant problem, which is the stronger of the two.
+-- Both tables date from M1 and predate the `revoke all ... from anon,
+-- authenticated` line that every table since has opened with. What they were
+-- left holding was PostgreSQL's default from `grant all`:
+--
+--   anon -> SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--           on every column, profiles.role and profiles.status included.
+--
+-- Nothing was reachable through it. RLS is on, and every policy on both tables
+-- is `to authenticated`, so an anonymous caller got the silent-empty-set
+-- treatment: reads returned [], a DELETE reported 204 having matched no row.
+-- That is exactly the failure mode worth removing, because it is invisible.
+-- One policy written without `TO authenticated` — and `TO public` is what you
+-- get when the clause is omitted — would hand an anonymous caller the user
+-- table, with no error anywhere to say so.
+--
+-- The contrast with the rest of the schema is the tell. Every other table
+-- grants deliberately and narrowly: messages may be INSERTed only in
+-- (body, course_id, user_id), courses may be UPDATEd only in its presentation
+-- columns so a trainer cannot publish a course or reassign it. These two were
+-- simply never revisited.
+--
+-- Nothing is re-granted to anon. Nothing anonymous should reach either table:
+-- profiles is written by handle_new_user, which is definer, and trainee_stats
+-- by the XP trigger, which is definer too. Both run as the owner and are
+-- unaffected by what anon may do.
+revoke all on public.profiles      from anon;
+revoke all on public.trainee_stats from anon;
+
+-- authenticated's grants are already correct and deliberately column-scoped
+-- (profiles: SELECT on all, UPDATE on name and avatar only), so they are left
+-- exactly as they are. Restating them here would risk widening them.
