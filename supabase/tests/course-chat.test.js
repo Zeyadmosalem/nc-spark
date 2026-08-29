@@ -314,8 +314,15 @@ describe('a long conversation', () => {
 });
 
 describe('live delivery', () => {
-  /** Waits for one realtime INSERT, or gives up. */
-  const waitForMessage = (channel, ms = 12000) => new Promise((resolve) => {
+  /**
+   * Waits for one realtime INSERT, or gives up.
+   *
+   * 12s was enough alone and not enough with three other live files running:
+   * the socket handshake competes for the same connection budget, so the wait
+   * has to cover a slow open as well as a slow delivery. The it() timeout is
+   * 40s, so this still fails as a failure rather than as a hang.
+   */
+  const waitForMessage = (channel, ms = 25000) => new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), ms);
     channel.on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages' },

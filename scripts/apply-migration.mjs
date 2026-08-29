@@ -32,3 +32,33 @@ const res = await fetch(
 const body = await res.text();
 console.log(res.status, body.slice(0, 2000));
 if (!res.ok) process.exit(1);
+
+// Record it in the ledger the CLI reads.
+//
+// This script only ran the SQL, so supabase_migrations.schema_migrations never
+// learned about anything applied through it. The repo and the database then
+// disagreed about what had been applied — `supabase db push` would try a
+// migration that was already live, and comparing the two told you nothing.
+const name = file.split(/[\\/]/).pop();
+const version = name.split('_')[0];
+const label = name.replace(/^\d+_/, '').replace(/\.sql$/, '');
+
+if (/^\d{14}$/.test(version)) {
+  const record = await fetch(
+    `https://api.supabase.com/v1/projects/${env.SUPABASE_PROJECT_REF}/database/query`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.SUPABASE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `insert into supabase_migrations.schema_migrations (version, name)
+                values ('${version}', '${label}')
+                on conflict (version) do nothing;`,
+      }),
+    });
+  console.log(record.ok ? `recorded ${version}_${label}` : 'WARNING: could not record it');
+} else {
+  console.log(`WARNING: ${name} has no 14-digit version prefix; not recorded`);
+}
