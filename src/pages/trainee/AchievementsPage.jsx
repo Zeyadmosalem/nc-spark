@@ -7,6 +7,8 @@ import { levelOf, pointsByDay, pointsByKind } from '../../api/xp';
 import TrendChart from '../../components/charts/TrendChart';
 import BarChart from '../../components/charts/BarChart';
 import { KIND_COLOR } from '../../components/charts/chartTokens';
+import { useBadgeCatalog, useMyBadges } from '../../hooks/useBadges';
+import BadgeShelf from '../../components/gamification/BadgeShelf';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
@@ -48,6 +50,8 @@ export default function AchievementsPage() {
     enrollments.data?.map((e) => e.id));
   const stats = useMyXp();
   const events = useMyXpEvents(200);
+  const catalog = useBadgeCatalog();
+  const badges = useMyBadges();
 
   if (enrollments.isLoading || courses.isLoading || results.isLoading || stats.isLoading) {
     return <PageSkeleton label="Loading your record" />;
@@ -80,6 +84,7 @@ export default function AchievementsPage() {
   const history = pointsByDay(events.data ?? [], 30);
   const sources = pointsByKind(events.data ?? []);
   const earnedRecently = history.some((d) => d.points > 0);
+  const earnedCount = badges.data?.size ?? 0;
 
   return (
     <motion.div
@@ -223,15 +228,19 @@ export default function AchievementsPage() {
         )}
       </motion.div>
 
-      {/* Badges and a leaderboard are still not built. Said out loud rather
-          than left as a blank space, and no longer claiming XP is missing:
-          XP is now real and leads this page. */}
       <motion.div variants={fadeUp} custom={5} className="card no-hover">
-        <p style={{ color: 'var(--text-3)', margin: 0, fontSize: '0.85rem' }}>
-          Badges and the leaderboard are not switched on yet. XP counts from
-          every activity you finish, every quiz you pass, and taking part in a
-          course conversation.
-        </p>
+        <h2 className="card-title">
+          <Icon name="achievements" size={16} />
+          Badges
+          <span className="section-count">
+            {earnedCount} of {catalog.data?.length ?? 0}
+          </span>
+        </h2>
+        {catalog.isLoading ? (
+          <p className="muted-2">Loading badges…</p>
+        ) : (
+          <BadgeShelf catalog={catalog.data} earned={badges.data} />
+        )}
       </motion.div>
     </motion.div>
   );

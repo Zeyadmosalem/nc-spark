@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   useMyEnrollments: vi.fn(), useCourses: vi.fn(),
   useMyQuizResults: vi.fn(), useCompletedActivityCount: vi.fn(),
   useMyXp: vi.fn(), useMyXpEvents: vi.fn(),
+  useBadgeCatalog: vi.fn(), useMyBadges: vi.fn(),
 }));
 vi.mock('../../hooks/useCourses', () => ({
   useMyEnrollments: mocks.useMyEnrollments, useCourses: mocks.useCourses,
@@ -16,6 +17,9 @@ vi.mock('../../hooks/useProgress', () => ({
 }));
 vi.mock('../../hooks/useXp', () => ({
   useMyXp: mocks.useMyXp, useMyXpEvents: mocks.useMyXpEvents,
+}));
+vi.mock('../../hooks/useBadges', () => ({
+  useBadgeCatalog: mocks.useBadgeCatalog, useMyBadges: mocks.useMyBadges,
 }));
 
 const AchievementsPage = (await import('./AchievementsPage')).default;
@@ -46,6 +50,11 @@ beforeEach(() => {
   mocks.useCompletedActivityCount.mockReturnValue(query(0));
   mocks.useMyXp.mockReturnValue(query({ xp: 0, streak: 0, lastActiveOn: null }));
   mocks.useMyXpEvents.mockReturnValue(query([]));
+  mocks.useBadgeCatalog.mockReturnValue(query([
+    { code: 'first_steps', name: 'First steps', description: 'Finished your first activity.', icon: 'spark' },
+    { code: 'century', name: 'Century', description: 'Earned 100 XP.', icon: 'achievements' },
+  ]));
+  mocks.useMyBadges.mockReturnValue(query(new Map()));
 });
 
 describe('the headline numbers', () => {
@@ -154,12 +163,27 @@ describe('what replaced the prototype', () => {
     expect(screen.queryByText(/^#\d+$/)).not.toBeInTheDocument();
   });
 
-  // A blank where the badges were invites the question. Answer it in the page.
-  it('says which parts are still not built', () => {
+  /**
+   * The unearned badges are shown on purpose. A shelf of only what you already
+   * have says nothing about what to do next, and the whole point of a badge is
+   * that it is visible before it is yours.
+   */
+  it('shows badges that have not been earned, marked as such', () => {
     show();
-    expect(screen.getByText(/not switched on yet/)).toBeInTheDocument();
-    // ...and no longer claims XP is one of them.
-    expect(screen.getByText(/XP counts from/)).toBeInTheDocument();
+    expect(screen.getByText('First steps')).toBeInTheDocument();
+    expect(screen.getAllByText('Not yet')).toHaveLength(2);
+    expect(screen.getByText('0 of 2')).toBeInTheDocument();
+  });
+
+  it('says when an earned badge was earned', () => {
+    mocks.useMyBadges.mockReturnValue(
+      query(new Map([['first_steps', '2026-08-01T00:00:00Z']])));
+    show();
+    // The exact date format is the runtime's business; that it says WHEN is
+    // this test's.
+    expect(screen.getByText(/^Earned .*2026/)).toBeInTheDocument();
+    expect(screen.getAllByText('Not yet')).toHaveLength(1);
+    expect(screen.getByText('1 of 2')).toBeInTheDocument();
   });
 });
 

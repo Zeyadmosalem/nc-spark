@@ -2598,3 +2598,120 @@ input[type='radio'] {
   gap: var(--gap-md);
   grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
 }
+
+/* =============================================
+   Badges
+   -------------------------------------------
+   Unearned tiles are dimmed and say "Not yet" in words: status carried by
+   opacity alone is invisible to anyone who cannot see the difference.
+   ============================================= */
+.badge-shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+.badge-tile {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+.badge-tile.is-earned {
+  opacity: 1;
+  filter: none;
+  background: var(--surface);
+  border-color: var(--brand-accent);
+  box-shadow: var(--shadow-xs);
+}
+
+.badge-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+.badge-tile.is-earned .badge-tile-icon {
+  background: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+  color: var(--brand-accent);
+}
+
+.badge-tile-name {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--heading);
+}
+
+.badge-tile-desc {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+
+.badge-tile-state {
+  font-size: var(--text-2xs);
+  font-weight: 650;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-tile.is-earned .badge-tile-state { color: var(--success); }
+
+/* The leaderboard: a rank, a person, a total. */
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 2rem auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--surface-alt);
+}
+
+.leaderboard-row.is-me {
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  outline: 1px solid var(--brand-accent);
+}
+
+.leaderboard-position {
+  font-weight: 700;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.leaderboard-xp {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-tile { transition: none; }
+}

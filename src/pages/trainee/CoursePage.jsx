@@ -5,6 +5,8 @@ import { useCourseOutline, useMyEnrollments } from '../../hooks/useCourses';
 import { useMyCompletions } from '../../hooks/useProgress';
 import { moduleLockState } from '../../api/progress';
 import CourseChat from '../../components/shared/CourseChat';
+import { useSession } from '../../hooks/useSession';
+import { useCourseLeaderboard } from '../../hooks/useBadges';
 import QueryError from '../../components/shared/QueryError';
 import PageSkeleton from '../../components/ui/Skeleton';
 import PageHeader from '../../components/ui/PageHeader';
@@ -22,6 +24,8 @@ export default function CoursePage() {
   } = useMyEnrollments();
 
   const [activeTab, setActiveTab] = useState('path');
+  const { profile } = useSession();
+  const leaderboard = useCourseLeaderboard(courseId);
 
   // Above the early returns, like every other hook here: this page has
   // already crashed once with "Rendered fewer hooks than expected" because
@@ -160,6 +164,7 @@ export default function CoursePage() {
           { id: 'path', label: 'Learning path', icon: 'curriculum' },
           { id: 'materials', label: 'Materials', icon: 'attachment' },
           { id: 'chat', label: 'Course chat', icon: 'support' },
+          { id: 'standing', label: 'Standing', icon: 'achievements' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -291,6 +296,45 @@ export default function CoursePage() {
               say anything else: course_materials, its RLS and the private
               bucket have existed since M3 with nothing reading them. */}
           {activeTab === 'materials' && <CourseMaterials courseId={courseId} />}
+
+          {activeTab === 'standing' && (
+            <div className="card no-hover stack-md">
+              <div>
+                <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>Standing</h2>
+                <p className="muted-2" style={{ margin: 0 }}>
+                  XP earned on this course by everyone taking it.
+                </p>
+              </div>
+
+              {leaderboard.error && (
+                <QueryError error={leaderboard.error} what="the standing" />
+              )}
+
+              {leaderboard.isLoading ? (
+                <p className="muted-2">Loading…</p>
+              ) : (leaderboard.data ?? []).length === 0 ? (
+                <p className="muted-2">Nobody has earned anything on this course yet.</p>
+              ) : (
+                <ol className="leaderboard">
+                  {leaderboard.data.map((row) => (
+                    <li
+                      key={row.traineeId}
+                      className={`leaderboard-row${row.traineeId === profile?.id ? ' is-me' : ''}`}
+                    >
+                      <span className="leaderboard-position">{row.position}</span>
+                      <span className="avatar" aria-hidden="true">
+                        {row.avatar || row.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="leaderboard-name">
+                        {row.traineeId === profile?.id ? 'You' : row.name}
+                      </span>
+                      <span className="leaderboard-xp">{row.xp} XP</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
 
           {activeTab === 'chat' && (
             <CourseChat
