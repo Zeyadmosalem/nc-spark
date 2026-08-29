@@ -1,21 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useSession } from '../../hooks/useSession';
-import { useMyEnrollments, useCourses } from '../../hooks/useCourses';
-import {
-  useSupportThreads, useSupportMessages, useCreateSupportRequest,
-  useReplyToSupport, useSetSupportStatus, useMarkSupportRead,
-} from '../../hooks/useSupport';
+import { useSupportThreads } from '../../hooks/useSupport';
 import QueryError from '../shared/QueryError';
 import PageSkeleton from '../ui/Skeleton';
 import PageHeader from '../ui/PageHeader';
 import EmptyState from '../ui/EmptyState';
 import Button from '../ui/Button';
 import Icon from '../ui/Icon';
-import Alert from '../ui/Alert';
-import { useToast } from '../ui/toast-context';
-import { item, stagger, SPRING_SOFT, EASE_OUT } from '../../lib/motion';
-import { formatDate } from '../../lib/format';
+import { stagger, SPRING_SOFT, EASE_OUT } from '../../lib/motion';
+import ThreadRow from './ThreadRow';
+import NewRequestForm from './NewRequestForm';
+import Thread from './Thread';
 
 /**
  * Support, as an inbox.
@@ -34,9 +29,6 @@ import { formatDate } from '../../lib/format';
  * RLS, not here.
  */
 
-const ROLE_LABEL = {
-  trainee: 'Trainee', trainer: 'Trainer', supervisor: 'Supervisor', admin: 'Administrator',
-};
 
 const FILTERS = {
   all: { label: 'All', match: () => true },
@@ -45,18 +37,6 @@ const FILTERS = {
   closed: { label: 'Closed', match: (t) => t.status === 'closed' },
 };
 
-const when = (iso) => {
-  const ms = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(ms)) return '';
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return formatDate(iso, { year: false });
-};
 
 export default function SupportInbox({
   canCreate = false,
@@ -205,262 +185,7 @@ export default function SupportInbox({
 
 /* ------------------------------------------------------------------- list */
 
-function ThreadRow({ thread, selected, onOpen }) {
-  const { profile } = useSession();
-  const mine = thread.authorId === profile?.id;
-  const closed = thread.status === 'closed';
-
-  return (
-    <motion.li variants={item}>
-      <button
-        type="button"
-        className={`inbox-thread${selected ? ' is-selected' : ''}${thread.unreadCount ? ' is-unread' : ''}`}
-        aria-current={selected ? 'true' : undefined}
-        onClick={onOpen}
-      >
-        <span className="avatar avatar-sm" aria-hidden="true">
-          {thread.authorAvatar || thread.authorName.charAt(0)}
-        </span>
-        <span className="inbox-thread-main">
-          <span className="inbox-thread-top">
-            <span className="inbox-thread-subject">{thread.subject}</span>
-            <span className="inbox-thread-time">{when(thread.lastMessageAt)}</span>
-          </span>
-          <span className="inbox-thread-meta">
-            {mine ? 'You' : thread.authorName}
-            {thread.courseTitle ? ` · ${thread.courseTitle}` : ' · General'}
-          </span>
-          <span className="inbox-thread-tags">
-            {closed && <span className="badge-pill pill-neutral">Closed</span>}
-            {!closed && thread.awaitingStaff && !mine && (
-              <span className="badge-pill pill-warning">Needs a reply</span>
-            )}
-            {!closed && !thread.awaitingStaff && mine && thread.hasReply && (
-              <span className="badge-pill pill-positive">Answered</span>
-            )}
-            {thread.unreadCount > 0 && (
-              <span className="badge-dot" aria-hidden="true">{thread.unreadCount}</span>
-            )}
-            {/* The dot is decorative; this is what a screen reader gets. */}
-            {thread.unreadCount > 0 && (
-              <span className="sr-only">{thread.unreadCount} unread</span>
-            )}
-          </span>
-        </span>
-      </button>
-    </motion.li>
-  );
-}
-
 /* ----------------------------------------------------------- new request */
-
-function NewRequestForm({ onDone }) {
-  const { notify } = useToast();
-  const create = useCreateSupportRequest();
-  const enrollments = useMyEnrollments();
-  const courses = useCourses();
-
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [courseId, setCourseId] = useState('');
-
-  const byId = new Map((courses.data ?? []).map((c) => [c.id, c]));
-  const mine = (enrollments.data ?? [])
-    .filter((e) => e.status === 'active' || e.status === 'completed')
-    .map((e) => byId.get(e.courseId))
-    .filter(Boolean);
-
-  const problem = !subject.trim()
-    ? 'Give it a subject, so whoever picks it up knows what it is about.'
-    : !body.trim()
-      ? 'Describe what is happening.'
-      : null;
-
-  function submit(e) {
-    e.preventDefault();
-    if (problem) return;
-    create.mutate({ subject, body, courseId: courseId || null }, {
-      onSuccess: (thread) => {
-        notify('Sent. The reply arrives here.');
-        onDone(thread?.id);
-      },
-    });
-  }
-
-  return (
-    <form onSubmit={submit} className="card no-hover stack-md">
-      <h2 className="card-title"><Icon name="support" size={16} />Ask for help</h2>
-
-      <div className="field">
-        <label className="input-label" htmlFor="support-subject">Subject</label>
-        <input
-          id="support-subject" className="input-field" maxLength={200} autoFocus
-          placeholder="Module 2 will not open"
-          value={subject} onChange={(e) => setSubject(e.target.value)}
-        />
-      </div>
-
-      {/* A course is context for the administrator, not a routing choice. */}
-      <div className="field">
-        <label className="input-label" htmlFor="support-course">Which course? (optional)</label>
-        <select
-          id="support-course" className="input-field" value={courseId}
-          onChange={(e) => setCourseId(e.target.value)}
-          aria-describedby="support-course-hint"
-        >
-          <option value="">Not about a course — send to an administrator</option>
-          {mine.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-        </select>
-        <p id="support-course-hint" className="input-hint">
-          This adds course context for an administrator. All support requests
-          are answered by the admin team.
-        </p>
-      </div>
-
-      <div className="field">
-        <label className="input-label" htmlFor="support-body">What is happening?</label>
-        <textarea
-          id="support-body" className="input-field" rows={6} maxLength={4000}
-          placeholder="I finished everything in module 1 but the next one is still locked."
-          value={body} onChange={(e) => setBody(e.target.value)}
-        />
-      </div>
-
-      {problem && <p className="input-hint input-hint-warn">{problem}</p>}
-      <Alert error={create.error} />
-
-      <div className="cluster">
-        <Button type="submit" variant="primary" pending={create.isPending} disabled={Boolean(problem)}>
-          Send
-        </Button>
-        <Button variant="ghost" onClick={() => onDone(null)}>Cancel</Button>
-      </div>
-    </form>
-  );
-}
 
 /* ----------------------------------------------------------- one thread */
 
-function Thread({ thread, onBack }) {
-  const { profile } = useSession();
-  const { notify } = useToast();
-  const messages = useSupportMessages(thread.id);
-  const reply = useReplyToSupport();
-  const setStatus = useSetSupportStatus();
-  const markRead = useMarkSupportRead();
-  const [body, setBody] = useState('');
-  const endRef = useRef(null);
-
-  const closed = thread.status === 'closed';
-  const mine = thread.authorId === profile?.id;
-
-  // Opening a thread is what "read" means. Only when there is something to
-  // clear, so switching between read threads does not write a row each time.
-  const { mutate: mark } = markRead;
-  const unread = thread.unreadCount;
-  useEffect(() => {
-    if (unread > 0) mark({ requestId: thread.id });
-  }, [thread.id, unread, mark]);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [messages.data?.length]);
-
-  function send(e) {
-    e.preventDefault();
-    if (!body.trim()) return;
-    reply.mutate({ requestId: thread.id, body }, { onSuccess: () => setBody('') });
-  }
-
-  return (
-    <section className="card no-hover thread-pane" aria-label={thread.subject}>
-      <header className="thread-head">
-        {/* Only reachable on a narrow screen, where the list is a separate
-            view. On a wide one the list is still there beside this. */}
-        <button type="button" className="btn btn-ghost btn-sm btn-icon thread-back"
-                onClick={onBack} aria-label="Back to the list">
-          <Icon name="back" size={16} />
-        </button>
-        <div className="grow">
-          <h2 className="thread-subject">{thread.subject}</h2>
-          <p className="thread-meta">
-            {thread.courseTitle ?? 'General'}
-            {' · '}
-            {mine ? 'You asked' : `${thread.authorName} asked`}
-          </p>
-        </div>
-        {closed && <span className="badge-pill pill-neutral push-end">Closed</span>}
-      </header>
-
-      {messages.isLoading && <p className="text-sm muted">Loading the conversation…</p>}
-      {messages.error && <QueryError error={messages.error} what="this conversation" />}
-
-      <div className="support-messages">
-        {(messages.data ?? []).map((m) => {
-          const own = m.authorId === profile?.id;
-          return (
-            <motion.div
-              key={m.id}
-              className={`support-message${own ? ' is-own' : ''}`}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-              transition={SPRING_SOFT}
-            >
-              <div className="support-message-meta">
-                <strong>{own ? 'You' : m.authorName}</strong>
-                {!own && m.authorRole && (
-                  <span className="chip">{ROLE_LABEL[m.authorRole] ?? m.authorRole}</span>
-                )}
-                <span className="muted">{when(m.createdAt)}</span>
-              </div>
-              {/*
-                Rendered as text, never as markup. This is the one place in the
-                product where one user's words reach another's screen.
-              */}
-              <p className="support-message-body">{m.body}</p>
-            </motion.div>
-          );
-        })}
-        <div ref={endRef} />
-      </div>
-
-      {closed ? (
-        <div className="support-closed">
-          <p className="text-sm muted m-0">
-            Closed. Reopen it to add anything else — a reply on a closed thread
-            is refused, so it would not reach anyone.
-          </p>
-          <Button variant="secondary" size="sm" icon="retry" pending={setStatus.isPending}
-                  onClick={() => setStatus.mutate(
-                    { requestId: thread.id, status: 'open' },
-                    { onSuccess: () => notify('Reopened.') })}>
-            Reopen
-          </Button>
-        </div>
-      ) : (
-        <form onSubmit={send} className="support-reply">
-          <label className="sr-only" htmlFor={`reply-${thread.id}`}>
-            Reply to {thread.subject}
-          </label>
-          <textarea
-            id={`reply-${thread.id}`} className="input-field" rows={3} maxLength={4000}
-            placeholder={mine ? 'Add anything else…' : 'Write a reply…'}
-            value={body} onChange={(e) => setBody(e.target.value)}
-          />
-          <div className="cluster">
-            <Button type="submit" variant="primary" size="sm" icon="forward"
-                    pending={reply.isPending} disabled={!body.trim()}>
-              Send
-            </Button>
-            <Button variant="ghost" size="sm" icon="done" pending={setStatus.isPending}
-                    onClick={() => setStatus.mutate(
-                      { requestId: thread.id, status: 'closed' },
-                      { onSuccess: () => notify('Closed.') })}>
-              {mine ? 'This is sorted' : 'Mark resolved'}
-            </Button>
-          </div>
-          <Alert error={reply.error ?? setStatus.error} />
-        </form>
-      )}
-    </section>
-  );
-}
