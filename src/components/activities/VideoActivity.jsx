@@ -12,7 +12,7 @@ export default function VideoActivity({ activity }) {
           title={activity.title}
         />
       </div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', display: 'flex', justifyContent: 'space-between' }}>
+      <div className="u-row-top u-text-base muted-2 u-between">
         <span>Video duration: {activity.duration || 'Unknown'}</span>
         <span>Watch the entire video before marking complete.</span>
       </div>

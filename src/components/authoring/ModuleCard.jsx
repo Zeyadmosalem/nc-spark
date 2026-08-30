@@ -111,7 +111,7 @@ export default function ModuleCard({ courseId, module: mod, earlier }) {
 
       <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
         {mod.activities.length === 0 && !adding && (
-          <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>
+          <p className="muted u-text-sm u-m0">
             No activities in this module yet.
           </p>
         )}
@@ -130,7 +130,7 @@ export default function ModuleCard({ courseId, module: mod, earlier }) {
           onDone={() => setAdding(false)}
         />
       ) : (
-        <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }}
+        <button type="button" className="btn btn-ghost btn-sm u-mt-3"
                 onClick={() => setAdding(true)}>
           + Add activity
         </button>

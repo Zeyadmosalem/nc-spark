@@ -240,7 +240,7 @@ export default function CoursePage() {
                     {activities.length === 0 ? (
                       <p className="text-sm muted">No activities yet.</p>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <div className="u-col u-gap-2 u-mt-3">
                         {activities.map((a) => {
                           const isDone = done.has(a.id);
                           const shared = {

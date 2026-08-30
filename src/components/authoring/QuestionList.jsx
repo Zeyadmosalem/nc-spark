@@ -34,7 +34,7 @@ export default function QuestionList({ quiz, questions, activityId, courseId }) 
         </EmptyState>
       ) : (
         <>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-2)', margin: 0 }}>
+          <p className="u-text-sm muted-2 u-m0">
             {questions.length} question{questions.length === 1 ? '' : 's'} ·{' '}
             {totalPoints} point{totalPoints === 1 ? '' : 's'} · a trainee needs{' '}
             {needed} to pass.

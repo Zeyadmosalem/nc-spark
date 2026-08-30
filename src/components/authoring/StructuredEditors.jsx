@@ -57,7 +57,7 @@ function RowFrame({ label, index, onRemove, canRemove, children }) {
     >
       <div className="cluster">
         <Ordinal>{index + 1}</Ordinal>
-        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{label} {index + 1}</span>
+        <span className="u-semibold u-text-sm">{label} {index + 1}</span>
         <div style={{ marginLeft: 'auto' }}>
           {/* Removing the last one would leave content the renderer draws as
               "No cards provided", so the control goes away at one rather than
@@ -106,7 +106,7 @@ export function FlashcardsEditor({ content, onChange, idPrefix = 'fc' }) {
 
   return (
     <div style={listStyle}>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', margin: 0 }}>
+      <p className="u-text-sm muted u-m0">
         A prompt on the front, the answer on the back. Trainees flip through them
         in order.
       </p>
@@ -119,7 +119,7 @@ export function FlashcardsEditor({ content, onChange, idPrefix = 'fc' }) {
             canRemove={cards.length > 1}
             onRemove={() => set(cards.filter((_, j) => j !== i))}
           >
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="u-row-top u-gap-sm u-wrap">
               <div className="grow-field">
                 <label className="input-label" htmlFor={`${idPrefix}-front-${i}`}>Front</label>
                 <input
@@ -160,7 +160,7 @@ export function MatchingEditor({ content, onChange, idPrefix = 'mt' }) {
       {/* The renderer shuffles the definition column by reversing it, so two
           identical definitions make one of them unmatchable. Worth saying
           before it is discovered by a trainee who cannot finish the module. */}
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', margin: 0 }}>
+      <p className="u-text-sm muted u-m0">
         Trainees drag each term onto its definition. Keep every definition
         distinct — two identical ones cannot be told apart.
       </p>
@@ -173,7 +173,7 @@ export function MatchingEditor({ content, onChange, idPrefix = 'mt' }) {
             canRemove={pairs.length > 1}
             onRemove={() => set(pairs.filter((_, j) => j !== i))}
           >
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="u-row-top u-gap-sm u-wrap">
               <div style={{ flex: 1, minWidth: 160 }}>
                 <label className="input-label" htmlFor={`${idPrefix}-term-${i}`}>Term</label>
                 <input
@@ -213,7 +213,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
 
   return (
     <div style={listStyle}>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', margin: 0 }}>
+      <p className="u-text-sm muted u-m0">
         A situation, then the options a trainee picks from. Each option shows its
         feedback once chosen, so write the wrong ones as teaching, not scolding.
       </p>
@@ -297,8 +297,7 @@ export function ScenarioEditor({ content, onChange, idPrefix = 'sc' }) {
                           </label>
                           <input
                             id={`${idPrefix}-fb-${i}-${c}`}
-                            className="input-field"
-                            style={{ fontSize: '0.85rem' }}
+                            className="input-field u-text-sm"
                             placeholder="Why this is right, or what it misses"
                             value={choice.feedback ?? ''}
                             onChange={(e) => setChoices(

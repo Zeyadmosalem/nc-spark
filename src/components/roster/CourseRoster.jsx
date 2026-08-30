@@ -262,7 +262,7 @@ function PersonRow({ person, activities }) {
               Activities
             </div>
             {activities.length === 0 ? (
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', margin: 0 }}>
+              <p className="u-text-sm muted u-m0">
                 This course has no activities yet.
               </p>
             ) : (
@@ -307,7 +307,7 @@ function PersonRow({ person, activities }) {
                 {person.attempts.map((a) => (
                   <div key={a.id} className="data-row" style={{ padding: '0.35rem 0.5rem' }}>
                     <div className="data-row-main">
-                      <div className="data-row-title" style={{ fontSize: '0.85rem' }}>
+                      <div className="data-row-title u-text-sm">
                         {a.quizTitle}
                       </div>
                       <div className="data-row-meta">
@@ -315,7 +315,7 @@ function PersonRow({ person, activities }) {
                         {a.attemptNo > 1 ? ` · attempt ${a.attemptNo}` : ''}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                    <div className="u-row u-gap-sm">
                       {/* A dash, not a zero. An unmarked paragraph has no
                           score yet, and 0% reads as a fail. */}
                       <span className="bold">

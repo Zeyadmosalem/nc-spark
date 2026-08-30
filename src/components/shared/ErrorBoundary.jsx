@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component {
           <div className="empty-state-icon" style={{ margin: '0 auto 1rem', color: 'var(--danger)' }}>
               <Icon name="warning" size={24} />
             </div>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
+          <h2 className="u-text-xl u-mb-2 u-heading">
             {title}
           </h2>
           <p style={{ color: 'var(--text-2)', maxWidth: '48ch', margin: '0 auto 1.5rem' }}>

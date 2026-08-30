@@ -130,7 +130,7 @@ export default function UserManager() {
           question an administrator of a training programme actually has. */}
       <section className="card no-hover stack-md">
         <div className="section-header" style={{ marginBottom: 0 }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Platform use</h2>
+          <h2 className="u-text-md u-m0">Platform use</h2>
           <span className="section-count">last 30 days</span>
         </div>
 
@@ -187,8 +187,8 @@ export default function UserManager() {
       {/* The queue comes first and unprompted. A pending user cannot sign in,
           and nothing else in the product tells anyone they are waiting. */}
       <section>
-        <div className="section-header" style={{ marginBottom: '0.75rem' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Waiting for approval</h2>
+        <div className="section-header u-mb-3">
+          <h2 className="u-text-md u-m0">Waiting for approval</h2>
           {queue.length > 0 && (
             <span className="section-count">
               {queue.length} {queue.length === 1 ? 'person' : 'people'}
@@ -214,8 +214,8 @@ export default function UserManager() {
           controls: allowlisting a domain is what stops signups landing there
           in the first place. */}
       <section>
-        <div className="section-header" style={{ marginBottom: '0.75rem' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Who skips approval</h2>
+        <div className="section-header u-mb-3">
+          <h2 className="u-text-md u-m0">Who skips approval</h2>
         </div>
         <AllowedDomains />
       </section>

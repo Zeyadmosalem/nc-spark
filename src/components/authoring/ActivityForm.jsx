@@ -39,11 +39,7 @@ export default function ActivityForm({ moduleId, courseId, nextPosition, mutatio
   }
 
   return (
-    <form onSubmit={submit} style={{
-      marginTop: '1rem', padding: '1rem', borderRadius: 'var(--r-lg)',
-      background: 'var(--surface-alt)', border: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', gap: '0.75rem',
-    }}>
+    <form onSubmit={submit} className="u-col u-mt-4 u-p4 u-r-lg u-alt u-bordered u-gap-3">
       <div className="cluster">
         <div>
           <label className="input-label" htmlFor="act-type">Type</label>

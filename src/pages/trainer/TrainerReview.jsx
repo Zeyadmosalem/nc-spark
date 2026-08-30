@@ -51,12 +51,12 @@ export default function TrainerReview() {
       ) : (
         <>
           <section className="stack-md">
-            <h2 style={{ fontSize: '1.1rem' }}>
+            <h2 className="u-text-md">
               <Icon name="review" size={16} />
             Paragraphs awaiting a grade ({paragraphs.length})
             </h2>
             {paragraphs.length === 0
-              ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
+              ? <p className="muted u-text-base">None right now.</p>
               : paragraphs.map((a) => <ParagraphCard key={a.attemptId} attempt={a} />)}
           </section>
 
@@ -66,7 +66,7 @@ export default function TrainerReview() {
               Blocked on a retake ({stuck.length})
             </h2>
             {stuck.length === 0
-              ? <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>None right now.</p>
+              ? <p className="muted u-text-base">None right now.</p>
               : stuck.map((a) => (
                 <RetakeCard
                   key={a.attemptId}
@@ -118,7 +118,7 @@ function ParagraphCard({ attempt }) {
       )}
 
       <div className="cluster">
-        <label style={{ fontSize: '0.8rem', color: 'var(--text-2)' }}>
+        <label className="u-text-sm muted-2">
           Marks awarded (out of {first.points})
           <input
             className="input-field" type="number" min={0} max={first.points}

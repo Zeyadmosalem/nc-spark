@@ -24,7 +24,7 @@ export default function CourseDialog({ title, form, setForm, submitting, error, 
           border: '1px solid var(--border)', boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h2 style={{ marginBottom: '1.5rem', fontFamily: 'var(--font-heading)' }}>{title}</h2>
+        <h2 className="u-mb-6 u-heading">{title}</h2>
 
         <form className="stack-md" onSubmit={onSubmit}>
           <div>

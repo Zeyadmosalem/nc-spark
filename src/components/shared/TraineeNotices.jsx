@@ -56,8 +56,8 @@ function Notice({ tone, icon, children }) {
   return (
     <div className="card no-hover" role="status"
          style={{ display: 'flex', gap: '0.75rem', padding: '1rem', borderLeft: `4px solid ${tone}` }}>
-      <span style={{ fontSize: '1.2rem' }}>{icon}</span>
-      <div style={{ fontSize: '0.9rem' }}>{children}</div>
+      <span className="u-text-lg">{icon}</span>
+      <div className="u-text-base">{children}</div>
     </div>
   );
 }

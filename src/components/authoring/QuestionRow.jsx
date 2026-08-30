@@ -23,7 +23,7 @@ export default function QuestionRow({ question, index, last, quiz, activityId, c
         border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '0.6rem 0.8rem',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'space-between' }}>
+      <div className="u-row u-gap-sm u-between">
         <div className="cluster grow">
           <span style={{
             width: 24, height: 24, borderRadius: '50%', flexShrink: 0, fontSize: '0.72rem',
@@ -83,7 +83,7 @@ export default function QuestionRow({ question, index, last, quiz, activityId, c
       <Alert error={remove.error} />
 
       {open && (
-        <div style={{ marginTop: '0.75rem' }}>
+        <div className="u-mt-3">
           <QuestionForm
             quiz={quiz}
             activityId={activityId}

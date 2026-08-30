@@ -32,7 +32,7 @@ function Figure({ label, value }) {
       <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.15rem' }}>
         {value}
       </div>
-      <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{label}</div>
+      <div className="u-text-xs muted">{label}</div>
     </div>
   );
 }
@@ -144,7 +144,7 @@ export default function SupervisorCourses() {
                       {course.icon ?? '📘'}
                     </div>
                     <div className="grow">
-                      <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>
+                      <h2 className="u-text-md u-semibold u-m0">
                         {course.title}
                       </h2>
                       <div className="text-xs muted">
@@ -163,7 +163,7 @@ export default function SupervisorCourses() {
                 </div>
 
                 {cohort.length > 0 && (
-                  <div style={{ marginTop: '1rem' }}>
+                  <div className="u-mt-4">
                     <div className="progress-track">
                       <div className="progress-fill" style={{ width: `${progress ?? 0}%` }} />
                     </div>

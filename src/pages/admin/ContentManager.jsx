@@ -105,7 +105,7 @@ export default function ContentManager() {
           cannot be edited or published by anyone but an admin. */}
       {queue.length > 0 && (
         <section>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+          <h2 className="u-text-md u-mb-3">
             Trainers asking to teach ({queue.length})
           </h2>
           <div className="grid-sm">

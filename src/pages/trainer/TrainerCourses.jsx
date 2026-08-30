@@ -77,7 +77,7 @@ export default function TrainerCourses() {
 
       {unclaimed.length > 0 && (
         <section>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+          <h2 className="u-text-md u-mb-3">
             Courses looking for a trainer ({unclaimed.length})
           </h2>
           <div className="grid-sm">
@@ -111,7 +111,7 @@ function MyCourseRow({ course, content }) {
             {course.icon ?? '📘'}
           </div>
           <div className="grow">
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>{course.title}</h3>
+            <h3 className="u-text-md u-semibold u-m0">{course.title}</h3>
             {course.subtitle && (
               <div className="text-sm muted-2">{course.subtitle}</div>
             )}
@@ -177,7 +177,7 @@ function ClaimRow({ course, alreadyAsked }) {
     <div className="card no-hover">
       <div className="cluster-between">
         <div className="cluster grow">
-          <span style={{ fontSize: '1.2rem' }}>{course.icon ?? '📘'}</span>
+          <span className="u-text-lg">{course.icon ?? '📘'}</span>
           <div>
             <div className="semibold">{course.title}</div>
             {course.subtitle && (

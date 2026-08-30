@@ -185,10 +185,7 @@ function AddMaterial({ courseId, onDone }) {
   return (
     <form
       onSubmit={submit}
-      style={{
-        padding: '1rem', borderRadius: 'var(--r-lg)', background: 'var(--surface-alt)',
-        border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.75rem',
-      }}
+      className="u-col u-p4 u-r-lg u-alt u-bordered u-gap-3"
     >
       <div className="tab-navigation" style={{ marginBottom: 0 }}>
         <button type="button" className={`tab-item ${mode === 'file' ? 'active' : ''}`}

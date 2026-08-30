@@ -69,7 +69,7 @@ export default function PageSkeleton({ label = 'Loading', stats = 4, rows = 4 })
     <div className="page-body stack-lg">
       <LoadingLabel>{label}</LoadingLabel>
       <div aria-hidden="true">
-        <Skeleton width={110} height="0.7rem" style={{ marginBottom: '0.75rem' }} />
+        <Skeleton width={110} height="0.7rem" className="u-mb-3" />
         <div className="skeleton skeleton-title" />
       </div>
       {stats > 0 && <SkeletonStats count={stats} />}

@@ -91,7 +91,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
   return (
     <div className="page-body stack-lg">
       <div>
-        <Link to={backTo} style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
+        <Link to={backTo} className="u-text-sm muted">
           <Icon name="back" size={14} />
           Back
         </Link>
@@ -105,7 +105,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
         {/* Content, cohort and conversation are the three views of one
             course, and they all hang off the same id. The chat used to be
             further down this very page, which is why nobody found it. */}
-        <div style={{ marginTop: '0.75rem' }}>
+        <div className="u-mt-3">
           {/* backTo is the course list this was reached from, so the course
               itself is always one segment below it: /admin/content/:id for an
               admin, /trainer/courses/:id for a trainer. */}
@@ -134,7 +134,7 @@ export default function CourseBuilder({ backTo = '/admin/content' }) {
       )}
 
       <section>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Materials</h2>
+        <h2 className="u-text-md u-mb-3">Materials</h2>
         {/* The same component a trainee sees, with the controls turned on.
             course_materials_write already limits those to an admin or the
             owning trainer, so canManage decides what to render and the

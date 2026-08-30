@@ -31,7 +31,7 @@ export default function ActivityRow({ courseId, activity }) {
           <span className="row-icon" style={{ width: '1.6rem', height: '1.6rem' }}>
             <Icon name={activity.type} size={14} />
           </span>
-          <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{activity.title}</span>
+          <span className="u-semibold u-text-base">{activity.title}</span>
           <span className="text-xs muted">
             {TYPE_LABEL[activity.type] ?? activity.type} · {activity.xp} XP
           </span>
@@ -53,7 +53,7 @@ export default function ActivityRow({ courseId, activity }) {
       </div>
 
       {open && (
-        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div className="u-col u-mt-3 u-gap-sm">
           <div className="cluster">
             <div className="grow-field">
               <label className="input-label" htmlFor={`t-${activity.id}`}>Title</label>

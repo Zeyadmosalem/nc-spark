@@ -84,7 +84,7 @@ export default function QuizRunner({ quiz, onPassed }) {
           <div style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: 700 }}>
             {result.score}%
           </div>
-          <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem' }}>{verdictText}</p>
+          <p className="muted-2 u-mb-6">{verdictText}</p>
 
           {/* Right or wrong only. Never the correct answer, never the
               explanation — see the component docblock. */}
@@ -210,7 +210,7 @@ export default function QuizRunner({ quiz, onPassed }) {
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', marginBottom: '0.5rem' }}>
           {quiz.title}
         </h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem' }}>
+        <p className="muted-2 u-mb-6">
           Pass mark {Math.round(quiz.passMark * 100)}%
           {quiz.timeLimitSeconds ? ` · ${Math.floor(quiz.timeLimitSeconds / 60)} minutes` : ''}
         </p>
@@ -231,7 +231,7 @@ export default function QuizRunner({ quiz, onPassed }) {
           </>
         ) : (
           <>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', marginBottom: '1.5rem' }}>
+            <p className="u-text-sm muted u-mb-6">
               You get <strong>one attempt</strong>. A trainer has to grant another.
             </p>
             <button className="btn btn-primary btn-lg btn-block"

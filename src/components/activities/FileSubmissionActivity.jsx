@@ -120,7 +120,7 @@ export default function FileSubmissionActivity({ activity, onComplete }) {
 
             {isUploading && (
               <div style={{ marginTop: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-2)' }}>
+                <div className="u-row-top u-between u-text-sm u-mb-2 muted-2">
                   <span>Uploading {file.name}...</span>
                   <span>{Math.min(progress, 100)}%</span>
                 </div>

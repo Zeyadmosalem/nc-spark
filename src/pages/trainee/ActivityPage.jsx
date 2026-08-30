@@ -98,8 +98,8 @@ export default function ActivityPage() {
       ) : (
         <div className="page-body measure">
           <button className="btn btn-ghost btn-sm" onClick={back}>← Back to Path</button>
-          <div className="card no-hover" style={{ padding: '2rem', marginTop: '1rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem' }}>{activity.title}</h1>
+          <div className="card no-hover u-p7 u-mt-4">
+            <h1 className="u-heading u-text-xl">{activity.title}</h1>
             <p className="muted-2">
               This activity type ({activity.type}) is not available yet.
             </p>

@@ -56,6 +56,29 @@
 .u-bordered{ border: 1px solid var(--border); }
 .u-r-md    { border-radius: var(--r-md); }
 .u-r-lg    { border-radius: var(--r-lg); }
+.u-p4      { padding: var(--sp-4); }
+.u-mt-3    { margin-top: var(--sp-3); }
+.u-mt-4    { margin-top: var(--sp-4); }
+.u-mb-2    { margin-bottom: var(--sp-2); }
+.u-mb-3    { margin-bottom: var(--sp-3); }
+.u-mb-6    { margin-bottom: var(--sp-6); }
+
+/* --- type -------------------------------------------------------------
+   The screens had grown a second type scale beside the real one: 0.7, 0.72,
+   0.78, 0.8, 0.82 and 0.85rem all written inline, where the scale has --text-xs
+   (0.75) and --text-sm (0.8125). Six sizes doing the work of two, none of them
+   the documented ones.
+
+   Snapping to the nearest token moves each by well under a pixel, and is the
+   whole point of having a scale. Sizes further from a token than that are left
+   inline rather than nudged into place — 1.4rem is a design decision, not
+   drift. */
+.u-text-xs   { font-size: var(--text-xs); }
+.u-text-sm   { font-size: var(--text-sm); }
+.u-text-base { font-size: var(--text-base); }
+.u-text-md   { font-size: var(--text-md); }
+.u-text-lg   { font-size: var(--text-lg); }
+.u-text-xl   { font-size: var(--text-xl); }
 
 /* --- text -------------------------------------------------------------- */
 .u-text-center { text-align: center; }

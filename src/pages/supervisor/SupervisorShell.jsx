@@ -129,7 +129,7 @@ export function Dashboard() {
       {awaitingMarking > 0 && (
         <motion.div variants={fadeUp} custom={2} className="card no-hover"
                     style={{ borderLeft: '4px solid var(--warn)' }}>
-          <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.9rem' }}>
+          <p className="u-m0 muted-2 u-text-base">
             <strong>{awaitingMarking}</strong> attempt{awaitingMarking === 1 ? ' is' : 's are'}{' '}
             waiting on a trainer to mark a written answer. Trainees cannot progress past a
             quiz until it is marked.
@@ -159,7 +159,7 @@ export function Dashboard() {
                     {t.status}
                   </span>
                 )}
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>
+                <span className="u-text-sm muted">
                   {coursesByTrainer.get(t.id) ?? 0} course
                   {(coursesByTrainer.get(t.id) ?? 0) === 1 ? '' : 's'}
                 </span>
@@ -167,7 +167,7 @@ export function Dashboard() {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: '1rem' }}>
+        <div className="u-mt-4">
           <Link to="/supervisor/courses" className="btn btn-ghost btn-sm plain-link">
             See course-by-course progress →
           </Link>
@@ -176,7 +176,7 @@ export function Dashboard() {
 
       {/* Individual trainees are absent by design, not by omission. */}
       <motion.div variants={fadeUp} custom={4} className="card no-hover">
-        <p style={{ color: 'var(--text-3)', margin: 0, fontSize: '0.85rem' }}>
+        <p className="muted u-m0 u-text-sm">
           These figures are cohort totals. Supervisors oversee trainers, so individual
           trainee names and results are not shown here — a trainer sees those for their
           own courses.
