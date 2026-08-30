@@ -595,6 +595,87 @@ select.input-field {
   cursor: pointer;
 }
 
+/* --------------------------------------------- file field -- */
+
+/* A file input is the one control that announces the browser instead of the
+   product: its button is drawn by the platform and cannot be restyled to
+   match anything around it. So the input keeps its behaviour and loses its
+   appearance — it sits visually hidden inside its own label, and the label
+   draws the field.
+
+   No click handler and no ref, deliberately. The label is what opens the
+   picker, which is why focus, Enter and Space still work exactly as they did
+   and the control still announces itself as a file input. */
+.file-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.file-field:hover {
+  border-color: var(--text-3);
+}
+
+/* The input is .sr-only, so without this a keyboard user tabbing on to it
+   would see nothing move at all. */
+.file-field:focus-within {
+  border-color: var(--brand-accent);
+  box-shadow: var(--ring);
+}
+
+.file-field-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--r-sm) - 1px);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.file-field:hover .file-field-action {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* Filenames are long and arbitrary; the field must not grow to fit one. */
+.file-field-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.file-field-name.is-empty {
+  color: var(--text-3);
+}
+
+.file-field-size {
+  flex: none;
+  padding-inline-end: 0.35rem;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .input-hint {
   font-size: var(--text-xs);
   color: var(--text-3);

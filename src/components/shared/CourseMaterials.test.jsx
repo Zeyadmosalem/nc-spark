@@ -136,6 +136,26 @@ describe('what a manager can do', () => {
     expect(varsOf(mocks.addFile)).toMatchObject({ courseId: 'c1', name: 'Fire Handbook' });
   });
 
+  /**
+   * The field draws the filename itself, because the input that would
+   * normally show it is hidden to keep the browser's own button off a form
+   * that looks nothing like it. So the name has to come from somewhere, and
+   * this is the assertion that it still does.
+   */
+  it('names the chosen file, and says so when there is none', async () => {
+    render(<CourseMaterials courseId="c1" canManage />);
+    await userEvent.click(screen.getByRole('button', { name: '+ Add material' }));
+    expect(screen.getByText('No file chosen')).toBeInTheDocument();
+
+    await userEvent.upload(
+      screen.getByLabelText('File'),
+      new File(['x'], 'evacuation-plan.pdf', { type: 'application/pdf' }),
+    );
+
+    expect(screen.getByText('evacuation-plan.pdf')).toBeInTheDocument();
+    expect(screen.queryByText('No file chosen')).not.toBeInTheDocument();
+  });
+
   it('adds a link instead', async () => {
     render(<CourseMaterials courseId="c1" canManage />);
     await userEvent.click(screen.getByRole('button', { name: '+ Add material' }));

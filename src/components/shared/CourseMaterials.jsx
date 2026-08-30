@@ -212,13 +212,38 @@ function AddMaterial({ courseId, onDone }) {
       {mode === 'file' ? (
         <div>
           <label className="input-label" htmlFor="material-file">File</label>
-          <input
-            id="material-file"
-            type="file"
-            className="input-field"
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
+          {/* The input is hidden rather than restyled: a file input's button
+              belongs to the browser and cannot be made to match the rest of
+              this form. Wrapping it in the label that draws the field keeps
+              the picker on Enter and Space and keeps the control announcing
+              itself as a file input, which a div with an onClick would not.
+              Everything the label shows is aria-hidden, so the accessible
+              name stays "File" and the filename is announced by the input
+              itself, once. */}
+          <label className="file-field">
+            <input
+              id="material-file"
+              type="file"
+              className="sr-only"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            <span className="file-field-action" aria-hidden="true">
+              <Icon name="attachment" size={13} />
+              Choose file
+            </span>
+            <span
+              className={`file-field-name${file ? '' : ' is-empty'}`}
+              aria-hidden="true"
+            >
+              {file ? file.name : 'No file chosen'}
+            </span>
+            {file ? (
+              <span className="file-field-size" aria-hidden="true">
+                {readableSize(file.size)}
+              </span>
+            ) : null}
+          </label>
           {/* The kind column has a CHECK constraint allowing five values, so
               anything else is refused before it is uploaded. */}
           <p className="input-hint mt-xs">
