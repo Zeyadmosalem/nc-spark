@@ -86,6 +86,26 @@ Database tests include **red-team suites** asserting that a trainee cannot
 promote itself, read another user's email, enumerate the user table, or award
 itself XP. Treat a failure there as a security regression, not a flaky test.
 
+### Reading a coverage number here
+
+Coverage has to be counted across **both** suites or it lies. `src/api` is
+barely touched by the frontend run and thoroughly exercised by the live one —
+`library.js` reads 2% in the first and 98% in the second — because they run
+under different vitest configs and neither sees the other's report. Counted as
+"either suite reaches it", the app is at 90.8% of statements; the frontend
+suite alone reads 86.7%.
+
+```bash
+npx vitest run --project app --coverage.enabled --coverage.include='src/**'
+npx vitest run --config vitest.db.config.js --coverage.enabled --coverage.include='src/**'
+```
+
+Two helpers exist so a new test does not start by rebuilding them:
+`src/test/queryHarness.jsx` wraps a hook in a React Query client (per render,
+with retries off), and `src/test/supabaseStub.js` stands in for the PostgREST
+builder and records the calls — so a test can assert the *filter* as well as
+the result, which is what matters wherever RLS decides the rows.
+
 `supabase/tests/admin-console.test.js` is the odd one out: instead of
 reimplementing the queries it checks, it imports `src/api/` and runs the code
 the browser runs against the live project. That is the only way to catch a

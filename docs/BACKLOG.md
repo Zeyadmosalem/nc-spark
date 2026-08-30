@@ -26,8 +26,8 @@ work. Nothing in the running app reads invented data. The site is live at
 | **B9** | framer-motion 12 -> 13 | **Closed.** v13's only breaking change is the removal of the optional @emotion/is-prop-valid dependency, which this app never had — the single MotionConfig passes reducedMotion and nothing else. v13 also fixes AnimatePresence under React 19 strict mode, which is the mode this app runs in. Verified in a browser as well as the suite: cards mount and settle at opacity 1 rather than sticking at their initial state. |
 | **B19** | Fixture writes that could not fail | **Closed.** must() and mustWrite() in helpers.js; 147 bare writes now assert. It found one immediately: schema-profiles had been inserting a profile and a trainee_stats row that handle_new_user already creates, so both had failed on duplicate key every run since the trigger landed, silently, while the tests passed on the trigger's work. |
 | **B20** | Five components over 400 lines | **Closed.** Every one split, verbatim, with only imports rewritten: UserManager 495->275, ContentManager 463->171, SupportInbox 466->192, CourseBuilder 566->163, QuizEditor 533->82. Nothing in the app is over 400 lines now; the largest is CoursePage at 351. |
-| **B21** | Inline style props | **Closed.** Two passes. First the 46 that hardcoded status colours and so never changed with the theme — now tokens, verified resolving differently in light and dark. Then the count itself, 292 -> 256, via a small utility layer and a codemod that converts a style object only when every declaration in it maps to a token-exact class. 0.75rem is `--sp-3` to the pixel and converts; 0.85rem is nothing in the type scale and stays inline rather than being quietly snapped onto `--text-sm`. My first read of this was wrong: grouped by whole style object it looked like a long tail of 203 one-offs, but counted one declaration at a time it is 719, and `display: flex` alone is 50 of them. |
-| **B22** | Frontend coverage | **Closed at 84%.** The 74% it was filed at measured one suite and called it the whole picture: `src/api` is exercised against the real database by the live suite, under a config the frontend coverage run never sees — `library.js` reads 2% there and 98% there. Combined, the honest starting point was 81.8%; it is 84.3% now (80.1% from the frontend suite alone, up from 77.7%). What remains is spread thin across hooks and pages rather than concentrated anywhere. |
+| **B21** | Inline style props | **Closed.** 292 -> 201. Two passes, and the second found what the count was hiding: the screens had grown a SECOND type scale. 23 distinct font sizes written inline — 0.7, 0.72, 0.78, 0.8, 0.82, 0.85 among them — where the scale has `--text-xs` 0.75 and `--text-sm` 0.8125. Six sizes doing the work of two, none of them the documented ones. Each is snapped to the nearest token only where the move is under 0.05rem, under a pixel; 1.4rem is left inline because moving it to 1.5 is a design decision rather than drift. The first pass had already replaced the 46 hardcoded status colours, which never changed with the theme at all. Verified by screenshotting the screens that actually changed, before and after via git stash: six of eight byte-identical, two differing by under 1% from antialiasing. Of the 201 left, 31 are computed from data and belong inline. |
+| **B22** | Code coverage | **Closed at 91%.** The 74% it was filed at measured one suite and called it the whole picture: `src/api` is exercised against the real database by the live suite, under a config the frontend coverage run never sees — `library.js` reads 2% in one and 98% in the other. Counted as "either suite reaches it", the honest starting point was 81.8%; it is 90.8% now, and the frontend suite alone went 74% -> 86.7% (lines 88.6%). Every hook has a test; so does every api module. What remains is thin and spread — defensive branches, and `main.jsx`, which is the bootstrap and has nothing to assert. |
 
 ## Security, reviewed and accepted
 
@@ -67,34 +67,57 @@ Rules worth keeping:
 - **A dash is not a zero.** `StatCard` renders what it is given, so "not
   measured yet" stays distinct from "measured, and it is nothing".
 
+`src/styles/utilities.css` is the one generic layer, and the exception that
+needs a reason. Everything else here is a named component class, which is the
+right default and stays the right default. It exists because counting the
+inline styles one DECLARATION at a time — rather than one style object at a
+time — showed they were not one-offs at all: `display: flex` alone appeared 50
+times, and six ad-hoc font sizes were clustered where the type scale has two.
+It is loaded last, it holds nothing that is not already a token, and a value
+further than 0.05rem from a token is deliberately left inline rather than
+nudged onto the scale.
+
 Accessibility invariants now under test: a `<main>` landmark and skip link on
 every portal, `document.title` per page, focus moved to content on navigation,
-`prefers-reduced-motion` honoured in both CSS and framer-motion, and no
-`display: none` on anything a screen reader needs.
+`prefers-reduced-motion` honoured in both CSS and framer-motion, no
+`display: none` on anything a screen reader needs, and — since the audit — a
+matching activity that can be completed from the keyboard, which it could not
+be when both its columns were `<div onClick>`.
 
 ## Frontend
 
 Every routed screen reads the server. `src/data/dummyData.js` no longer exists,
 and neither does anything that could only be built on it.
 
-| Role | Wired |
-|---|---|
-| Auth | 4/4 |
-| Admin | 4/4 |
-| Trainer | 4/4 |
-| Supervisor | 2/2 |
-| Trainee | 7/7 |
+Counting the routes each shell serves, redirects excluded:
 
-Deleted rather than wired, each being a UI for something with no server-side
-model: the course chat drawer and its tab (B8), `ContentReview` (content
-approval has no table or status), `SupervisorCoursePage`, `TrainerCatalog`
-(duplicated `/trainer/courses` on invented data, down to rendering raw trainer
-ids as "Current Instructor"), the four trainer authoring forms (replaced by the
-shared `CourseBuilder`), `GamificationWidgets` and `LearningPathMap` (B7),
-`NotificationToast` and `Confetti` (fired by XP and badge events that no longer
-exist), `QuizPreview`, `TraineeQuizzesPage` and `VideosPage` (demo pages behind
-redirects), and `src/data/schema.sql` — an 82-line schema sketch nothing
-referenced, sitting beside 27 migrations that disagreed with it.
+| Role | Screens |
+|---|---|
+| Auth | 4 |
+| Trainee | 12 |
+| Trainer | 7 |
+| Admin | 7 |
+| Supervisor | 3 |
+
+Deleted rather than wired, each being a UI for something that had no
+server-side model **at the time**: `ContentReview` (content approval still has
+no table or status), `SupervisorCoursePage`, `TrainerCatalog` (duplicated
+`/trainer/courses` on invented data, down to rendering raw trainer ids as
+"Current Instructor"), the four trainer authoring forms (replaced by the shared
+`CourseBuilder`), `NotificationToast` and `Confetti`, `QuizPreview`,
+`TraineeQuizzesPage` and `VideosPage` (demo pages behind redirects), and
+`src/data/schema.sql` — an 82-line schema sketch nothing referenced, sitting
+beside the migrations that disagreed with it.
+
+Three of those were about features that have since been **built rather than
+restored**: course chat (B8), and `GamificationWidgets` / `LearningPathMap`
+(B7). Deleting them first was the point — what shipped is backed by
+`messages`, `xp_events` and `trainee_badges`, not by a UI kept alive in hope
+of a backend.
+
+`JourneyMap` went the same way later, for a different reason: it was simply
+unreachable — nothing had imported it since the prototype, so it was deleted
+rather than given tests it could never justify.
 
 ## Maintenance
 
