@@ -1,9 +1,76 @@
+<div align="center">
+
 # NC Spark
 
-Role-based learning management platform. React 19 + Vite frontend, Supabase backend.
+**Compliance training that can prove who did what.**
 
-Four role portals (trainee, trainer, supervisor, admin), six activity types,
-quizzes with a second-attempt approval workflow, course chat, and gamification.
+A role-based learning platform for workplace training — the kind where somebody
+has to be able to answer *"has this person completed fire safety this year?"*
+and be right.
+
+[![React 19](https://img.shields.io/badge/React-19-087ea4)](https://react.dev)
+[![Vite 8](https://img.shields.io/badge/Vite-8-646cff)](https://vite.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%2017-3ecf8e)](https://supabase.com)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020)](https://workers.cloudflare.com)
+![Tests](https://img.shields.io/badge/tests-1%2C828%20passing-1a7f37)
+![Coverage](https://img.shields.io/badge/statements-91%25-1a7f37)
+
+<img src="docs/screenshots/trainee-dashboard.png" alt="A trainee's dashboard: overall progress, courses in flight, and a card per enrolment" width="900">
+
+</div>
+
+---
+
+## What it does
+
+Four people need different things from the same courses, so there are four
+portals rather than one screen with things hidden on it.
+
+| | |
+|---|---|
+| **Trainee** | Works through courses, one activity at a time. Modules unlock in order, quizzes are graded server-side, and progress is recorded as it happens. |
+| **Trainer** | Owns courses: writes the content, marks written answers, grants second attempts, answers the class in the course chat. |
+| **Supervisor** | Oversight without edit rights — how far each cohort has got, which trainees have stalled. |
+| **Admin** | Accounts, roles, the domain allowlist, the audit trail, and platform usage. |
+
+**Seven activity types** — reading, video, flashcards, matching, scenario, file
+submission and quiz — each with an authoring editor, so a course can be built
+entirely in the browser.
+
+**Quizzes are graded on the server.** The answer key lives in a table no browser
+role has any grant on; it is only ever touched by an Edge Function. A second
+attempt needs a trainer to grant it, and the grant is consumed when it is used.
+
+**XP, streaks, badges and a per-course leaderboard**, all derived from one
+append-only ledger — so a badge can never disagree with the record it came from.
+
+---
+
+## Screens
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/trainee-course.png" alt="A course: modules with per-activity progress, and tabs for materials, chat and standing"><br><sub><b>A course, as a trainee sees it.</b> Modules unlock in order; the second stays shut until the first is done.</sub></td>
+<td width="50%"><img src="docs/screenshots/trainee-achievements.png" alt="Achievements: XP total, level, streak, a 30-day trend and XP by source"><br><sub><b>Achievements.</b> Every figure is derived from the XP ledger, including the days nothing happened.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/trainer-roster.png" alt="Course roster: progress per person, XP earned, and counts of enrolled, not started and finished"><br><sub><b>The roster a trainer opens first</b> — sorted least-progress-first, because that is who needs chasing.</sub></td>
+<td><img src="docs/screenshots/course-builder.png" alt="Course builder: modules, activities, unlock rules and materials"><br><sub><b>The course builder.</b> The same component the admin console mounts, because the policies authorise both identically.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/admin-curriculum.png" alt="Admin curriculum list showing course status and why a draft cannot be published"><br><sub><b>Curriculum.</b> A draft says <em>why</em> it cannot be published yet, rather than failing when you try.</sub></td>
+<td><img src="docs/screenshots/trainee-dashboard-dark.png" alt="The same trainee dashboard in dark mode"><br><sub><b>Dark mode is designed, not inverted</b> — its own steps from the same ramps, checked for contrast.</sub></td>
+</tr>
+</table>
+
+<details>
+<summary>More — an activity, and the course chat</summary>
+<br>
+<img src="docs/screenshots/trainee-activity.png" alt="A flashcard activity" width="49%">
+<img src="docs/screenshots/trainer-chat.png" alt="Course chat between a trainer and the class" width="49%">
+</details>
+
+---
 
 ## Quick start
 
@@ -70,12 +137,80 @@ Unset, it does **not** fall back to `*`: `corsFor()` returns no
 `Access-Control-Allow-Origin` at all and every cross-origin call fails closed.
 An earlier version of this file claimed the opposite.
 
+---
+
+## How it is put together
+
+```
+src/
+  api/          the only place Supabase is touched, and the only place
+                snake_case becomes camelCase
+  hooks/        TanStack Query wrappers — one file per api module
+  components/
+    ui/         the design system: pill, alert, skeleton, empty state,
+                stat card, toast. Defined once, nowhere else.
+    activities/ the seven activity runtimes a trainee actually uses
+    authoring/  the course builder and quiz editor
+  pages/        one shell per role, each owning its own routes
+  styles/       foundation (tokens) → globals → components → ui → utilities
+supabase/
+  migrations/   39 of them; the schema is the source of truth
+  functions/    14 Edge Functions — every privileged write goes through one
+  tests/        RLS and Edge Function tests against a real database
+worker/         the Cloudflare Worker access gate in front of the whole site
+```
+
+### Architecture notes
+
+- **The live site sits behind an access gate**: a Cloudflare Worker
+  (`worker/index.js`) that checks both a valid Supabase session and the
+  profile's `status` before serving a single asset, throttles sign-in
+  attempts, and sets the site's security headers (CSP, HSTS, frame-ancestors,
+  referrer policy). Checking the session alone would not gate anything —
+  Supabase Auth is a different origin the Worker never sees.
+- **Authentication** is Supabase Auth. Profiles are created by a database
+  trigger that ignores any client-supplied role, so a role cannot be
+  self-assigned at signup.
+- **Privilege escalation** is blocked by three independent layers: column-level
+  grants, an RLS `WITH CHECK`, and a `BEFORE UPDATE` trigger.
+- **Public signup is closed.** Accounts are created by an administrator; the
+  endpoint returns `422 signup_disabled`. Supabase Auth sits outside the access
+  gate, so while it was open anyone holding the public anon key could write
+  rows into `auth.users`, `profiles` and `trainee_stats`. The domain allowlist
+  and the pending queue still govern every account the trigger sees, and email
+  confirmation is now required — the trigger activates an allowlisted domain,
+  which is only safe if the address has been proved.
+- **Privileged writes never touch a table.** Role changes, suspensions, signup
+  decisions, publishing and trainer assignment all go through Edge Functions so
+  they are validated and audited. `courses.trainer_id` and `courses.status` are
+  excluded from the column-level UPDATE grant, which is what makes that
+  structural rather than a convention.
+- **Every table has RLS on and no grant to `anon`.** A refusal is loud
+  (`42501 permission denied`) rather than a silently empty result set, which is
+  the failure mode that hides a missing policy for months.
+
+### Gotchas worth knowing
+
+- `citext` cannot be used inside a function pinned to `SET search_path = ''` —
+  the type lives in the `extensions` schema. Store lowercase `text` instead.
+- An `UPDATE ... WHERE` applies **SELECT** policies to its row scan, so a table
+  needs a SELECT policy before self-service updates work. The failure is
+  silent: HTTP 200, zero rows, no error.
+- A `WITH CHECK` subquery over the same table is itself RLS-filtered and
+  returns NULL. Use a `SECURITY DEFINER` helper.
+- `postgres_changes` is **best effort**. Realtime polls the WAL and caps how
+  many changes it takes per poll; the overflow is dropped, not queued. Measured
+  here: 10/10 delivered on a quiet database, 5/10 under churn. Anything that
+  must arrive needs a read behind it.
+
+---
+
 ## Testing
 
 | Command | Scope |
 |---|---|
 | `npm test` | Frontend unit and component tests |
-| `npm run test:db` | RLS policies and Edge Functions |
+| `npm run test:db` | RLS policies and Edge Functions, against a real database |
 | `npm run verify:m3` | Live end-to-end check of the learning loop |
 | `npm run verify:m4` | Live check of assessment integrity, including a grep of the built bundle |
 | `npm run verify:gate` | Live check of the access gate on a deployment |
@@ -113,54 +248,50 @@ wrong PostgREST embed name — `profiles!teaching_requests_trainer_id_fkey(...)`
 is a string, and the frontend unit tests mock `from`, so they pass whatever is
 written there while the browser gets a 400.
 
-## Deferred work
+The live suite runs its files in a **fixed order** (`vitest.db.config.js`).
+Vitest's default sequencer sorts slowest-first from cached durations, so no two
+runs shared an ordering and a failure could never be reproduced.
 
-[docs/BACKLOG.md](docs/BACKLOG.md) lists everything postponed on purpose, with
-the reasoning — including the access gate for the live site and the accepted
-client-side grading in scenario activities.
+---
 
-## Architecture notes
+## Deploying
 
-- **The live site sits behind an access gate**: a Cloudflare Worker
-  (`worker/index.js`) that checks both a valid Supabase session and the
-  profile's `status` before serving a single asset, throttles sign-in
-  attempts, and sets the site's security headers (CSP, HSTS, frame-ancestors,
-  referrer policy). Checking the session alone would not gate anything —
-  Supabase Auth is a different origin the Worker never sees.
-- **Authentication** is Supabase Auth. Profiles are created by a database
-  trigger that ignores any client-supplied role, so a role cannot be
-  self-assigned at signup.
-- **Privilege escalation** is blocked by three independent layers: column-level
-  grants, an RLS `WITH CHECK`, and a `BEFORE UPDATE` trigger.
-- **Public signup is closed.** Accounts are created by an administrator; the
-  endpoint returns `422 signup_disabled`. Supabase Auth sits outside the access
-  gate, so while it was open anyone holding the public anon key could write
-  rows into `auth.users`, `profiles` and `trainee_stats`. The domain allowlist
-  and the pending queue still govern every account the trigger sees, and email
-  confirmation is now required — the trigger activates an allowlisted domain,
-  which is only safe if the address has been proved.
-- `src/api/` is the only place Supabase is touched and the only place
-  `snake_case` becomes `camelCase`.
-- `src/components/ui/` is the only place a pill, alert, skeleton, empty state,
-  stat card or toast is defined. See the design-system notes in
-  [docs/BACKLOG.md](docs/BACKLOG.md) for which to reach for.
-- **Privileged writes never touch a table.** Role changes, suspensions, signup
-  decisions, publishing and trainer assignment all go through Edge Functions so
-  they are validated and audited. `courses.trainer_id` and `courses.status` are
-  excluded from the column-level UPDATE grant, which is what makes that
-  structural rather than a convention.
+`npm run deploy` builds the app and ships it with the access gate to Cloudflare
+Workers. [docs/DEPLOY.md](docs/DEPLOY.md) covers the whole path: connecting the
+repository, build settings, environment variables, and telling the backend
+about the new origin afterwards.
 
-### Gotchas worth knowing
+Two things are easy to miss, and both fail loudly:
 
-- `citext` cannot be used inside a function pinned to `SET search_path = ''` —
-  the type lives in the `extensions` schema. Store lowercase `text` instead.
-- An `UPDATE ... WHERE` applies **SELECT** policies to its row scan, so a table
-  needs a SELECT policy before self-service updates work. The failure is
-  silent: HTTP 200, zero rows, no error.
-- A `WITH CHECK` subquery over the same table is itself RLS-filtered and
-  returns NULL. Use a `SECURITY DEFINER` helper.
+- Worker secrets are **runtime** variables; Vite needs **build** ones. Setting
+  only the first gives you a site that builds and cannot sign anybody in.
+- The new origin has to be added to `ALLOWED_ORIGINS` or every Edge Function
+  call is blocked by the browser.
+
+---
 
 ## Documentation
 
-- Backend design: `docs/superpowers/specs/2026-08-21-nc-spark-backend-design.md`
-- M1 plan and progress: `docs/superpowers/plans/2026-08-21-m1-identity-and-access.md`
+| Where | What |
+|---|---|
+| [docs/BACKLOG.md](docs/BACKLOG.md) | Everything deferred, and why. Nothing here was missed — it was weighed and postponed. |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Deploying to Cloudflare Workers, step by step |
+| `docs/superpowers/specs/` | The backend design this was built from |
+| `docs/superpowers/plans/` | Milestone plans, M1 through M4 |
+
+---
+
+## A note on the screenshots
+
+They are captured from a throwaway demo tenant — seeded, photographed and
+deleted by one script, so nothing in them is a real account and no real address
+appears. Regenerate them with the dev server running:
+
+```bash
+npm run dev          # in another terminal
+npm run screenshots
+```
+
+The admin dashboard and the user directory are deliberately **not** shown:
+both list live email addresses, and this repository is public. Keep it that
+way if you add a screen.

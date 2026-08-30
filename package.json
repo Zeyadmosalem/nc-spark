@@ -24,6 +24,7 @@
     "verify:m4": "node ./scripts/verify-m4.mjs",
     "db:seed-review": "node ./scripts/seed-review-users.mjs",
     "verify:gate": "node ./scripts/verify-access-gate.mjs",
+    "screenshots": "node ./scripts/screenshots.mjs docs/screenshots 5173",
     "deploy": "npm run build && wrangler deploy",
     "worker:dev": "wrangler dev"
   },
