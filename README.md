@@ -14,6 +14,7 @@ and be right.
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020)](https://workers.cloudflare.com)
 ![Tests](https://img.shields.io/badge/tests-1%2C828%20passing-1a7f37)
 ![Coverage](https://img.shields.io/badge/statements-91%25-1a7f37)
+[![Licence](https://img.shields.io/badge/licence-all%20rights%20reserved-6b7280)](LICENSE)
 
 <img src="docs/screenshots/trainee-dashboard.png" alt="A trainee's dashboard: overall progress, courses in flight, and a card per enrolment" width="900">
 
@@ -295,3 +296,12 @@ npm run screenshots
 The admin dashboard and the user directory are deliberately **not** shown:
 both list live email addresses, and this repository is public. Keep it that
 way if you add a screen.
+
+---
+
+## Licence
+
+**Copyright © 2026 Zeyad Salem. All rights reserved.** See [LICENSE](LICENSE).
+
+The code is public so it can be read and reviewed; that is not a grant of
+permission to use it. Ask if you want to.

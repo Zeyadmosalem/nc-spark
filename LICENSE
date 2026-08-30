@@ -1,0 +1,26 @@
+NC Spark
+
+Copyright (c) 2026 Zeyad Salem. All rights reserved.
+
+The source code in this repository is published so that it can be read,
+reviewed and referenced. Publishing it does not grant a licence to use it.
+
+You may not copy, modify, merge, publish, distribute, sublicense, sell or
+create derivative works from any part of this repository, in whole or in
+part, without the prior written permission of the copyright holder.
+
+Reading the repository, and the copying GitHub itself performs in order to
+show or fork it through GitHub's own interface, are permitted because
+GitHub's Terms of Service require it of every public repository. Nothing
+further is.
+
+Third-party dependencies installed by this project are covered by their own
+licences, not by this one.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
