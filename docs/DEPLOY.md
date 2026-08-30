@@ -98,6 +98,21 @@ done
 completing an activity, submitting a quiz — with a CORS error in the console
 and no visible error in the UI.
 
+There is a second thing to tell it, and this one fails silently rather than
+loudly. Supabase builds every link it mails — password reset, address
+confirmation — from `site_url`, and honours a redirect the app asks for only
+if it matches `site_url` or `uri_allow_list`. Both ship as the Supabase
+default, which is `http://localhost:3000` and nothing:
+
+```bash
+node scripts/harden-auth.mjs show     # what the project has now
+node scripts/harden-auth.mjs apply    # set them, keeping a snapshot to revert to
+```
+
+Change the `SITE` constant in that script when the deployment moves. Leave it
+and the app still works perfectly, right up until somebody forgets a password
+— the mail arrives and its link points at a machine that is not theirs.
+
 ## Optional: no-billing per-user access gate
 
 Cloudflare Zero Trust may request a payment method even on its free plan. This

@@ -1,4 +1,6 @@
-// Applies the three Supabase Auth settings from the security audit (S1-S3).
+// Applies the Supabase Auth settings this project depends on: the three from
+// the security audit (S1-S3), and the deployment settings without which the
+// password-reset mail points somewhere that is not the site (S4-S6).
 //
 //   node scripts/harden-auth.mjs          # show current values, change nothing
 //   node scripts/harden-auth.mjs apply    # apply them
@@ -20,7 +22,15 @@ const HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const KEYS = ['mailer_autoconfirm', 'disable_signup', 'password_min_length', 'password_required_characters'];
+const KEYS = [
+  'mailer_autoconfirm', 'disable_signup', 'password_min_length',
+  'password_required_characters', 'password_hibp_enabled', 'site_url', 'uri_allow_list',
+];
+
+// Where the deployment actually is. Every link Supabase mails -- password
+// reset, address confirmation -- is built from site_url, and a redirect the
+// app asks for is honoured only if it matches site_url or uri_allow_list.
+const SITE = 'https://nc-spark-gate.ncspark.workers.dev';
 const SNAPSHOT = 'scripts/.auth-config.before.json';
 
 /**
@@ -51,7 +61,32 @@ const HARDENED = {
   // part of the value, not an escape of mine.
   password_required_characters:
     "abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789:!@#$%^&*()_+-=[]{};'\\\\:\"|<>?,./`~",
+  // S4. site_url was http://localhost:3000, the default nobody changes. Not
+  // cosmetic: it is the base of every link Supabase mails, so a real password
+  // reset arrived pointing at a machine that is not the user's.
+  site_url: SITE,
+
+  // S5. uri_allow_list was empty, which permits site_url and nothing else.
+  // src/api/auth.js asks for `${window.location.origin}/reset-password`, so
+  // without this the redirect is refused and the user lands on the site root
+  // with the recovery token unspent.
+  uri_allow_list: `${SITE}/**`,
+
+
 };
+
+// S6, and not applied. Leaked-password protection -- checking a new password
+// against Have I Been Pwned by k-anonymity, so a hash prefix goes out and
+// never the password -- is refused on this project:
+//
+//   PATCH /config/auth -> 402 "available on Pro Plans and up"
+//
+// It is left here because it is the setting to turn on the day the project
+// moves to Pro for backups, and because one PATCH carrying it fails whole,
+// taking the settings above with it. A twelve-character minimum does not help
+// if the twelve characters are twelve everybody has already used.
+const PRO_ONLY = { password_hibp_enabled: true };
+void PRO_ONLY;
 
 const show = (label, config) =>
   console.log(label, JSON.stringify(Object.fromEntries(KEYS.map((k) => [k, config[k]])), null, 2));
@@ -76,13 +111,18 @@ if (mode === 'show') {
   console.log('\nRun `node scripts/harden-auth.mjs apply` to apply.');
 } else if (mode === 'apply') {
   // Written before the change, so revert has something to go back to even if
-  // the process dies partway.
-  writeFileSync(SNAPSHOT, JSON.stringify(Object.fromEntries(KEYS.map((k) => [k, before[k]])), null, 2));
+  // the process dies partway. Keys already recorded keep their first reading:
+  // a later apply that adds settings must not overwrite the original values
+  // with the ones an earlier apply put there, or revert stops meaning much.
+  const kept = existsSync(SNAPSHOT) ? JSON.parse(readFileSync(SNAPSHOT, 'utf8')) : {};
+  writeFileSync(SNAPSHOT, JSON.stringify(
+    { ...Object.fromEntries(KEYS.map((k) => [k, before[k]])), ...kept }, null, 2));
   show('before:', before);
   await write(HARDENED);
   show('after :', await read());
   console.log(`\nPrevious values saved to ${SNAPSHOT}.`);
-  console.log('Note: /signup now returns an error. Accounts are created by an admin.');
+  console.log('Note: /signup returns 422 signup_disabled. There is no admin-side');
+  console.log('create-user screen either, so today accounts come from a script.');
 } else if (mode === 'revert') {
   if (!existsSync(SNAPSHOT)) throw new Error(`no snapshot at ${SNAPSHOT}`);
   await write(JSON.parse(readFileSync(SNAPSHOT, 'utf8')));

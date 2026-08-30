@@ -1,0 +1,26 @@
+-- The one table-like object anon was still holding grants on.
+--
+-- 20260829000700 revoked profiles and trainee_stats. enrollment_progress was
+-- missed because it is a view, and the sweep that found the other two was
+-- written against tables.
+--
+--   anon -> SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--
+-- Nothing is reachable through it today. The view is security_invoker=on, so
+-- it reads as the caller rather than as its owner, and an anonymous caller is
+-- refused at the first underlying table:
+--
+--   GET /rest/v1/enrollment_progress
+--     -> 401  42501  permission denied for table enrollments
+--
+-- That is the loud failure this schema prefers, and it is why this is hygiene
+-- rather than an incident. It is worth removing anyway: the grant is one
+-- `grant select on enrollments to anon` -- or one view rebuilt without
+-- security_invoker -- away from becoming every trainee's progress, readable
+-- by anyone holding the public anon key.
+revoke all on public.enrollment_progress from anon;
+
+-- authenticated keeps what it has. The view aggregates, so it is not
+-- auto-updatable and its INSERT/UPDATE/DELETE grants cannot do anything in
+-- the first place; every caller in the app reads it with select(). Removing
+-- them would be tidying with a migration, which is how working things break.

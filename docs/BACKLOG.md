@@ -3,8 +3,12 @@
 Work that has been deliberately deferred, with the reasoning. Anything here was
 seen, weighed and postponed — not missed.
 
-Last reviewed: 2026-08-30, after the security audit and the live test-suite
-work. Nothing in the running app reads invented data. The site is live at
+Last reviewed: 2026-08-30, after a readiness check against the live project
+(`grants held by anon: none`, 27 of 27 tables with RLS, both buckets private)
+that turned up nothing wrong with the code and four things missing from the
+deployment — B23 to B26 below.
+
+Nothing in the running app reads invented data. The site is live at
 `https://nc-spark-gate.ncspark.workers.dev` — the older
 `nc-spark.ncspark.workers.dev` in this file was dead and returned 404.
 
@@ -13,6 +17,30 @@ work. Nothing in the running app reads invented data. The site is live at
 | # | Item | Why it is waiting | Cost |
 |---|---|---|---|
 | **B2** | **Delete or expire the review accounts** | Four admin-capable logins on `ncspark-review.local`, a domain nobody can receive mail at, so there is no password-reset path. Kept for now because review is ongoing. Password was rotated on 2026-08-23 after being found in the public repo. | ~1 min |
+
+## Before real learners
+
+Nothing here is a defect. They are the things a deployment needs that a
+codebase cannot supply, and every one of them is blocking in the sense that
+real people cannot be onboarded without it.
+
+| # | Item | What is actually missing | Cost |
+|---|---|---|---|
+| **B23** | **An email service** | `smtp_host` is unset, so auth mail goes through Supabase's shared development sender at `rate_limit_email_sent: 2` per hour, which they document as not for production. Confirmation and password reset both ride on it. Needs a provider (Resend, Postmark, SES) and a sending domain with SPF, DKIM and DMARC, or every message lands in spam. | half a day, plus DNS |
+| **B24** | **A way for people to get accounts** | Today: none. `/auth/v1/signup` returns `422 signup_disabled` (correctly — it was closed in the security audit), and there is no admin-side create-user screen, only the review screen for signups that no longer happen. Two routes: turn signup back on and put the institution's domain in `allowed_domains`, which is zero code and needs B23; or build admin invite plus CSV import, which is a day and also needs B23 to deliver the invitation. | 0–1 day, after B23 |
+| **B25** | **Backups** | Free plan: `pitr_enabled: false`, zero stored backups. A product whose claim is "prove this person completed fire safety this year" cannot restore the record it is claiming. Supabase Pro is where daily backups and PITR live; free projects also pause after 7 days idle. | a plan change |
+| **B26** | **MFA for admins** | TOTP is enabled at the project level but the app has no enrolment screen, so an admin who can read every learner's record is protected by a password alone. `security_update_password_require_reauthentication` is also off — an unlocked laptop is enough to change a password. That one is a single setting, but it needs testing against the recovery flow first, since a mistake there locks everyone out of the only way back in. | 1 day |
+
+Also refused on the free plan, and worth doing the day B25 moves it: leaked
+password protection (`password_hibp_enabled`), which returns
+`402 available on Pro Plans and up`. `scripts/harden-auth.mjs` carries it in
+`PRO_ONLY` so the setting is not lost.
+
+Not engineering, and not mine: real training records are personal data about
+identifiable people, held in `eu-central-1`. How long they are kept, how one
+person is erased on request, and whether Frankfurt is an acceptable location
+are questions for whoever owns compliance. The database already enforces who
+may see what; nothing anywhere states the rest.
 
 ## Done since this list was written
 
@@ -24,6 +52,7 @@ work. Nothing in the running app reads invented data. The site is live at
 | **B7** | XP and gamification awarding | **Closed.** `xp_events` is an append-only ledger; a trigger maintains `trainee_stats.xp`, the streak and `last_active_on`, and badges are evaluated from the ledger so a badge cannot disagree with the record it came from. Seven badges and a per-course leaderboard. |
 | **B8** | M5 — realtime chat | **Closed.** `messages` with RLS scoped to course membership, Realtime, pagination, and one chat surface shared by all four roles. Built as B8 specified, not restored from the prototype. |
 | **B9** | framer-motion 12 -> 13 | **Closed.** v13's only breaking change is the removal of the optional @emotion/is-prop-valid dependency, which this app never had — the single MotionConfig passes reducedMotion and nothing else. v13 also fixes AnimatePresence under React 19 strict mode, which is the mode this app runs in. Verified in a browser as well as the suite: cards mount and settle at opacity 1 rather than sticking at their initial state. |
+| **B27** | anon still held grants on `enrollment_progress` | **Closed.** The 20260829000700 sweep revoked profiles and trainee_stats and missed this one, because it was written against tables and this is a view. Not reachable — it is `security_invoker=on`, so an anonymous read is refused at the first underlying table with `42501 permission denied for table enrollments` — but one `grant select on enrollments to anon` away from being every learner's progress, readable with the public anon key. `grants held by anon` is now empty across the whole schema. |
 | **B19** | Fixture writes that could not fail | **Closed.** must() and mustWrite() in helpers.js; 147 bare writes now assert. It found one immediately: schema-profiles had been inserting a profile and a trainee_stats row that handle_new_user already creates, so both had failed on duplicate key every run since the trigger landed, silently, while the tests passed on the trigger's work. |
 | **B20** | Five components over 400 lines | **Closed.** Every one split, verbatim, with only imports rewritten: UserManager 495->275, ContentManager 463->171, SupportInbox 466->192, CourseBuilder 566->163, QuizEditor 533->82. Nothing in the app is over 400 lines now; the largest is CoursePage at 351. |
 | **B21** | Inline style props | **Closed.** 292 -> 201. Two passes, and the second found what the count was hiding: the screens had grown a SECOND type scale. 23 distinct font sizes written inline — 0.7, 0.72, 0.78, 0.8, 0.82, 0.85 among them — where the scale has `--text-xs` 0.75 and `--text-sm` 0.8125. Six sizes doing the work of two, none of them the documented ones. Each is snapped to the nearest token only where the move is under 0.05rem, under a pixel; 1.4rem is left inline because moving it to 1.5 is a design decision rather than drift. The first pass had already replaced the 46 hardcoded status colours, which never changed with the theme at all. Verified by screenshotting the screens that actually changed, before and after via git stash: six of eight byte-identical, two differing by under 1% from antialiasing. Of the 201 left, 31 are computed from data and belong inline. |
