@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useMyNotices } from '../../hooks/useNotices';
+import Icon from '../ui/Icon';
 
 /**
  * What changed for this trainee while they were away.
@@ -56,7 +57,7 @@ function Notice({ tone, icon, children }) {
   return (
     <div className="card no-hover" role="status"
          style={{ display: 'flex', gap: '0.75rem', padding: '1rem', borderLeft: `4px solid ${tone}` }}>
-      <span className="u-text-lg">{icon}</span>
+      <span className="u-text-lg" aria-hidden="true"><Icon name={icon} size={20} /></span>
       <div className="u-text-base">{children}</div>
     </div>
   );

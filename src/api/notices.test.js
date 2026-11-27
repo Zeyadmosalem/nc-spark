@@ -9,6 +9,9 @@ vi.mock('./client', () => ({
 
 const { myNotices } = await import('./notices');
 
+// Inside the seven-day "recently graded" window whenever the suite runs.
+const YESTERDAY = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
 /** A thenable stand-in that records which table was asked for. */
 function tableStub(results) {
   return (table) => {
@@ -54,7 +57,7 @@ describe('myNotices', () => {
         data: [
           { id: 'at1', status: 'pending_review', graded_at: null, passed: null,
             quizzes: { id: 'q1', title: 'Waiting', courses: { title: 'C' } } },
-          { id: 'at2', status: 'passed', graded_at: '2026-08-23T12:00:00Z', passed: true,
+          { id: 'at2', status: 'passed', graded_at: YESTERDAY, passed: true,
             final_score: '90.00', quizzes: { id: 'q2', title: 'Marked', courses: { title: 'C' } } },
         ],
         error: null,
@@ -86,7 +89,7 @@ describe('myNotices', () => {
         data: [
           { id: 'at1', status: 'pending_review', graded_at: null, passed: null,
             quizzes: { id: 'q1', title: 'A', courses: { title: 'C' } } },
-          { id: 'at2', status: 'failed', graded_at: '2026-08-23T12:00:00Z', passed: false,
+          { id: 'at2', status: 'failed', graded_at: YESTERDAY, passed: false,
             final_score: '20.00', quizzes: { id: 'q2', title: 'B', courses: { title: 'C' } } },
         ],
         error: null,

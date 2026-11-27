@@ -18,6 +18,8 @@ and be right.
 
 <img src="docs/screenshots/trainee-dashboard.png" alt="A trainee's dashboard: overall progress, courses in flight, and a card per enrolment" width="900">
 
+**[Try the live demo →](https://zeyadmosalem.github.io/portfolio/demos/nc-spark/)** It runs in your browser on made-up data, with a role switcher for trainee, trainer, supervisor and admin. Nothing reaches a real server.
+
 </div>
 
 ---
